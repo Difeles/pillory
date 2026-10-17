@@ -4,7 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pillory/app/app.dart';
 import 'package:pillory/app/providers.dart';
 import 'package:pillory/domain/models.dart';
+import 'package:pillory/domain/reminders.dart';
 import 'package:pillory/domain/schedule.dart';
+import 'package:pillory/features/today/today_providers.dart';
+import 'package:pillory/features/today/today_screen.dart';
 
 import '../support/fake_inventory_repository.dart';
 
@@ -218,5 +221,46 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Пропущено'), findsOneWidget);
     expect(find.textContaining('Аспирин'), findsOneWidget);
+  });
+
+  testWidgets('a tapped reminder opens its intake on the intake tab', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    final id = await inventory.createMedicine(
+      const NewMedicine(name: 'Аспирин', initialQuantity: 5, unit: 'шт.'),
+    );
+    final sid = await schedules.createSchedule(
+      NewSchedule(
+        medicineId: id,
+        kind: ScheduleKind.daily,
+        dose: 1,
+        doseUnit: 'шт.',
+        startDate: DateTime.now(),
+        times: const [8 * 60],
+      ),
+    );
+    await tab(tester, 'Аптечка');
+
+    final now = DateTime.now();
+    final day = DateTime(now.year, now.month, now.day + 2);
+    ProviderScope.containerOf(tester.element(find.byType(NavigationBar)))
+        .read(openIntakeProvider.notifier)
+        .open(
+          OpenIntakeRequest(scheduleId: sid, day: day, minuteOfDay: 8 * 60),
+        );
+    await tester.pumpAndSettle();
+
+    expect(find.text(formatDay(day)), findsOneWidget);
+    expect(find.textContaining('08:00'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration! as BoxDecoration).border != null,
+      ),
+      findsOneWidget,
+    );
   });
 }

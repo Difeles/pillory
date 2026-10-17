@@ -4,6 +4,7 @@ import '../data/app_database.dart';
 import '../data/drift_inventory_repository.dart';
 import '../data/drift_schedule_repository.dart';
 import '../domain/inventory_repository.dart';
+import '../domain/reminder_scheduler.dart';
 import '../domain/schedule.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -21,4 +22,9 @@ final scheduleRepositoryProvider = Provider<ScheduleRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(inventoryRepositoryProvider),
   ),
+);
+
+/// Replaced in `main` with the real one; tests run without notifications.
+final reminderSchedulerProvider = Provider<ReminderScheduler>(
+  (ref) => const NoopReminderScheduler(),
 );

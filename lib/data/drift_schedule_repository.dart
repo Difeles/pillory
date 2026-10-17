@@ -5,6 +5,7 @@ import '../domain/errors.dart';
 import '../domain/inventory_repository.dart';
 import '../domain/inventory_rules.dart';
 import '../domain/models.dart';
+import '../domain/reminders.dart';
 import '../domain/schedule.dart';
 import 'app_database.dart';
 import 'tables.dart';
@@ -32,6 +33,45 @@ class DriftScheduleRepository implements ScheduleRepository {
     DateTime from,
     DateTime to,
   ) => _watchRange(dateOnly(from), dateOnly(to));
+
+  @override
+  Stream<ReminderSource> watchReminderSource(DateTime from) {
+    final s = _db.schedules, m = _db.medicines, l = _db.intakeLogs;
+    final query = _db.select(s).join([
+      innerJoin(m, m.id.equalsExp(s.medicineId)),
+      leftOuterJoin(
+        l,
+        l.scheduleId.equalsExp(s.id) &
+            l.day.isBiggerOrEqual(Constant(_dates.toSql(dateOnly(from)))) &
+            l.status.equalsValue(IntakeStatus.pending).not(),
+      ),
+    ]);
+    return query.watch().map((rows) {
+      final schedules = <String, ReminderSchedule>{};
+      final settled = <String>{};
+      for (final r in rows) {
+        final row = r.readTable(s);
+        schedules[row.id] ??= ReminderSchedule(
+          _schedule(row),
+          r.readTable(m).name,
+        );
+        final log = r.readTableOrNull(l);
+        if (log != null) {
+          settled.add(
+            intakeKey(
+              row.id,
+              log.day,
+              log.slot == untimedSlot ? null : log.slot,
+            ),
+          );
+        }
+      }
+      return ReminderSource(
+        schedules: schedules.values.toList(),
+        settled: settled,
+      );
+    });
+  }
 
   Stream<Map<DateTime, List<DayIntake>>> _watchRange(
     DateTime from,

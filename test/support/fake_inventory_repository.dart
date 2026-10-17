@@ -5,6 +5,7 @@ import 'package:pillory/domain/errors.dart';
 import 'package:pillory/domain/inventory_repository.dart';
 import 'package:pillory/domain/inventory_rules.dart';
 import 'package:pillory/domain/models.dart';
+import 'package:pillory/domain/reminders.dart';
 import 'package:pillory/domain/schedule.dart';
 
 /// In-memory repository for widget tests. Real SQLite I/O does not complete
@@ -118,7 +119,7 @@ class FakeScheduleRepository implements ScheduleRepository {
   final _changes = StreamController<void>.broadcast(sync: true);
 
   String _key(String id, DateTime day, int? minute) =>
-      '$id|${dateOnly(day)}|$minute';
+      intakeKey(id, day, minute);
 
   /// Test hook: a taken mark as made before v4.
   void markLegacyTaken(String scheduleId, DateTime day, [int? minute]) {
@@ -168,6 +169,34 @@ class FakeScheduleRepository implements ScheduleRepository {
       )
         if ((await _snapshot(d)) case final l when l.isNotEmpty) d: l,
     };
+    yield await snapshot();
+    await for (final _ in _changes.stream) {
+      yield await snapshot();
+    }
+  }
+
+  @override
+  Stream<ReminderSource> watchReminderSource(DateTime from) async* {
+    Future<ReminderSource> snapshot() async {
+      final stock = await _inventory.watchStock().first;
+      return ReminderSource(
+        schedules: [
+          for (final s in _schedules)
+            ReminderSchedule(
+              s,
+              stock
+                  .firstWhere((m) => m.medicine.id == s.medicineId)
+                  .medicine
+                  .name,
+            ),
+        ],
+        settled: {
+          for (final e in _marks.entries)
+            if (e.value != IntakeStatus.pending) e.key,
+        },
+      );
+    }
+
     yield await snapshot();
     await for (final _ in _changes.stream) {
       yield await snapshot();

@@ -78,10 +78,28 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
     setState(() => _saving = true);
     try {
       validateNewSchedule(draft(_medicineId!));
+      // Asked before saving, so the schedule is planned with the answer.
+      var muted = false;
+      if (_times.isNotEmpty) {
+        final reminders = ref.read(reminderSchedulerProvider);
+        muted =
+            !await reminders.notificationsAllowed() &&
+            !await reminders.requestPermission();
+      }
       await ref
           .read(scheduleRepositoryProvider)
           .createSchedule(draft(_medicineId!));
       navigator.pop();
+      if (muted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Уведомления выключены. Включите их в настройках, чтобы '
+              'получать напоминания',
+            ),
+          ),
+        );
+      }
     } on InvalidScheduleException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
       if (mounted) setState(() => _saving = false);

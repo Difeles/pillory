@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
 import '../../domain/errors.dart';
 import '../../domain/inventory_rules.dart';
+import '../../domain/reminders.dart';
 import '../../domain/schedule.dart';
 import '../inventory/format.dart';
 import 'add_intake_screen.dart';
@@ -42,8 +43,24 @@ class TodayScreen extends ConsumerStatefulWidget {
 class _TodayScreenState extends ConsumerState<TodayScreen> {
   DateTime _day = dateOnly(DateTime.now());
 
-  void _shift(int days) =>
-      setState(() => _day = DateTime(_day.year, _day.month, _day.day + days));
+  /// The intake a tapped reminder pointed at, marked until the day changes.
+  OpenIntakeRequest? _highlight;
+
+  @override
+  void initState() {
+    super.initState();
+    // A reminder that launched the app was tapped before this screen existed.
+    final request = ref.read(openIntakeProvider);
+    if (request != null) {
+      _day = request.day;
+      _highlight = request;
+    }
+  }
+
+  void _shift(int days) => setState(() {
+    _day = DateTime(_day.year, _day.month, _day.day + days);
+    _highlight = null;
+  });
 
   Future<void> _take(DayIntake i) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -80,6 +97,14 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(openIntakeProvider, (_, request) {
+      if (request != null) {
+        setState(() {
+          _day = request.day;
+          _highlight = request;
+        });
+      }
+    });
     final text = Theme.of(context).textTheme;
     final today = dateOnly(DateTime.now());
     final isToday = _day == today;
@@ -143,6 +168,9 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                             intake: i,
                             // Marking a future dose as taken makes no sense.
                             canMark: !_day.isAfter(today),
+                            highlighted:
+                                _highlight?.scheduleId == i.schedule.id &&
+                                _highlight?.minuteOfDay == i.minuteOfDay,
                             onTake: () => _take(i),
                             onSkip: () => _skip(i),
                             onReset: () => _reset(i),
@@ -170,6 +198,7 @@ class _IntakeCard extends StatelessWidget {
   const _IntakeCard({
     required this.intake,
     required this.canMark,
+    required this.highlighted,
     required this.onTake,
     required this.onSkip,
     required this.onReset,
@@ -177,6 +206,7 @@ class _IntakeCard extends StatelessWidget {
 
   final DayIntake intake;
   final bool canMark;
+  final bool highlighted;
   final VoidCallback onTake;
   final VoidCallback onSkip;
   final VoidCallback onReset;
@@ -198,6 +228,9 @@ class _IntakeCard extends StatelessWidget {
               ? AppColors.primaryLight
               : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadii.lg),
+          border: highlighted
+              ? Border.all(color: AppColors.primary, width: 2)
+              : null,
           boxShadow: intake.status != IntakeStatus.pending
               ? null
               : AppShadows.card,

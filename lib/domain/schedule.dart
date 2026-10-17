@@ -1,6 +1,7 @@
 import 'errors.dart';
 import 'inventory_rules.dart';
 import 'models.dart';
+import 'reminders.dart';
 
 enum ScheduleKind { daily, weekdays, dates }
 
@@ -197,6 +198,10 @@ abstract class ScheduleRepository {
     DateTime from,
     DateTime to,
   );
+
+  /// The schedules with their medicine names and the intakes already settled
+  /// (taken or skipped) on or after [from]; re-emits on change.
+  Stream<ReminderSource> watchReminderSource(DateTime from);
 
   /// Returns the new schedule id. Throws [InvalidScheduleException].
   Future<String> createSchedule(NewSchedule draft);

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../domain/inventory_rules.dart';
+import '../../domain/reminders.dart';
 import '../../domain/schedule.dart';
 
 /// Intakes for one calendar day (date-only key), live from the database.
@@ -21,3 +22,16 @@ final historyProvider = StreamProvider<Map<DateTime, List<DayIntake>>>((ref) {
         today,
       );
 });
+
+/// The intake a tapped notification points at; the day screen shows it.
+class OpenIntakeNotifier extends Notifier<OpenIntakeRequest?> {
+  @override
+  OpenIntakeRequest? build() => null;
+
+  void open(OpenIntakeRequest request) => state = request;
+}
+
+final openIntakeProvider =
+    NotifierProvider<OpenIntakeNotifier, OpenIntakeRequest?>(
+      OpenIntakeNotifier.new,
+    );
