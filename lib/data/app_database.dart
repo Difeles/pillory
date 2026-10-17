@@ -15,6 +15,7 @@ part 'app_database.g.dart';
     InventoryTransactions,
     Schedules,
     IntakeLogs,
+    IntakeDeductions,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -22,7 +23,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pillory'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -36,10 +37,15 @@ class AppDatabase extends _$AppDatabase {
       } else if (from < 3) {
         // v3: several times per schedule. Logs first, as they read the old
         // schedules.minute_of_day; existing marks keep their time as slot.
+        // Their SQL defaults make them taken with untracked deductions.
         await m.alterTable(
           TableMigration(
             intakeLogs,
-            newColumns: [intakeLogs.slot],
+            newColumns: [
+              intakeLogs.slot,
+              intakeLogs.status,
+              intakeLogs.deductionsTracked,
+            ],
             columnTransformer: {
               intakeLogs.slot: const CustomExpression(
                 '(SELECT coalesce(s.minute_of_day, -1) FROM schedules s '
@@ -59,6 +65,13 @@ class AppDatabase extends _$AppDatabase {
             },
           ),
         );
+      } else if (from < 4) {
+        // v4: skipped marks and undo. Existing marks stay taken, untracked.
+        await m.addColumn(intakeLogs, intakeLogs.status);
+        await m.addColumn(intakeLogs, intakeLogs.deductionsTracked);
+      }
+      if (from < 4) {
+        await m.createTable(intakeDeductions);
       }
     },
     beforeOpen: (details) async {

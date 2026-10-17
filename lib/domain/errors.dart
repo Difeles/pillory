@@ -45,3 +45,19 @@ class ScheduleNotFoundException implements Exception {
   @override
   String toString() => 'ScheduleNotFoundException: $scheduleId';
 }
+
+/// The mark cannot move to the requested state from its current one.
+class IntakeStateException implements Exception {
+  const IntakeStateException(this.message);
+  final String message;
+
+  @override
+  String toString() => 'IntakeStateException: $message';
+}
+
+/// A taken mark made before deductions were recorded: its stock cannot be
+/// restored exactly, so it cannot be undone.
+class UntrackedIntakeException extends IntakeStateException {
+  const UntrackedIntakeException()
+    : super('Списания для этой отметки не сохранены');
+}

@@ -1995,6 +1995,31 @@ class $IntakeLogsTable extends IntakeLogs
     requiredDuringInsert: false,
     defaultValue: const Constant(untimedSlot),
   );
+  @override
+  late final GeneratedColumnWithTypeConverter<IntakeStatus, String> status =
+      GeneratedColumn<String>(
+        'status',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: Constant(IntakeStatus.taken.name),
+      ).withConverter<IntakeStatus>($IntakeLogsTable.$converterstatus);
+  static const VerificationMeta _deductionsTrackedMeta = const VerificationMeta(
+    'deductionsTracked',
+  );
+  @override
+  late final GeneratedColumn<bool> deductionsTracked = GeneratedColumn<bool>(
+    'deductions_tracked',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deductions_tracked" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _takenAtMeta = const VerificationMeta(
     'takenAt',
   );
@@ -2007,7 +2032,15 @@ class $IntakeLogsTable extends IntakeLogs
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, scheduleId, day, slot, takenAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    scheduleId,
+    day,
+    slot,
+    status,
+    deductionsTracked,
+    takenAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2037,6 +2070,15 @@ class $IntakeLogsTable extends IntakeLogs
       context.handle(
         _slotMeta,
         slot.isAcceptableOrUnknown(data['slot']!, _slotMeta),
+      );
+    }
+    if (data.containsKey('deductions_tracked')) {
+      context.handle(
+        _deductionsTrackedMeta,
+        deductionsTracked.isAcceptableOrUnknown(
+          data['deductions_tracked']!,
+          _deductionsTrackedMeta,
+        ),
       );
     }
     if (data.containsKey('taken_at')) {
@@ -2078,6 +2120,16 @@ class $IntakeLogsTable extends IntakeLogs
         DriftSqlType.int,
         data['${effectivePrefix}slot'],
       )!,
+      status: $IntakeLogsTable.$converterstatus.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}status'],
+        )!,
+      ),
+      deductionsTracked: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deductions_tracked'],
+      )!,
       takenAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}taken_at'],
@@ -2092,6 +2144,8 @@ class $IntakeLogsTable extends IntakeLogs
 
   static TypeConverter<DateTime, String> $converterday =
       const DateOnlyConverter();
+  static JsonTypeConverter2<IntakeStatus, String, String> $converterstatus =
+      const EnumNameConverter<IntakeStatus>(IntakeStatus.values);
 }
 
 class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
@@ -2102,12 +2156,20 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
   /// Minutes from midnight of the taken intake, [untimedSlot] if untimed
   /// (not NULL, because NULLs never collide in a unique key).
   final int slot;
+  final IntakeStatus status;
+
+  /// Whether every stock deduction of this mark is in [IntakeDeductions].
+  /// False for marks made before deductions were recorded: they cannot be
+  /// undone, as the stock cannot be restored exactly.
+  final bool deductionsTracked;
   final DateTime takenAt;
   const IntakeLogRow({
     required this.id,
     required this.scheduleId,
     required this.day,
     required this.slot,
+    required this.status,
+    required this.deductionsTracked,
     required this.takenAt,
   });
   @override
@@ -2119,6 +2181,12 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       map['day'] = Variable<String>($IntakeLogsTable.$converterday.toSql(day));
     }
     map['slot'] = Variable<int>(slot);
+    {
+      map['status'] = Variable<String>(
+        $IntakeLogsTable.$converterstatus.toSql(status),
+      );
+    }
+    map['deductions_tracked'] = Variable<bool>(deductionsTracked);
     map['taken_at'] = Variable<DateTime>(takenAt);
     return map;
   }
@@ -2129,6 +2197,8 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       scheduleId: Value(scheduleId),
       day: Value(day),
       slot: Value(slot),
+      status: Value(status),
+      deductionsTracked: Value(deductionsTracked),
       takenAt: Value(takenAt),
     );
   }
@@ -2143,6 +2213,10 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       scheduleId: serializer.fromJson<String>(json['scheduleId']),
       day: serializer.fromJson<DateTime>(json['day']),
       slot: serializer.fromJson<int>(json['slot']),
+      status: $IntakeLogsTable.$converterstatus.fromJson(
+        serializer.fromJson<String>(json['status']),
+      ),
+      deductionsTracked: serializer.fromJson<bool>(json['deductionsTracked']),
       takenAt: serializer.fromJson<DateTime>(json['takenAt']),
     );
   }
@@ -2154,6 +2228,10 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       'scheduleId': serializer.toJson<String>(scheduleId),
       'day': serializer.toJson<DateTime>(day),
       'slot': serializer.toJson<int>(slot),
+      'status': serializer.toJson<String>(
+        $IntakeLogsTable.$converterstatus.toJson(status),
+      ),
+      'deductionsTracked': serializer.toJson<bool>(deductionsTracked),
       'takenAt': serializer.toJson<DateTime>(takenAt),
     };
   }
@@ -2163,12 +2241,16 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
     String? scheduleId,
     DateTime? day,
     int? slot,
+    IntakeStatus? status,
+    bool? deductionsTracked,
     DateTime? takenAt,
   }) => IntakeLogRow(
     id: id ?? this.id,
     scheduleId: scheduleId ?? this.scheduleId,
     day: day ?? this.day,
     slot: slot ?? this.slot,
+    status: status ?? this.status,
+    deductionsTracked: deductionsTracked ?? this.deductionsTracked,
     takenAt: takenAt ?? this.takenAt,
   );
   IntakeLogRow copyWithCompanion(IntakeLogsCompanion data) {
@@ -2179,6 +2261,10 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
           : this.scheduleId,
       day: data.day.present ? data.day.value : this.day,
       slot: data.slot.present ? data.slot.value : this.slot,
+      status: data.status.present ? data.status.value : this.status,
+      deductionsTracked: data.deductionsTracked.present
+          ? data.deductionsTracked.value
+          : this.deductionsTracked,
       takenAt: data.takenAt.present ? data.takenAt.value : this.takenAt,
     );
   }
@@ -2190,13 +2276,23 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
           ..write('scheduleId: $scheduleId, ')
           ..write('day: $day, ')
           ..write('slot: $slot, ')
+          ..write('status: $status, ')
+          ..write('deductionsTracked: $deductionsTracked, ')
           ..write('takenAt: $takenAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, scheduleId, day, slot, takenAt);
+  int get hashCode => Object.hash(
+    id,
+    scheduleId,
+    day,
+    slot,
+    status,
+    deductionsTracked,
+    takenAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2205,6 +2301,8 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
           other.scheduleId == this.scheduleId &&
           other.day == this.day &&
           other.slot == this.slot &&
+          other.status == this.status &&
+          other.deductionsTracked == this.deductionsTracked &&
           other.takenAt == this.takenAt);
 }
 
@@ -2213,6 +2311,8 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
   final Value<String> scheduleId;
   final Value<DateTime> day;
   final Value<int> slot;
+  final Value<IntakeStatus> status;
+  final Value<bool> deductionsTracked;
   final Value<DateTime> takenAt;
   final Value<int> rowid;
   const IntakeLogsCompanion({
@@ -2220,6 +2320,8 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     this.scheduleId = const Value.absent(),
     this.day = const Value.absent(),
     this.slot = const Value.absent(),
+    this.status = const Value.absent(),
+    this.deductionsTracked = const Value.absent(),
     this.takenAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2228,6 +2330,8 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     required String scheduleId,
     required DateTime day,
     this.slot = const Value.absent(),
+    this.status = const Value.absent(),
+    this.deductionsTracked = const Value.absent(),
     required DateTime takenAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2239,6 +2343,8 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     Expression<String>? scheduleId,
     Expression<String>? day,
     Expression<int>? slot,
+    Expression<String>? status,
+    Expression<bool>? deductionsTracked,
     Expression<DateTime>? takenAt,
     Expression<int>? rowid,
   }) {
@@ -2247,6 +2353,8 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
       if (scheduleId != null) 'schedule_id': scheduleId,
       if (day != null) 'day': day,
       if (slot != null) 'slot': slot,
+      if (status != null) 'status': status,
+      if (deductionsTracked != null) 'deductions_tracked': deductionsTracked,
       if (takenAt != null) 'taken_at': takenAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2257,6 +2365,8 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     Value<String>? scheduleId,
     Value<DateTime>? day,
     Value<int>? slot,
+    Value<IntakeStatus>? status,
+    Value<bool>? deductionsTracked,
     Value<DateTime>? takenAt,
     Value<int>? rowid,
   }) {
@@ -2265,6 +2375,8 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
       scheduleId: scheduleId ?? this.scheduleId,
       day: day ?? this.day,
       slot: slot ?? this.slot,
+      status: status ?? this.status,
+      deductionsTracked: deductionsTracked ?? this.deductionsTracked,
       takenAt: takenAt ?? this.takenAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2287,6 +2399,14 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     if (slot.present) {
       map['slot'] = Variable<int>(slot.value);
     }
+    if (status.present) {
+      map['status'] = Variable<String>(
+        $IntakeLogsTable.$converterstatus.toSql(status.value),
+      );
+    }
+    if (deductionsTracked.present) {
+      map['deductions_tracked'] = Variable<bool>(deductionsTracked.value);
+    }
     if (takenAt.present) {
       map['taken_at'] = Variable<DateTime>(takenAt.value);
     }
@@ -2303,7 +2423,386 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
           ..write('scheduleId: $scheduleId, ')
           ..write('day: $day, ')
           ..write('slot: $slot, ')
+          ..write('status: $status, ')
+          ..write('deductionsTracked: $deductionsTracked, ')
           ..write('takenAt: $takenAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $IntakeDeductionsTable extends IntakeDeductions
+    with TableInfo<$IntakeDeductionsTable, IntakeDeductionRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $IntakeDeductionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _intakeLogIdMeta = const VerificationMeta(
+    'intakeLogId',
+  );
+  @override
+  late final GeneratedColumn<String> intakeLogId = GeneratedColumn<String>(
+    'intake_log_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES intake_logs (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _packageIdMeta = const VerificationMeta(
+    'packageId',
+  );
+  @override
+  late final GeneratedColumn<String> packageId = GeneratedColumn<String>(
+    'package_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES medicine_packages (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    check: () => ComparableExpr(amount).isBiggerThanValue(0),
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _restoredAtMeta = const VerificationMeta(
+    'restoredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> restoredAt = GeneratedColumn<DateTime>(
+    'restored_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    intakeLogId,
+    packageId,
+    amount,
+    restoredAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'intake_deductions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<IntakeDeductionRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('intake_log_id')) {
+      context.handle(
+        _intakeLogIdMeta,
+        intakeLogId.isAcceptableOrUnknown(
+          data['intake_log_id']!,
+          _intakeLogIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_intakeLogIdMeta);
+    }
+    if (data.containsKey('package_id')) {
+      context.handle(
+        _packageIdMeta,
+        packageId.isAcceptableOrUnknown(data['package_id']!, _packageIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packageIdMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('restored_at')) {
+      context.handle(
+        _restoredAtMeta,
+        restoredAt.isAcceptableOrUnknown(data['restored_at']!, _restoredAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  IntakeDeductionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return IntakeDeductionRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      intakeLogId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}intake_log_id'],
+      )!,
+      packageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}package_id'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      restoredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}restored_at'],
+      ),
+    );
+  }
+
+  @override
+  $IntakeDeductionsTable createAlias(String alias) {
+    return $IntakeDeductionsTable(attachedDatabase, alias);
+  }
+}
+
+class IntakeDeductionRow extends DataClass
+    implements Insertable<IntakeDeductionRow> {
+  final String id;
+  final String intakeLogId;
+  final String packageId;
+  final double amount;
+  final DateTime? restoredAt;
+  const IntakeDeductionRow({
+    required this.id,
+    required this.intakeLogId,
+    required this.packageId,
+    required this.amount,
+    this.restoredAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['intake_log_id'] = Variable<String>(intakeLogId);
+    map['package_id'] = Variable<String>(packageId);
+    map['amount'] = Variable<double>(amount);
+    if (!nullToAbsent || restoredAt != null) {
+      map['restored_at'] = Variable<DateTime>(restoredAt);
+    }
+    return map;
+  }
+
+  IntakeDeductionsCompanion toCompanion(bool nullToAbsent) {
+    return IntakeDeductionsCompanion(
+      id: Value(id),
+      intakeLogId: Value(intakeLogId),
+      packageId: Value(packageId),
+      amount: Value(amount),
+      restoredAt: restoredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(restoredAt),
+    );
+  }
+
+  factory IntakeDeductionRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return IntakeDeductionRow(
+      id: serializer.fromJson<String>(json['id']),
+      intakeLogId: serializer.fromJson<String>(json['intakeLogId']),
+      packageId: serializer.fromJson<String>(json['packageId']),
+      amount: serializer.fromJson<double>(json['amount']),
+      restoredAt: serializer.fromJson<DateTime?>(json['restoredAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'intakeLogId': serializer.toJson<String>(intakeLogId),
+      'packageId': serializer.toJson<String>(packageId),
+      'amount': serializer.toJson<double>(amount),
+      'restoredAt': serializer.toJson<DateTime?>(restoredAt),
+    };
+  }
+
+  IntakeDeductionRow copyWith({
+    String? id,
+    String? intakeLogId,
+    String? packageId,
+    double? amount,
+    Value<DateTime?> restoredAt = const Value.absent(),
+  }) => IntakeDeductionRow(
+    id: id ?? this.id,
+    intakeLogId: intakeLogId ?? this.intakeLogId,
+    packageId: packageId ?? this.packageId,
+    amount: amount ?? this.amount,
+    restoredAt: restoredAt.present ? restoredAt.value : this.restoredAt,
+  );
+  IntakeDeductionRow copyWithCompanion(IntakeDeductionsCompanion data) {
+    return IntakeDeductionRow(
+      id: data.id.present ? data.id.value : this.id,
+      intakeLogId: data.intakeLogId.present
+          ? data.intakeLogId.value
+          : this.intakeLogId,
+      packageId: data.packageId.present ? data.packageId.value : this.packageId,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      restoredAt: data.restoredAt.present
+          ? data.restoredAt.value
+          : this.restoredAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IntakeDeductionRow(')
+          ..write('id: $id, ')
+          ..write('intakeLogId: $intakeLogId, ')
+          ..write('packageId: $packageId, ')
+          ..write('amount: $amount, ')
+          ..write('restoredAt: $restoredAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, intakeLogId, packageId, amount, restoredAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IntakeDeductionRow &&
+          other.id == this.id &&
+          other.intakeLogId == this.intakeLogId &&
+          other.packageId == this.packageId &&
+          other.amount == this.amount &&
+          other.restoredAt == this.restoredAt);
+}
+
+class IntakeDeductionsCompanion extends UpdateCompanion<IntakeDeductionRow> {
+  final Value<String> id;
+  final Value<String> intakeLogId;
+  final Value<String> packageId;
+  final Value<double> amount;
+  final Value<DateTime?> restoredAt;
+  final Value<int> rowid;
+  const IntakeDeductionsCompanion({
+    this.id = const Value.absent(),
+    this.intakeLogId = const Value.absent(),
+    this.packageId = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.restoredAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  IntakeDeductionsCompanion.insert({
+    required String id,
+    required String intakeLogId,
+    required String packageId,
+    required double amount,
+    this.restoredAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       intakeLogId = Value(intakeLogId),
+       packageId = Value(packageId),
+       amount = Value(amount);
+  static Insertable<IntakeDeductionRow> custom({
+    Expression<String>? id,
+    Expression<String>? intakeLogId,
+    Expression<String>? packageId,
+    Expression<double>? amount,
+    Expression<DateTime>? restoredAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (intakeLogId != null) 'intake_log_id': intakeLogId,
+      if (packageId != null) 'package_id': packageId,
+      if (amount != null) 'amount': amount,
+      if (restoredAt != null) 'restored_at': restoredAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  IntakeDeductionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? intakeLogId,
+    Value<String>? packageId,
+    Value<double>? amount,
+    Value<DateTime?>? restoredAt,
+    Value<int>? rowid,
+  }) {
+    return IntakeDeductionsCompanion(
+      id: id ?? this.id,
+      intakeLogId: intakeLogId ?? this.intakeLogId,
+      packageId: packageId ?? this.packageId,
+      amount: amount ?? this.amount,
+      restoredAt: restoredAt ?? this.restoredAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (intakeLogId.present) {
+      map['intake_log_id'] = Variable<String>(intakeLogId.value);
+    }
+    if (packageId.present) {
+      map['package_id'] = Variable<String>(packageId.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (restoredAt.present) {
+      map['restored_at'] = Variable<DateTime>(restoredAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IntakeDeductionsCompanion(')
+          ..write('id: $id, ')
+          ..write('intakeLogId: $intakeLogId, ')
+          ..write('packageId: $packageId, ')
+          ..write('amount: $amount, ')
+          ..write('restoredAt: $restoredAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2321,6 +2820,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $InventoryTransactionsTable(this);
   late final $SchedulesTable schedules = $SchedulesTable(this);
   late final $IntakeLogsTable intakeLogs = $IntakeLogsTable(this);
+  late final $IntakeDeductionsTable intakeDeductions = $IntakeDeductionsTable(
+    this,
+  );
   late final Index idxPackagesMedicine = Index(
     'idx_packages_medicine',
     'CREATE INDEX idx_packages_medicine ON medicine_packages (medicine_id)',
@@ -2333,6 +2835,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_schedules_medicine',
     'CREATE INDEX idx_schedules_medicine ON schedules (medicine_id)',
   );
+  late final Index idxDeductionsLog = Index(
+    'idx_deductions_log',
+    'CREATE INDEX idx_deductions_log ON intake_deductions (intake_log_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2343,9 +2849,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     inventoryTransactions,
     schedules,
     intakeLogs,
+    intakeDeductions,
     idxPackagesMedicine,
     idxTransactionsPackage,
     idxSchedulesMedicine,
+    idxDeductionsLog,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -2376,6 +2884,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('intake_logs', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'intake_logs',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('intake_deductions', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'medicine_packages',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('intake_deductions', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -2857,6 +3379,26 @@ final class $$MedicinePackagesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$IntakeDeductionsTable, List<IntakeDeductionRow>>
+  _intakeDeductionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.intakeDeductions,
+    aliasName: 'medicine_packages__id__intake_deductions__package_id',
+  );
+
+  $$IntakeDeductionsTableProcessedTableManager get intakeDeductionsRefs {
+    final manager = $$IntakeDeductionsTableTableManager(
+      $_db,
+      $_db.intakeDeductions,
+    ).filter((f) => f.packageId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _intakeDeductionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$MedicinePackagesTableFilterComposer
@@ -2945,6 +3487,31 @@ class $$MedicinePackagesTableFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> intakeDeductionsRefs(
+    Expression<bool> Function($$IntakeDeductionsTableFilterComposer f) f,
+  ) {
+    final $$IntakeDeductionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.intakeDeductions,
+      getReferencedColumn: (t) => t.packageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IntakeDeductionsTableFilterComposer(
+            $db: $db,
+            $table: $db.intakeDeductions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -3089,6 +3656,31 @@ class $$MedicinePackagesTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> intakeDeductionsRefs<T extends Object>(
+    Expression<T> Function($$IntakeDeductionsTableAnnotationComposer a) f,
+  ) {
+    final $$IntakeDeductionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.intakeDeductions,
+      getReferencedColumn: (t) => t.packageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IntakeDeductionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.intakeDeductions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$MedicinePackagesTableTableManager
@@ -3107,6 +3699,7 @@ class $$MedicinePackagesTableTableManager
           PrefetchHooks Function({
             bool medicineId,
             bool inventoryTransactionsRefs,
+            bool intakeDeductionsRefs,
           })
         > {
   $$MedicinePackagesTableTableManager(
@@ -3173,11 +3766,16 @@ class $$MedicinePackagesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({medicineId = false, inventoryTransactionsRefs = false}) {
+              ({
+                medicineId = false,
+                inventoryTransactionsRefs = false,
+                intakeDeductionsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (inventoryTransactionsRefs) db.inventoryTransactions,
+                    if (intakeDeductionsRefs) db.intakeDeductions,
                   ],
                   addJoins:
                       <
@@ -3232,6 +3830,27 @@ class $$MedicinePackagesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (intakeDeductionsRefs)
+                        await $_getPrefetchedData<
+                          MedicinePackageRow,
+                          $MedicinePackagesTable,
+                          IntakeDeductionRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$MedicinePackagesTableReferences
+                              ._intakeDeductionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$MedicinePackagesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).intakeDeductionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.packageId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -3252,7 +3871,11 @@ typedef $$MedicinePackagesTableProcessedTableManager =
       $$MedicinePackagesTableUpdateCompanionBuilder,
       (MedicinePackageRow, $$MedicinePackagesTableReferences),
       MedicinePackageRow,
-      PrefetchHooks Function({bool medicineId, bool inventoryTransactionsRefs})
+      PrefetchHooks Function({
+        bool medicineId,
+        bool inventoryTransactionsRefs,
+        bool intakeDeductionsRefs,
+      })
     >;
 typedef $$InventoryTransactionsTableCreateCompanionBuilder =
     InventoryTransactionsCompanion Function({
@@ -4141,6 +4764,8 @@ typedef $$IntakeLogsTableCreateCompanionBuilder = IntakeLogsCompanion Function({
   required String scheduleId,
   required DateTime day,
   Value<int> slot,
+  Value<IntakeStatus> status,
+  Value<bool> deductionsTracked,
   required DateTime takenAt,
   Value<int> rowid,
 });
@@ -4149,6 +4774,8 @@ typedef $$IntakeLogsTableUpdateCompanionBuilder = IntakeLogsCompanion Function({
   Value<String> scheduleId,
   Value<DateTime> day,
   Value<int> slot,
+  Value<IntakeStatus> status,
+  Value<bool> deductionsTracked,
   Value<DateTime> takenAt,
   Value<int> rowid,
 });
@@ -4171,6 +4798,26 @@ final class $$IntakeLogsTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$IntakeDeductionsTable, List<IntakeDeductionRow>>
+  _intakeDeductionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.intakeDeductions,
+    aliasName: 'intake_logs__id__intake_deductions__intake_log_id',
+  );
+
+  $$IntakeDeductionsTableProcessedTableManager get intakeDeductionsRefs {
+    final manager = $$IntakeDeductionsTableTableManager(
+      $_db,
+      $_db.intakeDeductions,
+    ).filter((f) => f.intakeLogId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _intakeDeductionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -4197,6 +4844,17 @@ class $$IntakeLogsTableFilterComposer
 
   ColumnFilters<int> get slot => $composableBuilder(
     column: $table.slot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<IntakeStatus, IntakeStatus, String>
+  get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<bool> get deductionsTracked => $composableBuilder(
+    column: $table.deductionsTracked,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4227,6 +4885,31 @@ class $$IntakeLogsTableFilterComposer
     );
     return composer;
   }
+
+  Expression<bool> intakeDeductionsRefs(
+    Expression<bool> Function($$IntakeDeductionsTableFilterComposer f) f,
+  ) {
+    final $$IntakeDeductionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.intakeDeductions,
+      getReferencedColumn: (t) => t.intakeLogId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IntakeDeductionsTableFilterComposer(
+            $db: $db,
+            $table: $db.intakeDeductions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$IntakeLogsTableOrderingComposer
@@ -4250,6 +4933,16 @@ class $$IntakeLogsTableOrderingComposer
 
   ColumnOrderings<int> get slot => $composableBuilder(
     column: $table.slot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deductionsTracked => $composableBuilder(
+    column: $table.deductionsTracked,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -4300,6 +4993,14 @@ class $$IntakeLogsTableAnnotationComposer
   GeneratedColumn<int> get slot =>
       $composableBuilder(column: $table.slot, builder: (column) => column);
 
+  GeneratedColumnWithTypeConverter<IntakeStatus, String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<bool> get deductionsTracked => $composableBuilder(
+    column: $table.deductionsTracked,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get takenAt =>
       $composableBuilder(column: $table.takenAt, builder: (column) => column);
 
@@ -4325,6 +5026,31 @@ class $$IntakeLogsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> intakeDeductionsRefs<T extends Object>(
+    Expression<T> Function($$IntakeDeductionsTableAnnotationComposer a) f,
+  ) {
+    final $$IntakeDeductionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.intakeDeductions,
+      getReferencedColumn: (t) => t.intakeLogId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IntakeDeductionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.intakeDeductions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$IntakeLogsTableTableManager
@@ -4340,7 +5066,7 @@ class $$IntakeLogsTableTableManager
           $$IntakeLogsTableUpdateCompanionBuilder,
           (IntakeLogRow, $$IntakeLogsTableReferences),
           IntakeLogRow,
-          PrefetchHooks Function({bool scheduleId})
+          PrefetchHooks Function({bool scheduleId, bool intakeDeductionsRefs})
         > {
   $$IntakeLogsTableTableManager(_$AppDatabase db, $IntakeLogsTable table)
     : super(
@@ -4359,6 +5085,8 @@ class $$IntakeLogsTableTableManager
                 Value<String> scheduleId = const Value.absent(),
                 Value<DateTime> day = const Value.absent(),
                 Value<int> slot = const Value.absent(),
+                Value<IntakeStatus> status = const Value.absent(),
+                Value<bool> deductionsTracked = const Value.absent(),
                 Value<DateTime> takenAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => IntakeLogsCompanion(
@@ -4366,6 +5094,8 @@ class $$IntakeLogsTableTableManager
                 scheduleId: scheduleId,
                 day: day,
                 slot: slot,
+                status: status,
+                deductionsTracked: deductionsTracked,
                 takenAt: takenAt,
                 rowid: rowid,
               ),
@@ -4375,6 +5105,8 @@ class $$IntakeLogsTableTableManager
                 required String scheduleId,
                 required DateTime day,
                 Value<int> slot = const Value.absent(),
+                Value<IntakeStatus> status = const Value.absent(),
+                Value<bool> deductionsTracked = const Value.absent(),
                 required DateTime takenAt,
                 Value<int> rowid = const Value.absent(),
               }) => IntakeLogsCompanion.insert(
@@ -4382,6 +5114,8 @@ class $$IntakeLogsTableTableManager
                 scheduleId: scheduleId,
                 day: day,
                 slot: slot,
+                status: status,
+                deductionsTracked: deductionsTracked,
                 takenAt: takenAt,
                 rowid: rowid,
               ),
@@ -4393,7 +5127,436 @@ class $$IntakeLogsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({scheduleId = false}) {
+          prefetchHooksCallback:
+              ({scheduleId = false, intakeDeductionsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (intakeDeductionsRefs) db.intakeDeductions,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (scheduleId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.scheduleId,
+                            referencedTable: $$IntakeLogsTableReferences
+                                ._scheduleIdTable(db),
+                            referencedColumn: $$IntakeLogsTableReferences
+                                ._scheduleIdTable(db)
+                                .id,
+                          ) as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (intakeDeductionsRefs)
+                        await $_getPrefetchedData<
+                          IntakeLogRow,
+                          $IntakeLogsTable,
+                          IntakeDeductionRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$IntakeLogsTableReferences
+                              ._intakeDeductionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$IntakeLogsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).intakeDeductionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.intakeLogId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$IntakeLogsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $IntakeLogsTable,
+      IntakeLogRow,
+      $$IntakeLogsTableFilterComposer,
+      $$IntakeLogsTableOrderingComposer,
+      $$IntakeLogsTableAnnotationComposer,
+      $$IntakeLogsTableCreateCompanionBuilder,
+      $$IntakeLogsTableUpdateCompanionBuilder,
+      (IntakeLogRow, $$IntakeLogsTableReferences),
+      IntakeLogRow,
+      PrefetchHooks Function({bool scheduleId, bool intakeDeductionsRefs})
+    >;
+typedef $$IntakeDeductionsTableCreateCompanionBuilder =
+    IntakeDeductionsCompanion Function({
+      required String id,
+      required String intakeLogId,
+      required String packageId,
+      required double amount,
+      Value<DateTime?> restoredAt,
+      Value<int> rowid,
+    });
+typedef $$IntakeDeductionsTableUpdateCompanionBuilder =
+    IntakeDeductionsCompanion Function({
+      Value<String> id,
+      Value<String> intakeLogId,
+      Value<String> packageId,
+      Value<double> amount,
+      Value<DateTime?> restoredAt,
+      Value<int> rowid,
+    });
+
+final class $$IntakeDeductionsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $IntakeDeductionsTable,
+          IntakeDeductionRow
+        > {
+  $$IntakeDeductionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $IntakeLogsTable _intakeLogIdTable(_$AppDatabase db) => db.intakeLogs
+      .createAlias('intake_deductions__intake_log_id__intake_logs__id');
+
+  $$IntakeLogsTableProcessedTableManager get intakeLogId {
+    final $_column = $_itemColumn<String>('intake_log_id')!;
+
+    final manager = $$IntakeLogsTableTableManager(
+      $_db,
+      $_db.intakeLogs,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_intakeLogIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $MedicinePackagesTable _packageIdTable(_$AppDatabase db) => db
+      .medicinePackages
+      .createAlias('intake_deductions__package_id__medicine_packages__id');
+
+  $$MedicinePackagesTableProcessedTableManager get packageId {
+    final $_column = $_itemColumn<String>('package_id')!;
+
+    final manager = $$MedicinePackagesTableTableManager(
+      $_db,
+      $_db.medicinePackages,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_packageIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$IntakeDeductionsTableFilterComposer
+    extends Composer<_$AppDatabase, $IntakeDeductionsTable> {
+  $$IntakeDeductionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get restoredAt => $composableBuilder(
+    column: $table.restoredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$IntakeLogsTableFilterComposer get intakeLogId {
+    final $$IntakeLogsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.intakeLogId,
+      referencedTable: $db.intakeLogs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IntakeLogsTableFilterComposer(
+            $db: $db,
+            $table: $db.intakeLogs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MedicinePackagesTableFilterComposer get packageId {
+    final $$MedicinePackagesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.packageId,
+      referencedTable: $db.medicinePackages,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MedicinePackagesTableFilterComposer(
+            $db: $db,
+            $table: $db.medicinePackages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$IntakeDeductionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $IntakeDeductionsTable> {
+  $$IntakeDeductionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get restoredAt => $composableBuilder(
+    column: $table.restoredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$IntakeLogsTableOrderingComposer get intakeLogId {
+    final $$IntakeLogsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.intakeLogId,
+      referencedTable: $db.intakeLogs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IntakeLogsTableOrderingComposer(
+            $db: $db,
+            $table: $db.intakeLogs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MedicinePackagesTableOrderingComposer get packageId {
+    final $$MedicinePackagesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.packageId,
+      referencedTable: $db.medicinePackages,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MedicinePackagesTableOrderingComposer(
+            $db: $db,
+            $table: $db.medicinePackages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$IntakeDeductionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $IntakeDeductionsTable> {
+  $$IntakeDeductionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get restoredAt => $composableBuilder(
+    column: $table.restoredAt,
+    builder: (column) => column,
+  );
+
+  $$IntakeLogsTableAnnotationComposer get intakeLogId {
+    final $$IntakeLogsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.intakeLogId,
+      referencedTable: $db.intakeLogs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IntakeLogsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.intakeLogs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MedicinePackagesTableAnnotationComposer get packageId {
+    final $$MedicinePackagesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.packageId,
+      referencedTable: $db.medicinePackages,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MedicinePackagesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.medicinePackages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$IntakeDeductionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $IntakeDeductionsTable,
+          IntakeDeductionRow,
+          $$IntakeDeductionsTableFilterComposer,
+          $$IntakeDeductionsTableOrderingComposer,
+          $$IntakeDeductionsTableAnnotationComposer,
+          $$IntakeDeductionsTableCreateCompanionBuilder,
+          $$IntakeDeductionsTableUpdateCompanionBuilder,
+          (IntakeDeductionRow, $$IntakeDeductionsTableReferences),
+          IntakeDeductionRow,
+          PrefetchHooks Function({bool intakeLogId, bool packageId})
+        > {
+  $$IntakeDeductionsTableTableManager(
+    _$AppDatabase db,
+    $IntakeDeductionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$IntakeDeductionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$IntakeDeductionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$IntakeDeductionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> intakeLogId = const Value.absent(),
+                Value<String> packageId = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<DateTime?> restoredAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => IntakeDeductionsCompanion(
+                id: id,
+                intakeLogId: intakeLogId,
+                packageId: packageId,
+                amount: amount,
+                restoredAt: restoredAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String intakeLogId,
+                required String packageId,
+                required double amount,
+                Value<DateTime?> restoredAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => IntakeDeductionsCompanion.insert(
+                id: id,
+                intakeLogId: intakeLogId,
+                packageId: packageId,
+                amount: amount,
+                restoredAt: restoredAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$IntakeDeductionsTable, IntakeDeductionRow>(
+                    table,
+                  ),
+                  $$IntakeDeductionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({intakeLogId = false, packageId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -4413,14 +5576,25 @@ class $$IntakeLogsTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (scheduleId) {
+                    if (intakeLogId) {
                       state = state.withJoin(
                         currentTable: table,
-                        currentColumn: table.scheduleId,
-                        referencedTable: $$IntakeLogsTableReferences
-                            ._scheduleIdTable(db),
-                        referencedColumn: $$IntakeLogsTableReferences
-                            ._scheduleIdTable(db)
+                        currentColumn: table.intakeLogId,
+                        referencedTable: $$IntakeDeductionsTableReferences
+                            ._intakeLogIdTable(db),
+                        referencedColumn: $$IntakeDeductionsTableReferences
+                            ._intakeLogIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+                    if (packageId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.packageId,
+                        referencedTable: $$IntakeDeductionsTableReferences
+                            ._packageIdTable(db),
+                        referencedColumn: $$IntakeDeductionsTableReferences
+                            ._packageIdTable(db)
                             .id,
                       ) as T;
                     }
@@ -4436,19 +5610,19 @@ class $$IntakeLogsTableTableManager
       );
 }
 
-typedef $$IntakeLogsTableProcessedTableManager =
+typedef $$IntakeDeductionsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $IntakeLogsTable,
-      IntakeLogRow,
-      $$IntakeLogsTableFilterComposer,
-      $$IntakeLogsTableOrderingComposer,
-      $$IntakeLogsTableAnnotationComposer,
-      $$IntakeLogsTableCreateCompanionBuilder,
-      $$IntakeLogsTableUpdateCompanionBuilder,
-      (IntakeLogRow, $$IntakeLogsTableReferences),
-      IntakeLogRow,
-      PrefetchHooks Function({bool scheduleId})
+      $IntakeDeductionsTable,
+      IntakeDeductionRow,
+      $$IntakeDeductionsTableFilterComposer,
+      $$IntakeDeductionsTableOrderingComposer,
+      $$IntakeDeductionsTableAnnotationComposer,
+      $$IntakeDeductionsTableCreateCompanionBuilder,
+      $$IntakeDeductionsTableUpdateCompanionBuilder,
+      (IntakeDeductionRow, $$IntakeDeductionsTableReferences),
+      IntakeDeductionRow,
+      PrefetchHooks Function({bool intakeLogId, bool packageId})
     >;
 
 class $AppDatabaseManager {
@@ -4464,4 +5638,6 @@ class $AppDatabaseManager {
       $$SchedulesTableTableManager(_db, _db.schedules);
   $$IntakeLogsTableTableManager get intakeLogs =>
       $$IntakeLogsTableTableManager(_db, _db.intakeLogs);
+  $$IntakeDeductionsTableTableManager get intakeDeductions =>
+      $$IntakeDeductionsTableTableManager(_db, _db.intakeDeductions);
 }

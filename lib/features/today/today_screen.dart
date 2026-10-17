@@ -8,6 +8,7 @@ import '../../domain/inventory_rules.dart';
 import '../../domain/schedule.dart';
 import '../inventory/format.dart';
 import 'add_intake_screen.dart';
+import 'history_screen.dart';
 import 'today_providers.dart';
 
 const _months = [
@@ -61,6 +62,22 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     }
   }
 
+  Future<void> _skip(DayIntake i) => ref
+      .read(scheduleRepositoryProvider)
+      .markSkipped(
+        scheduleId: i.schedule.id,
+        day: _day,
+        minuteOfDay: i.minuteOfDay,
+      );
+
+  Future<void> _reset(DayIntake i) => ref
+      .read(scheduleRepositoryProvider)
+      .resetMark(
+        scheduleId: i.schedule.id,
+        day: _day,
+        minuteOfDay: i.minuteOfDay,
+      );
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
@@ -68,7 +85,18 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     final isToday = _day == today;
     final intakes = ref.watch(dayIntakesProvider(_day));
     return Scaffold(
-      appBar: AppBar(title: const Text('Приём')),
+      appBar: AppBar(
+        title: const Text('Приём'),
+        actions: [
+          IconButton(
+            tooltip: 'История',
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const HistoryScreen()),
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -116,6 +144,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                             // Marking a future dose as taken makes no sense.
                             canMark: !_day.isAfter(today),
                             onTake: () => _take(i),
+                            onSkip: () => _skip(i),
+                            onReset: () => _reset(i),
                           ),
                       ],
                     ),
@@ -141,11 +171,15 @@ class _IntakeCard extends StatelessWidget {
     required this.intake,
     required this.canMark,
     required this.onTake,
+    required this.onSkip,
+    required this.onReset,
   });
 
   final DayIntake intake;
   final bool canMark;
   final VoidCallback onTake;
+  final VoidCallback onSkip;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -160,9 +194,13 @@ class _IntakeCard extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: kMinTapSize),
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: intake.taken ? AppColors.primaryLight : AppColors.surface,
+          color: intake.status != IntakeStatus.pending
+              ? AppColors.primaryLight
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadii.lg),
-          boxShadow: intake.taken ? null : AppShadows.card,
+          boxShadow: intake.status != IntakeStatus.pending
+              ? null
+              : AppShadows.card,
         ),
         child: Row(
           children: [
@@ -180,26 +218,58 @@ class _IntakeCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (intake.taken)
-              const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle, color: AppColors.success),
-                  SizedBox(width: AppSpacing.xs),
-                  Text('Принято'),
-                ],
-              )
-            else
+            if (intake.status == IntakeStatus.pending) ...[
+              IconButton(
+                tooltip: 'Пропустить',
+                icon: const Icon(Icons.skip_next),
+                onPressed: canMark ? onSkip : null,
+              ),
               FilledButton(
                 onPressed: canMark ? onTake : null,
                 child: const Text('Принято'),
               ),
+            ] else ...[
+              intakeStatusLabel(intake.status),
+              if (intake.canReset)
+                IconButton(
+                  tooltip: 'Отменить отметку',
+                  icon: const Icon(Icons.undo),
+                  onPressed: onReset,
+                ),
+            ],
           ],
         ),
       ),
     );
   }
 }
+
+/// Icon and name of a mark; shared by the day and history screens.
+Widget intakeStatusLabel(IntakeStatus status) => Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    switch (status) {
+      IntakeStatus.taken => const Icon(
+        Icons.check_circle,
+        color: AppColors.success,
+      ),
+      IntakeStatus.skipped => const Icon(
+        Icons.remove_circle_outline,
+        color: AppColors.textSecondary,
+      ),
+      IntakeStatus.pending => const Icon(
+        Icons.radio_button_unchecked,
+        color: AppColors.textSecondary,
+      ),
+    },
+    const SizedBox(width: AppSpacing.xs),
+    Text(switch (status) {
+      IntakeStatus.taken => 'Принято',
+      IntakeStatus.skipped => 'Пропущено',
+      IntakeStatus.pending => 'Не отмечено',
+    }),
+  ],
+);
 
 class _Empty extends StatelessWidget {
   const _Empty();

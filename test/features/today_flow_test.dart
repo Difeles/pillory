@@ -4,24 +4,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pillory/app/app.dart';
 import 'package:pillory/app/providers.dart';
 import 'package:pillory/domain/models.dart';
+import 'package:pillory/domain/schedule.dart';
 
 import '../support/fake_inventory_repository.dart';
 
 void main() {
   late FakeInventoryRepository inventory;
+  late FakeScheduleRepository schedules;
 
   Future<void> pumpApp(WidgetTester tester) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     inventory = FakeInventoryRepository();
+    schedules = FakeScheduleRepository(inventory);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           inventoryRepositoryProvider.overrideWithValue(inventory),
-          scheduleRepositoryProvider.overrideWithValue(
-            FakeScheduleRepository(inventory),
-          ),
+          scheduleRepositoryProvider.overrideWithValue(schedules),
         ],
         child: const PilloryApp(),
       ),
@@ -177,5 +178,45 @@ void main() {
       tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Вт')).selected,
       isTrue,
     );
+  });
+
+  testWidgets('skip, undo and history show statuses', (tester) async {
+    await pumpApp(tester);
+    final id = await inventory.createMedicine(
+      const NewMedicine(name: 'Аспирин', initialQuantity: 5, unit: 'шт.'),
+    );
+    await schedules.createSchedule(
+      NewSchedule(
+        medicineId: id,
+        kind: ScheduleKind.daily,
+        dose: 1,
+        doseUnit: 'шт.',
+        startDate: DateTime.now(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Пропустить'));
+    await tester.pumpAndSettle();
+    expect(find.text('Пропущено'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Отменить отметку'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Принято'));
+    await tester.pumpAndSettle();
+    expect(find.text('Принято'), findsOneWidget);
+    expect((await inventory.watchStock().first).single.totalQuantity, 4);
+
+    await tester.tap(find.byTooltip('Отменить отметку'));
+    await tester.pumpAndSettle();
+    expect((await inventory.watchStock().first).single.totalQuantity, 5);
+    expect(find.byTooltip('Пропустить'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Пропустить'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('История'));
+    await tester.pumpAndSettle();
+    expect(find.text('Пропущено'), findsOneWidget);
+    expect(find.textContaining('Аспирин'), findsOneWidget);
   });
 }

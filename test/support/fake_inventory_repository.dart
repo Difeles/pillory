@@ -111,32 +111,63 @@ class FakeScheduleRepository implements ScheduleRepository {
 
   final FakeInventoryRepository _inventory;
   final _schedules = <Schedule>[];
-  final _taken = <String, DateTime>{}; // "scheduleId|yyyy-MM-dd" -> takenAt
+  final _marks = <String, IntakeStatus>{};
+  // Marks made "before deductions were recorded": cannot be undone.
+  final _untracked = <String>{};
+  final _deductions = <String, List<({String packageId, double amount})>>{};
   final _changes = StreamController<void>.broadcast(sync: true);
 
   String _key(String id, DateTime day, int? minute) =>
       '$id|${dateOnly(day)}|$minute';
 
+  /// Test hook: a taken mark as made before v4.
+  void markLegacyTaken(String scheduleId, DateTime day, [int? minute]) {
+    final k = _key(scheduleId, day, minute);
+    _marks[k] = IntakeStatus.taken;
+    _untracked.add(k);
+    _changes.add(null);
+  }
+
+  Future<List<DayIntake>> _snapshot(DateTime day) async {
+    final stock = await _inventory.watchStock().first;
+    return [
+      for (final s in _schedules)
+        if (occursOn(s, day))
+          for (final slot in slotsOf(s))
+            DayIntake(
+              schedule: s,
+              medicineName: stock
+                  .firstWhere((m) => m.medicine.id == s.medicineId)
+                  .medicine
+                  .name,
+              minuteOfDay: slot,
+              status: _marks[_key(s.id, day, slot)] ?? IntakeStatus.pending,
+              deductionsTracked: !_untracked.contains(_key(s.id, day, slot)),
+            ),
+    ]..sort(compareIntakes);
+  }
+
   @override
   Stream<List<DayIntake>> watchDay(DateTime day) async* {
-    Future<List<DayIntake>> snapshot() async {
-      final stock = await _inventory.watchStock().first;
-      return [
-        for (final s in _schedules)
-          if (occursOn(s, day))
-            for (final slot in slotsOf(s))
-              DayIntake(
-                schedule: s,
-                medicineName: stock
-                    .firstWhere((m) => m.medicine.id == s.medicineId)
-                    .medicine
-                    .name,
-                minuteOfDay: slot,
-                takenAt: _taken[_key(s.id, day, slot)],
-              ),
-      ]..sort(compareIntakes);
+    yield await _snapshot(day);
+    await for (final _ in _changes.stream) {
+      yield await _snapshot(day);
     }
+  }
 
+  @override
+  Stream<Map<DateTime, List<DayIntake>>> watchHistory(
+    DateTime from,
+    DateTime to,
+  ) async* {
+    Future<Map<DateTime, List<DayIntake>>> snapshot() async => {
+      for (
+        var d = dateOnly(from);
+        !d.isAfter(to);
+        d = DateTime(d.year, d.month, d.day + 1)
+      )
+        if ((await _snapshot(d)) case final l when l.isNotEmpty) d: l,
+    };
     yield await snapshot();
     await for (final _ in _changes.stream) {
       yield await snapshot();
@@ -171,18 +202,56 @@ class FakeScheduleRepository implements ScheduleRepository {
     int? minuteOfDay,
   }) async {
     final s = _schedules.firstWhere((s) => s.id == scheduleId);
-    if (_taken.containsKey(_key(scheduleId, day, minuteOfDay))) return;
+    final k = _key(scheduleId, day, minuteOfDay);
+    if (_marks[k] == IntakeStatus.taken) return;
     final stock = await _inventory.watchStock().first;
     final packages = stock
         .firstWhere((m) => m.medicine.id == s.medicineId)
         .packages;
-    for (final step in planDeduction(packages, s.dose, DateTime.now())) {
+    final plan = planDeduction(packages, s.dose, DateTime.now());
+    for (final step in plan) {
       await _inventory.adjustQuantity(
         packageId: step.packageId,
         delta: -step.amount,
       );
     }
-    _taken[_key(scheduleId, day, minuteOfDay)] = DateTime.now();
+    _marks[k] = IntakeStatus.taken;
+    _untracked.remove(k);
+    _deductions[k] = plan;
+    _changes.add(null);
+  }
+
+  @override
+  Future<void> markSkipped({
+    required String scheduleId,
+    required DateTime day,
+    int? minuteOfDay,
+  }) async {
+    final k = _key(scheduleId, day, minuteOfDay);
+    if (_marks[k] == IntakeStatus.taken) {
+      throw const IntakeStateException('taken');
+    }
+    _marks[k] = IntakeStatus.skipped;
+    _changes.add(null);
+  }
+
+  @override
+  Future<void> resetMark({
+    required String scheduleId,
+    required DateTime day,
+    int? minuteOfDay,
+  }) async {
+    final k = _key(scheduleId, day, minuteOfDay);
+    if (_marks[k] == IntakeStatus.taken) {
+      if (_untracked.contains(k)) throw const UntrackedIntakeException();
+      for (final x in _deductions.remove(k) ?? const []) {
+        await _inventory.adjustQuantity(
+          packageId: x.packageId,
+          delta: x.amount,
+        );
+      }
+    }
+    _marks.remove(k);
     _changes.add(null);
   }
 }

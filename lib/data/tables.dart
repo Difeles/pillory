@@ -105,7 +105,9 @@ class Schedules extends Table {
 
 const untimedSlot = -1;
 
-/// One taken intake. The unique key is what makes a repeated mark a no-op.
+/// One marked intake (taken or skipped). The unique key is what makes a
+/// repeated mark a no-op. A reset mark stays as a `pending` row, so its
+/// deductions and restores remain traceable; marking again reuses the row.
 @DataClassName('IntakeLogRow')
 class IntakeLogs extends Table {
   TextColumn get id => text()();
@@ -116,6 +118,14 @@ class IntakeLogs extends Table {
   /// Minutes from midnight of the taken intake, [untimedSlot] if untimed
   /// (not NULL, because NULLs never collide in a unique key).
   IntColumn get slot => integer().withDefault(const Constant(untimedSlot))();
+  TextColumn get status =>
+      textEnum<IntakeStatus>().withDefault(Constant(IntakeStatus.taken.name))();
+
+  /// Whether every stock deduction of this mark is in [IntakeDeductions].
+  /// False for marks made before deductions were recorded: they cannot be
+  /// undone, as the stock cannot be restored exactly.
+  BoolColumn get deductionsTracked =>
+      boolean().withDefault(const Constant(false))();
   DateTimeColumn get takenAt => dateTime()();
 
   @override
@@ -125,4 +135,21 @@ class IntakeLogs extends Table {
   List<Set<Column>> get uniqueKeys => [
     {scheduleId, day, slot},
   ];
+}
+
+/// The exact packages and amounts one "taken" mark took from stock.
+/// [restoredAt] is set once the amount has been given back.
+@DataClassName('IntakeDeductionRow')
+@TableIndex(name: 'idx_deductions_log', columns: {#intakeLogId})
+class IntakeDeductions extends Table {
+  TextColumn get id => text()();
+  TextColumn get intakeLogId =>
+      text().references(IntakeLogs, #id, onDelete: KeyAction.cascade)();
+  TextColumn get packageId =>
+      text().references(MedicinePackages, #id, onDelete: KeyAction.cascade)();
+  RealColumn get amount => real().check(amount.isBiggerThanValue(0))();
+  DateTimeColumn get restoredAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

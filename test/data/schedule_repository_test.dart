@@ -225,6 +225,180 @@ void main() {
     expect(await db.select(db.intakeLogs).get(), isEmpty);
   });
 
+  group('skip, undo and history', () {
+    Future<Map<String, double>> packages() async => {
+      for (final p in await db.select(db.medicinePackages).get())
+        p.id: p.quantity,
+    };
+
+    test('skipping leaves stock alone and shows as skipped', () async {
+      final id = await medicine(5);
+      final sid = await repo.createSchedule(daily(id));
+      await repo.markSkipped(scheduleId: sid, day: day);
+      await repo.markSkipped(scheduleId: sid, day: day);
+      expect((await intakes()).single.skipped, isTrue);
+      expect(await total(), 5);
+      expect(await db.select(db.inventoryTransactions).get(), hasLength(1));
+    });
+
+    test(
+      'a taken intake cannot be skipped; a skipped one can be taken',
+      () async {
+        final id = await medicine(5);
+        final sid = await repo.createSchedule(daily(id));
+        await repo.markTaken(scheduleId: sid, day: day);
+        expect(
+          () => repo.markSkipped(scheduleId: sid, day: day),
+          throwsA(isA<IntakeStateException>()),
+        );
+        await repo.resetMark(scheduleId: sid, day: day);
+        await repo.markSkipped(scheduleId: sid, day: day);
+        await repo.markTaken(scheduleId: sid, day: day);
+        expect((await intakes()).single.taken, isTrue);
+        expect(await total(), 4);
+      },
+    );
+
+    test('resetting a skip needs no stock change', () async {
+      final id = await medicine(5);
+      final sid = await repo.createSchedule(daily(id));
+      await repo.markSkipped(scheduleId: sid, day: day);
+      await repo.resetMark(scheduleId: sid, day: day);
+      expect((await intakes()).single.status, IntakeStatus.pending);
+      expect(await total(), 5);
+    });
+
+    test('undo restores exactly the packages that were charged', () async {
+      final id = await medicine(2);
+      await inventory.addPackage(
+        medicineId: id,
+        quantity: 1,
+        unit: 'шт.',
+        expiresOn: DateTime(2027, 1, 1),
+      );
+      await inventory.addPackage(
+        medicineId: id,
+        quantity: 2,
+        unit: 'шт.',
+        expiresOn: DateTime(2027, 6, 1),
+      );
+      final sid = await repo.createSchedule(daily(id, dose: 3.5));
+      final before = await packages();
+
+      await repo.markTaken(scheduleId: sid, day: day);
+      expect((await packages()).values.toList()..sort(), [0, 0, 1.5]);
+      final charged = await db.select(db.intakeDeductions).get();
+      expect(charged.map((x) => x.amount).toList()..sort(), [0.5, 1, 2]);
+
+      await repo.resetMark(scheduleId: sid, day: day);
+      expect(await packages(), before);
+      expect((await intakes()).single.status, IntakeStatus.pending);
+      // Nothing is deleted: deductions are marked restored, history kept.
+      final after = await db.select(db.intakeDeductions).get();
+      expect(after.every((x) => x.restoredAt != null), isTrue);
+      expect(
+        (await db.select(db.inventoryTransactions).get()).where(
+          (t) => t.kind == TransactionKind.increase,
+        ),
+        hasLength(3),
+      );
+      expect(await db.select(db.intakeLogs).get(), hasLength(1));
+    });
+
+    test('repeated and parallel undo restore once', () async {
+      final id = await medicine(5);
+      final sid = await repo.createSchedule(daily(id, dose: 2));
+      await repo.markTaken(scheduleId: sid, day: day);
+      await Future.wait([
+        for (var i = 0; i < 4; i++) repo.resetMark(scheduleId: sid, day: day),
+      ]);
+      await repo.resetMark(scheduleId: sid, day: day);
+      expect(await total(), 5);
+    });
+
+    test('parallel marking deducts once', () async {
+      final id = await medicine(5);
+      final sid = await repo.createSchedule(daily(id, dose: 2));
+      await Future.wait([
+        for (var i = 0; i < 4; i++) repo.markTaken(scheduleId: sid, day: day),
+      ]);
+      expect(await total(), 3);
+      expect(await db.select(db.intakeDeductions).get(), hasLength(1));
+    });
+
+    test('taking again after an undo charges and undoes again', () async {
+      final id = await medicine(5);
+      final sid = await repo.createSchedule(daily(id, dose: 2));
+      await repo.markTaken(scheduleId: sid, day: day);
+      await repo.resetMark(scheduleId: sid, day: day);
+      await repo.markTaken(scheduleId: sid, day: day);
+      await repo.markTaken(scheduleId: sid, day: day);
+      expect(await total(), 3);
+      await repo.resetMark(scheduleId: sid, day: day);
+      expect(await total(), 5);
+      expect(await db.select(db.intakeDeductions).get(), hasLength(2));
+    });
+
+    test('times of one medicine are marked and undone independently', () async {
+      final id = await medicine(10);
+      final sid = await repo.createSchedule(
+        daily(id, times: [8 * 60, 20 * 60]),
+      );
+      await repo.markTaken(scheduleId: sid, day: day, minuteOfDay: 480);
+      await repo.markSkipped(scheduleId: sid, day: day, minuteOfDay: 1200);
+      expect((await intakes()).map((i) => i.status), [
+        IntakeStatus.taken,
+        IntakeStatus.skipped,
+      ]);
+      await repo.resetMark(scheduleId: sid, day: day, minuteOfDay: 480);
+      expect((await intakes()).map((i) => i.status), [
+        IntakeStatus.pending,
+        IntakeStatus.skipped,
+      ]);
+      expect(await total(), 10);
+    });
+
+    test('an untracked (legacy) taken mark cannot be undone', () async {
+      final id = await medicine(5);
+      final sid = await repo.createSchedule(daily(id));
+      await db
+          .into(db.intakeLogs)
+          .insert(
+            IntakeLogsCompanion.insert(
+              id: 'old',
+              scheduleId: sid,
+              day: day,
+              takenAt: DateTime(2026, 10, 19),
+            ),
+          );
+      final i = (await intakes()).single;
+      expect(i.taken, isTrue);
+      expect(i.deductionsTracked, isFalse);
+      expect(i.canReset, isFalse);
+      await expectLater(
+        repo.resetMark(scheduleId: sid, day: day),
+        throwsA(isA<UntrackedIntakeException>()),
+      );
+      expect((await intakes()).single.taken, isTrue);
+      expect(await total(), 5);
+    });
+
+    test('history groups past days with statuses', () async {
+      final id = await medicine(10);
+      final sid = await repo.createSchedule(daily(id));
+      final d1 = DateTime(2026, 10, 18), d2 = DateTime(2026, 10, 19);
+      await repo.markTaken(scheduleId: sid, day: d1);
+      await repo.markSkipped(scheduleId: sid, day: d2);
+      final h = await repo.watchHistory(d1, d2).first;
+      expect(h.keys, [d1, d2]);
+      expect(h[d1]!.single.status, IntakeStatus.taken);
+      expect(h[d2]!.single.status, IntakeStatus.skipped);
+      await repo.resetMark(scheduleId: sid, day: d1);
+      final h2 = await repo.watchHistory(d1, d2).first;
+      expect(h2[d1]!.single.status, IntakeStatus.pending);
+    });
+  });
+
   group('on disk', () {
     late File file;
     setUp(() async {
@@ -302,6 +476,8 @@ void main() {
           (480, true),
           (null, true),
         ]);
+        // Migrated marks stay taken but cannot be undone.
+        expect(list.every((i) => i.taken && !i.canReset), isTrue);
         // A later time on the migrated schedule is still independent.
         await db3.customStatement(
           "UPDATE schedules SET times = '480,1200' WHERE id = 'timed'",
@@ -315,6 +491,42 @@ void main() {
         ]);
       },
     );
+
+    test('a v3 database upgrades keeping marks and stock untouched', () async {
+      final v3 = AppDatabase(NativeDatabase(file));
+      final inv = DriftInventoryRepository(v3);
+      final r = DriftScheduleRepository(v3, inv);
+      final mid = await inv.createMedicine(
+        const NewMedicine(name: 'Старое', initialQuantity: 5, unit: 'шт.'),
+      );
+      final sid = await r.createSchedule(daily(mid));
+      await r.markTaken(scheduleId: sid, day: day);
+      // Turn the file back into a v3 database (no status/tracking, no
+      // deductions table).
+      await v3.customStatement('DROP TABLE intake_deductions');
+      await v3.customStatement('ALTER TABLE intake_logs DROP COLUMN status');
+      await v3.customStatement(
+        'ALTER TABLE intake_logs DROP COLUMN deductions_tracked',
+      );
+      await v3.customStatement('PRAGMA user_version = 3');
+      await v3.close();
+
+      final v4 = AppDatabase(NativeDatabase(file));
+      addTearDown(v4.close);
+      final inv2 = DriftInventoryRepository(v4);
+      final r2 = DriftScheduleRepository(v4, inv2);
+      final i = (await r2.watchDay(day).first).single;
+      expect(i.taken, isTrue);
+      expect(i.canReset, isFalse);
+      expect((await inv2.watchStock().first).single.totalQuantity, 4);
+      // New marks work on the migrated database.
+      await r2.resetMark(scheduleId: sid, day: day).catchError((_) {});
+      await r2.markSkipped(scheduleId: sid, day: DateTime(2026, 10, 20));
+      expect(
+        (await r2.watchDay(DateTime(2026, 10, 20)).first).single.skipped,
+        isTrue,
+      );
+    });
 
     test('a v1 database upgrades to v2 and keeps its data', () async {
       final v1 = AppDatabase(NativeDatabase(file));

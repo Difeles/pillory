@@ -111,13 +111,16 @@ bool occursOn(NewSchedule s, DateTime day) {
 /// one (null).
 List<int?> slotsOf(NewSchedule s) => s.times.isEmpty ? [null] : s.times;
 
-/// One scheduled intake on one day, with whether it was marked taken.
+enum IntakeStatus { pending, taken, skipped }
+
+/// One scheduled intake on one day, with its mark.
 class DayIntake {
   const DayIntake({
     required this.schedule,
     required this.medicineName,
     this.minuteOfDay,
-    this.takenAt,
+    this.status = IntakeStatus.pending,
+    this.deductionsTracked = false,
   });
 
   final Schedule schedule;
@@ -125,9 +128,15 @@ class DayIntake {
 
   /// Which of the schedule's times this is; null for an untimed intake.
   final int? minuteOfDay;
-  final DateTime? takenAt;
+  final IntakeStatus status;
 
-  bool get taken => takenAt != null;
+  /// Whether a taken mark has its stock deductions recorded (see the
+  /// `intake_logs` table); only then can it be undone.
+  final bool deductionsTracked;
+
+  bool get taken => status == IntakeStatus.taken;
+  bool get skipped => status == IntakeStatus.skipped;
+  bool get canReset => skipped || (taken && deductionsTracked);
 }
 
 /// Timed intakes first by time, then untimed ones, each by medicine name.
@@ -179,18 +188,44 @@ List<({String packageId, double amount})> planDeduction(
 }
 
 abstract class ScheduleRepository {
-  /// Intakes scheduled for [day], with their taken state; re-emits on change.
+  /// Intakes scheduled for [day], with their marks; re-emits on change.
   Stream<List<DayIntake>> watchDay(DateTime day);
+
+  /// Intakes of each day in [from]..[to] that has any, by day; re-emits on
+  /// change.
+  Stream<Map<DateTime, List<DayIntake>>> watchHistory(
+    DateTime from,
+    DateTime to,
+  );
 
   /// Returns the new schedule id. Throws [InvalidScheduleException].
   Future<String> createSchedule(NewSchedule draft);
 
   /// Marks the intake of [scheduleId] at [minuteOfDay] (null if untimed) on
   /// [day] as taken and deducts one dose from stock, recording inventory
-  /// transactions, atomically. A second call for the same intake does nothing;
-  /// other times of the same schedule are unaffected. Throws [InsufficientStockException]
-  /// (nothing written) if stock is short.
+  /// transactions and the exact deductions, atomically. Already taken: does
+  /// nothing. A skipped intake can be taken. Other times of the same schedule
+  /// are unaffected. Throws [InsufficientStockException] (nothing written) if
+  /// stock is short.
   Future<void> markTaken({
+    required String scheduleId,
+    required DateTime day,
+    int? minuteOfDay,
+  });
+
+  /// Marks the intake as skipped; stock is untouched. Already skipped: does
+  /// nothing. Throws [IntakeStateException] if it is taken (reset it first).
+  Future<void> markSkipped({
+    required String scheduleId,
+    required DateTime day,
+    int? minuteOfDay,
+  });
+
+  /// Returns a taken or skipped intake to unmarked. Undoing a taken mark gives
+  /// back exactly what it took, from the same packages, once, atomically.
+  /// Not marked: does nothing. Throws [UntrackedIntakeException] for a taken
+  /// mark without recorded deductions (nothing changes).
+  Future<void> resetMark({
     required String scheduleId,
     required DateTime day,
     int? minuteOfDay,
