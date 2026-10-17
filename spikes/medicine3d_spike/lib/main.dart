@@ -53,7 +53,10 @@ class _PillSpikePageState extends State<PillSpikePage> {
   String? _error;
 
   // Orientation, driven by drag; applied to the node once per frame in onTick.
-  vm.Quaternion _orientation = vm.Quaternion.axisAngle(vm.Vector3(1, 0, 0), -0.9);
+  vm.Quaternion _orientation = vm.Quaternion.axisAngle(
+    vm.Vector3(1, 0, 0),
+    -0.9,
+  );
   // Angular velocity (rad/s) about world Y / X, for inertia after a flick.
   double _spinY = 0, _spinX = 0;
   bool _dragging = false;
@@ -103,10 +106,14 @@ class _PillSpikePageState extends State<PillSpikePage> {
 
   void _onScaleUpdate(ScaleUpdateDetails d) {
     // Screen-right is world +X for a camera on -Z looking at the origin.
-    _rotateBy(-d.focalPointDelta.dx * _radiansPerPixel,
-        -d.focalPointDelta.dy * _radiansPerPixel);
-    _distance =
-        (_distanceAtGestureStart / d.scale).clamp(_minDistance, _maxDistance);
+    _rotateBy(
+      -d.focalPointDelta.dx * _radiansPerPixel,
+      -d.focalPointDelta.dy * _radiansPerPixel,
+    );
+    _distance = (_distanceAtGestureStart / d.scale).clamp(
+      _minDistance,
+      _maxDistance,
+    );
   }
 
   void _onScaleEnd(ScaleEndDetails d) {
@@ -117,7 +124,8 @@ class _PillSpikePageState extends State<PillSpikePage> {
   }
 
   void _rotateBy(double aroundY, double aroundX) {
-    final dq = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), aroundY) *
+    final dq =
+        vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), aroundY) *
         vm.Quaternion.axisAngle(vm.Vector3(1, 0, 0), aroundX);
     _orientation = (dq * _orientation)..normalize();
   }
@@ -154,18 +162,28 @@ class _PillSpikePageState extends State<PillSpikePage> {
                 ? Center(child: Text('Init failed:\n$_error'))
                 : _pill == null
                 ? const Center(child: CircularProgressIndicator())
-                : GestureDetector(
-                    onScaleStart: _onScaleStart,
-                    onScaleUpdate: _onScaleUpdate,
-                    onScaleEnd: _onScaleEnd,
-                    child: SceneView(
-                      _scene,
-                      cameraBuilder: (_) => PerspectiveCamera(
-                        position: vm.Vector3(0, 0, -_distance),
-                        target: vm.Vector3.zero(),
-                      ),
-                      onTick: _onTick,
-                    ),
+                : LayoutBuilder(
+                    // Camera FOV is vertical: on a narrow portrait screen the
+                    // face-on tablet is wider than the view, so back off.
+                    builder: (context, box) {
+                      final fit = math.min(
+                        1.0,
+                        box.maxWidth / box.maxHeight * 1.3,
+                      );
+                      return GestureDetector(
+                        onScaleStart: _onScaleStart,
+                        onScaleUpdate: _onScaleUpdate,
+                        onScaleEnd: _onScaleEnd,
+                        child: SceneView(
+                          _scene,
+                          cameraBuilder: (_) => PerspectiveCamera(
+                            position: vm.Vector3(0, 0, -_distance / fit),
+                            target: vm.Vector3.zero(),
+                          ),
+                          onTick: _onTick,
+                        ),
+                      );
+                    },
                   ),
           ),
           Padding(

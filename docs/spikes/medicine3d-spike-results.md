@@ -13,7 +13,7 @@ PASS отмечен только для того, что реально пров
 | Платформа | Статус | Комментарий |
 |---|---|---|
 | Web (Chrome) | **PASS** (см. ниже, с оговорками) | первый кадр, вращение, смена цвета |
-| Android (эмулятор) | **не пройдено** | 3D не проверялась: сборка падает, Flutter GPU не включён |
+| Android (эмулятор) | **PASS в release**, debug-зависание не исправлено | см. раздел Android |
 | iOS | **NOT RUN** | Xcode ещё не настроен |
 
 ## Web
@@ -45,22 +45,37 @@ PASS отмечен только для того, что реально пров
 
 ## Android
 
-Визуальная проверка 3D **не пройдена**. Две отдельные проблемы:
+Эмулятор `Medium_Phone_API_37.0` (Android 17, API 37, arm64, виртуальный GPU).
 
-1. **Сборка Gradle** (`implicit_dependency`) падает до установки.
-   Задача `:app:compileFlutterBuild{Debug,Release}` использует выходы других задач AGP
-   (`mergeDebugNativeDebugMetadata`, `mergeDebugAssets`, `buildKotlinToolingMetadata`) без объявленной зависимости.
-   - Подтверждено: версии не причина (чистый Flutter-проект на тех же Gradle 9.3.1, AGP 9.1.0, Kotlin 2.4.0
-     собирается и запускается на эмуляторе; экран счётчика PASS).
-   - Подтверждено: ошибка появляется на **повторной** сборке (когда есть depfile `flutter_build.d`),
-     и только в проекте после `dart run flutter_scene:init`.
-     В чистом проекте с одним flutter_scene повторная сборка проходит.
-     В depfile проекта с hook-ом во входах — каталоги (корень проекта, `build`, `build/app`), без hook-а их нет.
-   - Не доказано: что именно записывает каталоги (hook flutter_scene или механизм хуков Flutter 3.47.7).
-   - Правка `mustRunAfter` на одну задачу не помогла и откачена.
-2. **Flutter GPU не включён**: старая установленная сборка показывала
-   `Exception: Flutter GPU must be enabled ...` (нужен `--enable-flutter-gpu` или метаданные в `AndroidManifest.xml`).
-   Манифест не менялся.
+| Проверка | Результат |
+|---|---|
+| Обычный Flutter UI (`main_surface_smoke.dart`) | PASS |
+| 3D-сцена, `flutter run --release` | **PASS**: `Scene.initializeStaticResources()` ~1,0 с, таблетка отрисована, смена цвета и вращение жестом работают (проверено `adb input tap/swipe`) |
+| 3D-сцена, запуск без инструмента (`adb shell am start`, debug APK, те же intent-параметры, что у `flutter run`) | **PASS**: инициализация ~0,75 с |
+| 3D-сцена, `flutter run` в debug (`--enable-flutter-gpu`) | **FAIL (не исправлено)**: заставка не уходит; повторяется |
+| iOS | NOT RUN |
+
+### Что исправлено и что нет
+
+1. **Сборка Gradle `implicit_dependency`**: устранена. Причина: устаревший `build/app/intermediates/flutter/debug/flutter_build.d`
+   перечислял каталоги (корень проекта, `build`, `build/app`), оставшиеся от app-level `hook/build.dart` (создан `flutter_scene:init`).
+   После удаления hook-а (он нужен только для пользовательских ресурсов `.glb/.fmat/...`; движковые шейдеры
+   собирает собственный hook flutter_scene, шейдерные бандлы есть в APK) и удаления только этого depfile сборка проходит.
+   Подтверждено: чистый проект с одним flutter_scene и повторными сборками ошибки не даёт; проект после `init` даёт.
+   Не доказано, что именно записывает каталоги в depfile.
+2. **Flutter GPU включён** метаданными в `AndroidManifest.xml` (`io.flutter.embedding.android.EnableFlutterGPU`).
+3. **Таблетка была шире экрана** на узком портретном экране (вертикальный FOV камеры): камера отодвигается по отношению сторон области
+   (`LayoutBuilder` в `lib/main.dart`). Проверено на скриншоте эмулятора.
+4. **Зависание под `flutter run` (debug) не исправлено, только локализовано.**
+   - Подтверждено: после `await Scene.initializeStaticResources()` код не продолжается 90+ с (диагностика `PILLORY_DIAG`:
+     `before…` есть, `after…` нет, ошибок нет). Тот же debug APK, запущенный без Flutter-инструмента, инициализируется за ~0,75 с.
+     В release под `flutter run` тоже работает.
+   - Подтверждено: при зависании VM service отвечает на `getVM`, но главный изолят не отвечает на `getIsolate`,
+     ANR Android нет. Значит, блокирован Dart-поток Flutter (`1.ui`), а не главный поток Android.
+   - Не определено: в каком нативном вызове блокировка (нативный стек без root получить не удалось) и почему её вызывает
+     подключение отладчика/инструмента. Это гипотеза, не диагноз.
+   - Обходной путь: `flutter run --release -d <android>` для просмотра сцены; debug-режим с hot reload на этом эмуляторе
+     для 3D не годится. Не проверялось на реальном устройстве.
 
 ## iOS
 
