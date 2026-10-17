@@ -7,3 +7,15 @@
 
 # Local agent instructions installed by flutter_scene
 /spikes/medicine3d_spike/.claude/skills/
+
+# Flutter / Dart
+.dart_tool/
+/build/
+.idea/
+*.iml
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+app.*.symbols
+app.*.map.json
+.DS_Store
