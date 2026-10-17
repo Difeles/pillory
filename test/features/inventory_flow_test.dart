@@ -8,14 +8,24 @@ import '../support/fake_inventory_repository.dart';
 
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
+    final inventory = FakeInventoryRepository();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          inventoryRepositoryProvider.overrideWithValue(
-            FakeInventoryRepository(),
+          inventoryRepositoryProvider.overrideWithValue(inventory),
+          scheduleRepositoryProvider.overrideWithValue(
+            FakeScheduleRepository(inventory),
           ),
         ],
         child: const PilloryApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // The app opens on "Сегодня"; this flow lives in the cabinet tab.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Аптечка'),
       ),
     );
     await tester.pumpAndSettle();

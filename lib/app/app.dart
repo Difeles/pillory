@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../design_system/theme.dart';
-import '../features/inventory/inventory_screen.dart';
+import 'home_shell.dart';
 
 class PilloryApp extends StatelessWidget {
   const PilloryApp({super.key});
@@ -20,6 +20,6 @@ class PilloryApp extends StatelessWidget {
       GlobalWidgetsLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,
     ],
-    home: const InventoryScreen(),
+    home: const HomeShell(),
   );
 }

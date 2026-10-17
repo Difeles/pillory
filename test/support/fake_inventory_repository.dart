@@ -5,6 +5,7 @@ import 'package:pillory/domain/errors.dart';
 import 'package:pillory/domain/inventory_repository.dart';
 import 'package:pillory/domain/inventory_rules.dart';
 import 'package:pillory/domain/models.dart';
+import 'package:pillory/domain/schedule.dart';
 
 /// In-memory repository for widget tests. Real SQLite I/O does not complete
 /// under the widget tester's fake clock, so the UI is tested against this and
@@ -101,4 +102,83 @@ class FakeInventoryRepository implements InventoryRepository {
 
   @override
   Future<List<InventoryTransaction>> history(String packageId) async => [];
+}
+
+/// In-memory schedule repository for widget tests, on top of the fake
+/// inventory. Uses the real domain rules.
+class FakeScheduleRepository implements ScheduleRepository {
+  FakeScheduleRepository(this._inventory);
+
+  final FakeInventoryRepository _inventory;
+  final _schedules = <Schedule>[];
+  final _taken = <String, DateTime>{}; // "scheduleId|yyyy-MM-dd" -> takenAt
+  final _changes = StreamController<void>.broadcast(sync: true);
+
+  String _key(String id, DateTime day) => '$id|${dateOnly(day)}';
+
+  @override
+  Stream<List<DayIntake>> watchDay(DateTime day) async* {
+    Future<List<DayIntake>> snapshot() async {
+      final stock = await _inventory.watchStock().first;
+      return [
+        for (final s in _schedules)
+          if (occursOn(s, day))
+            DayIntake(
+              schedule: s,
+              medicineName: stock
+                  .firstWhere((m) => m.medicine.id == s.medicineId)
+                  .medicine
+                  .name,
+              takenAt: _taken[_key(s.id, day)],
+            ),
+      ]..sort(compareIntakes);
+    }
+
+    yield await snapshot();
+    await for (final _ in _changes.stream) {
+      yield await snapshot();
+    }
+  }
+
+  @override
+  Future<String> createSchedule(NewSchedule draft) async {
+    final d = validateNewSchedule(draft);
+    final s = Schedule(
+      id: generateId(),
+      createdAt: DateTime.now(),
+      medicineId: d.medicineId,
+      kind: d.kind,
+      dose: d.dose,
+      doseUnit: d.doseUnit,
+      weekdays: d.weekdays,
+      dates: d.dates,
+      startDate: d.startDate,
+      endDate: d.endDate,
+      minuteOfDay: d.minuteOfDay,
+    );
+    _schedules.add(s);
+    _changes.add(null);
+    return s.id;
+  }
+
+  @override
+  Future<void> markTaken({
+    required String scheduleId,
+    required DateTime day,
+  }) async {
+    final s = _schedules.firstWhere((s) => s.id == scheduleId);
+    if (_taken.containsKey(_key(scheduleId, day))) return;
+    final stock = await _inventory.watchStock().first;
+    final packages = stock
+        .firstWhere((m) => m.medicine.id == s.medicineId)
+        .packages;
+    for (final step in planDeduction(packages, s.dose, DateTime.now())) {
+      await _inventory.adjustQuantity(
+        packageId: step.packageId,
+        delta: -step.amount,
+      );
+    }
+    _taken[_key(scheduleId, day)] = DateTime.now();
+    _changes.add(null);
+  }
 }

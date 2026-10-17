@@ -1,0 +1,233 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../app/providers.dart';
+import '../../design_system/tokens.dart';
+import '../../domain/errors.dart';
+import '../../domain/inventory_rules.dart';
+import '../../domain/schedule.dart';
+import '../inventory/format.dart';
+import 'add_intake_screen.dart';
+import 'today_providers.dart';
+
+const _months = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+]; // prettier-ignore
+
+String formatDay(DateTime d) => '${d.day} ${_months[d.month - 1]}';
+
+String formatMinute(int m) =>
+    '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
+
+/// Home screen: the intake tracker for one day (today by default).
+class TodayScreen extends ConsumerStatefulWidget {
+  const TodayScreen({super.key});
+
+  @override
+  ConsumerState<TodayScreen> createState() => _TodayScreenState();
+}
+
+class _TodayScreenState extends ConsumerState<TodayScreen> {
+  DateTime _day = dateOnly(DateTime.now());
+
+  void _shift(int days) =>
+      setState(() => _day = DateTime(_day.year, _day.month, _day.day + days));
+
+  Future<void> _take(DayIntake i) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(scheduleRepositoryProvider)
+          .markTaken(scheduleId: i.schedule.id, day: _day);
+    } on InsufficientStockException {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('В аптечке не хватает лекарства')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final today = dateOnly(DateTime.now());
+    final isToday = _day == today;
+    final intakes = ref.watch(dayIntakesProvider(_day));
+    return Scaffold(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            96,
+          ),
+          children: [
+            Text('Здравствуйте!', style: text.headlineMedium),
+            Row(
+              children: [
+                IconButton(
+                  tooltip: 'Предыдущий день',
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () => _shift(-1),
+                ),
+                Expanded(
+                  child: Text(
+                    isToday ? 'Сегодня, ${formatDay(_day)}' : formatDay(_day),
+                    textAlign: TextAlign.center,
+                    style: text.titleMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Следующий день',
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () => _shift(1),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            intakes.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) =>
+                  const Center(child: Text('Не удалось загрузить приёмы')),
+              data: (list) => list.isEmpty
+                  ? const _Empty()
+                  : Column(
+                      children: [
+                        for (final i in list)
+                          _IntakeCard(
+                            intake: i,
+                            // Marking a future dose as taken makes no sense.
+                            canMark: !_day.isAfter(today),
+                            onTake: () => _take(i),
+                          ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        // Tabs are kept alive side by side; two default hero tags would clash.
+        heroTag: 'add-intake',
+        tooltip: 'Добавить приём',
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const AddIntakeScreen()),
+        ),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _IntakeCard extends StatelessWidget {
+  const _IntakeCard({
+    required this.intake,
+    required this.canMark,
+    required this.onTake,
+  });
+
+  final DayIntake intake;
+  final bool canMark;
+  final VoidCallback onTake;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final s = intake.schedule;
+    final time = s.minuteOfDay == null
+        ? ''
+        : '${formatMinute(s.minuteOfDay!)} · ';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: kMinTapSize),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: intake.taken ? AppColors.primaryLight : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          boxShadow: intake.taken ? null : AppShadows.card,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(intake.medicineName, style: text.titleMedium),
+                  Text(
+                    '$time${formatQuantity(s.dose)} ${s.doseUnit}',
+                    style: text.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (intake.taken)
+              const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle, color: AppColors.success),
+                  SizedBox(width: AppSpacing.xs),
+                  Text('Принято'),
+                ],
+              )
+            else
+              FilledButton(
+                onPressed: canMark ? onTake : null,
+                child: const Text('Принято'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Empty extends StatelessWidget {
+  const _Empty();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      const SizedBox(height: AppSpacing.xl),
+      Container(
+        width: 96,
+        height: 96,
+        decoration: const BoxDecoration(
+          color: AppColors.primaryLight,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.event_available,
+          size: 48,
+          color: AppColors.primary,
+        ),
+      ),
+      const SizedBox(height: AppSpacing.md),
+      Text(
+        'На этот день приёмов нет',
+        style: Theme.of(context).textTheme.titleLarge,
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      const Text(
+        'Нажмите «+», чтобы добавить приём',
+        textAlign: TextAlign.center,
+      ),
+    ],
+  );
+}

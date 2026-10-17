@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 
 import '../domain/medicine_form.dart';
 import '../domain/models.dart';
+import '../domain/schedule.dart';
 
 /// Stores a calendar date as `yyyy-MM-dd` text, so it never shifts with the
 /// device time zone (unlike a stored instant).
@@ -70,4 +71,50 @@ class InventoryTransactions extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('ScheduleRow')
+@TableIndex(name: 'idx_schedules_medicine', columns: {#medicineId})
+class Schedules extends Table {
+  TextColumn get id => text()();
+
+  /// The cabinet's own medicine, never a copy.
+  TextColumn get medicineId =>
+      text().references(Medicines, #id, onDelete: KeyAction.cascade)();
+  TextColumn get kind => textEnum<ScheduleKind>()();
+
+  /// Comma-separated weekday numbers, 1 = Monday.
+  TextColumn get weekdays => text().withDefault(const Constant(''))();
+
+  /// Comma-separated `yyyy-MM-dd`.
+  TextColumn get dates => text().withDefault(const Constant(''))();
+  TextColumn get startDate => text().map(const DateOnlyConverter())();
+  TextColumn get endDate => text().map(const DateOnlyConverter()).nullable()();
+  IntColumn get minuteOfDay => integer().nullable()();
+
+  /// Per intake; independent of any package quantity.
+  RealColumn get dose => real().check(dose.isBiggerThanValue(0))();
+  TextColumn get doseUnit => text().withLength(min: 1)();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// One taken intake. The unique key is what makes a repeated mark a no-op.
+@DataClassName('IntakeLogRow')
+class IntakeLogs extends Table {
+  TextColumn get id => text()();
+  TextColumn get scheduleId =>
+      text().references(Schedules, #id, onDelete: KeyAction.cascade)();
+  TextColumn get day => text().map(const DateOnlyConverter())();
+  DateTimeColumn get takenAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {scheduleId, day},
+  ];
 }

@@ -28,3 +28,20 @@ class PackageNotFoundException implements Exception {
   @override
   String toString() => 'PackageNotFoundException: $packageId';
 }
+
+/// Input does not satisfy the schedule rules (no days, bad dose, bad range).
+class InvalidScheduleException implements Exception {
+  const InvalidScheduleException(this.message);
+  final String message;
+
+  @override
+  String toString() => 'InvalidScheduleException: $message';
+}
+
+class ScheduleNotFoundException implements Exception {
+  const ScheduleNotFoundException(this.scheduleId);
+  final String scheduleId;
+
+  @override
+  String toString() => 'ScheduleNotFoundException: $scheduleId';
+}

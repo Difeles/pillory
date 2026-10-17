@@ -52,7 +52,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref
+      final id = await ref
           .read(inventoryRepositoryProvider)
           .createMedicine(
             NewMedicine(
@@ -64,7 +64,8 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               expiresOn: _expiresOn,
             ),
           );
-      navigator.pop();
+      // The id lets a caller (the intake form) select the new medicine.
+      navigator.pop(id);
     } on InvalidMedicineException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
       if (mounted) setState(() => _saving = false);
