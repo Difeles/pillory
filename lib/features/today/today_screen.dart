@@ -49,7 +49,11 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     try {
       await ref
           .read(scheduleRepositoryProvider)
-          .markTaken(scheduleId: i.schedule.id, day: _day);
+          .markTaken(
+            scheduleId: i.schedule.id,
+            day: _day,
+            minuteOfDay: i.minuteOfDay,
+          );
     } on InsufficientStockException {
       messenger.showSnackBar(
         const SnackBar(content: Text('В аптечке не хватает лекарства')),
@@ -64,6 +68,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     final isToday = _day == today;
     final intakes = ref.watch(dayIntakesProvider(_day));
     return Scaffold(
+      appBar: AppBar(title: const Text('Приём')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -73,7 +78,6 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
             96,
           ),
           children: [
-            Text('Здравствуйте!', style: text.headlineMedium),
             Row(
               children: [
                 IconButton(
@@ -147,9 +151,9 @@ class _IntakeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final s = intake.schedule;
-    final time = s.minuteOfDay == null
+    final time = intake.minuteOfDay == null
         ? ''
-        : '${formatMinute(s.minuteOfDay!)} · ';
+        : '${formatMinute(intake.minuteOfDay!)} · ';
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Container(

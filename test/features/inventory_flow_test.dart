@@ -21,7 +21,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    // The app opens on "Сегодня"; this flow lives in the cabinet tab.
+    // The app opens on "Приём"; this flow lives in the cabinet tab.
     await tester.tap(
       find.descendant(
         of: find.byType(NavigationBar),

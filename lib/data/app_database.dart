@@ -22,7 +22,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pillory'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -33,6 +33,32 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(schedules);
         await m.createIndex(idxSchedulesMedicine);
         await m.createTable(intakeLogs);
+      } else if (from < 3) {
+        // v3: several times per schedule. Logs first, as they read the old
+        // schedules.minute_of_day; existing marks keep their time as slot.
+        await m.alterTable(
+          TableMigration(
+            intakeLogs,
+            newColumns: [intakeLogs.slot],
+            columnTransformer: {
+              intakeLogs.slot: const CustomExpression(
+                '(SELECT coalesce(s.minute_of_day, -1) FROM schedules s '
+                'WHERE s.id = schedule_id)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            schedules,
+            newColumns: [schedules.times],
+            columnTransformer: {
+              schedules.times: const CustomExpression(
+                "coalesce(CAST(minute_of_day AS TEXT), '')",
+              ),
+            },
+          ),
+        );
       }
     },
     beforeOpen: (details) async {

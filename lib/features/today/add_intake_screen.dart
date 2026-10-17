@@ -28,7 +28,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
   ScheduleKind _kind = ScheduleKind.daily;
   final _weekdays = <int>{};
   final _dates = <DateTime>[];
-  int? _minute;
+  final _times = <int>{};
   DateTime _start = dateOnly(DateTime.now());
   DateTime? _end;
   bool _saving = false;
@@ -73,7 +73,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
           ? (_dates.isEmpty ? _start : ([..._dates]..sort()).first)
           : _start,
       endDate: _kind == ScheduleKind.dates ? null : _end,
-      minuteOfDay: _minute,
+      times: _times.toList(),
     );
     setState(() => _saving = true);
     try {
@@ -207,18 +207,32 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 ],
               ),
             gap,
-            _PickerTile(
-              label: 'Время (необязательно)',
-              value: _minute == null ? null : formatMinute(_minute!),
-              icon: Icons.schedule,
-              onClear: () => setState(() => _minute = null),
-              onTap: () async {
-                final t = await showTimePicker(
-                  context: context,
-                  initialTime: const TimeOfDay(hour: 9, minute: 0),
-                );
-                if (t != null) setState(() => _minute = t.hour * 60 + t.minute);
-              },
+            Wrap(
+              spacing: AppSpacing.sm,
+              children: [
+                for (final t in ([..._times]..sort()))
+                  InputChip(
+                    label: Text(formatMinute(t)),
+                    onDeleted: () => setState(() => _times.remove(t)),
+                  ),
+                ActionChip(
+                  avatar: const Icon(Icons.schedule),
+                  label: Text(
+                    _times.isEmpty
+                        ? 'Добавить время (необязательно)'
+                        : 'Добавить время',
+                  ),
+                  onPressed: () async {
+                    final t = await showTimePicker(
+                      context: context,
+                      initialTime: const TimeOfDay(hour: 9, minute: 0),
+                    );
+                    if (t != null) {
+                      setState(() => _times.add(t.hour * 60 + t.minute));
+                    }
+                  },
+                ),
+              ],
             ),
             if (_kind != ScheduleKind.dates) ...[
               gap,

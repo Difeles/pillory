@@ -1356,16 +1356,15 @@ class $SchedulesTable extends Schedules
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       ).withConverter<DateTime?>($SchedulesTable.$converterendDaten);
-  static const VerificationMeta _minuteOfDayMeta = const VerificationMeta(
-    'minuteOfDay',
-  );
+  static const VerificationMeta _timesMeta = const VerificationMeta('times');
   @override
-  late final GeneratedColumn<int> minuteOfDay = GeneratedColumn<int>(
-    'minute_of_day',
+  late final GeneratedColumn<String> times = GeneratedColumn<String>(
+    'times',
     aliasedName,
-    true,
-    type: DriftSqlType.int,
+    false,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _doseMeta = const VerificationMeta('dose');
   @override
@@ -1409,7 +1408,7 @@ class $SchedulesTable extends Schedules
     dates,
     startDate,
     endDate,
-    minuteOfDay,
+    times,
     dose,
     doseUnit,
     createdAt,
@@ -1451,13 +1450,10 @@ class $SchedulesTable extends Schedules
         dates.isAcceptableOrUnknown(data['dates']!, _datesMeta),
       );
     }
-    if (data.containsKey('minute_of_day')) {
+    if (data.containsKey('times')) {
       context.handle(
-        _minuteOfDayMeta,
-        minuteOfDay.isAcceptableOrUnknown(
-          data['minute_of_day']!,
-          _minuteOfDayMeta,
-        ),
+        _timesMeta,
+        times.isAcceptableOrUnknown(data['times']!, _timesMeta),
       );
     }
     if (data.containsKey('dose')) {
@@ -1527,10 +1523,10 @@ class $SchedulesTable extends Schedules
           data['${effectivePrefix}end_date'],
         ),
       ),
-      minuteOfDay: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}minute_of_day'],
-      ),
+      times: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}times'],
+      )!,
       dose: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}dose'],
@@ -1575,7 +1571,9 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
   final String dates;
   final DateTime startDate;
   final DateTime? endDate;
-  final int? minuteOfDay;
+
+  /// Comma-separated minutes from midnight; empty means one untimed intake.
+  final String times;
 
   /// Per intake; independent of any package quantity.
   final double dose;
@@ -1589,7 +1587,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     required this.dates,
     required this.startDate,
     this.endDate,
-    this.minuteOfDay,
+    required this.times,
     required this.dose,
     required this.doseUnit,
     required this.createdAt,
@@ -1616,9 +1614,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
         $SchedulesTable.$converterendDaten.toSql(endDate),
       );
     }
-    if (!nullToAbsent || minuteOfDay != null) {
-      map['minute_of_day'] = Variable<int>(minuteOfDay);
-    }
+    map['times'] = Variable<String>(times);
     map['dose'] = Variable<double>(dose);
     map['dose_unit'] = Variable<String>(doseUnit);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -1636,9 +1632,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       endDate: endDate == null && nullToAbsent
           ? const Value.absent()
           : Value(endDate),
-      minuteOfDay: minuteOfDay == null && nullToAbsent
-          ? const Value.absent()
-          : Value(minuteOfDay),
+      times: Value(times),
       dose: Value(dose),
       doseUnit: Value(doseUnit),
       createdAt: Value(createdAt),
@@ -1660,7 +1654,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       dates: serializer.fromJson<String>(json['dates']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       endDate: serializer.fromJson<DateTime?>(json['endDate']),
-      minuteOfDay: serializer.fromJson<int?>(json['minuteOfDay']),
+      times: serializer.fromJson<String>(json['times']),
       dose: serializer.fromJson<double>(json['dose']),
       doseUnit: serializer.fromJson<String>(json['doseUnit']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1679,7 +1673,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       'dates': serializer.toJson<String>(dates),
       'startDate': serializer.toJson<DateTime>(startDate),
       'endDate': serializer.toJson<DateTime?>(endDate),
-      'minuteOfDay': serializer.toJson<int?>(minuteOfDay),
+      'times': serializer.toJson<String>(times),
       'dose': serializer.toJson<double>(dose),
       'doseUnit': serializer.toJson<String>(doseUnit),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1694,7 +1688,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     String? dates,
     DateTime? startDate,
     Value<DateTime?> endDate = const Value.absent(),
-    Value<int?> minuteOfDay = const Value.absent(),
+    String? times,
     double? dose,
     String? doseUnit,
     DateTime? createdAt,
@@ -1706,7 +1700,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     dates: dates ?? this.dates,
     startDate: startDate ?? this.startDate,
     endDate: endDate.present ? endDate.value : this.endDate,
-    minuteOfDay: minuteOfDay.present ? minuteOfDay.value : this.minuteOfDay,
+    times: times ?? this.times,
     dose: dose ?? this.dose,
     doseUnit: doseUnit ?? this.doseUnit,
     createdAt: createdAt ?? this.createdAt,
@@ -1722,9 +1716,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       dates: data.dates.present ? data.dates.value : this.dates,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
-      minuteOfDay: data.minuteOfDay.present
-          ? data.minuteOfDay.value
-          : this.minuteOfDay,
+      times: data.times.present ? data.times.value : this.times,
       dose: data.dose.present ? data.dose.value : this.dose,
       doseUnit: data.doseUnit.present ? data.doseUnit.value : this.doseUnit,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -1741,7 +1733,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
           ..write('dates: $dates, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
-          ..write('minuteOfDay: $minuteOfDay, ')
+          ..write('times: $times, ')
           ..write('dose: $dose, ')
           ..write('doseUnit: $doseUnit, ')
           ..write('createdAt: $createdAt')
@@ -1758,7 +1750,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     dates,
     startDate,
     endDate,
-    minuteOfDay,
+    times,
     dose,
     doseUnit,
     createdAt,
@@ -1774,7 +1766,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
           other.dates == this.dates &&
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
-          other.minuteOfDay == this.minuteOfDay &&
+          other.times == this.times &&
           other.dose == this.dose &&
           other.doseUnit == this.doseUnit &&
           other.createdAt == this.createdAt);
@@ -1788,7 +1780,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
   final Value<String> dates;
   final Value<DateTime> startDate;
   final Value<DateTime?> endDate;
-  final Value<int?> minuteOfDay;
+  final Value<String> times;
   final Value<double> dose;
   final Value<String> doseUnit;
   final Value<DateTime> createdAt;
@@ -1801,7 +1793,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
     this.dates = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
-    this.minuteOfDay = const Value.absent(),
+    this.times = const Value.absent(),
     this.dose = const Value.absent(),
     this.doseUnit = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1815,7 +1807,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
     this.dates = const Value.absent(),
     required DateTime startDate,
     this.endDate = const Value.absent(),
-    this.minuteOfDay = const Value.absent(),
+    this.times = const Value.absent(),
     required double dose,
     required String doseUnit,
     required DateTime createdAt,
@@ -1835,7 +1827,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
     Expression<String>? dates,
     Expression<String>? startDate,
     Expression<String>? endDate,
-    Expression<int>? minuteOfDay,
+    Expression<String>? times,
     Expression<double>? dose,
     Expression<String>? doseUnit,
     Expression<DateTime>? createdAt,
@@ -1849,7 +1841,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
       if (dates != null) 'dates': dates,
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
-      if (minuteOfDay != null) 'minute_of_day': minuteOfDay,
+      if (times != null) 'times': times,
       if (dose != null) 'dose': dose,
       if (doseUnit != null) 'dose_unit': doseUnit,
       if (createdAt != null) 'created_at': createdAt,
@@ -1865,7 +1857,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
     Value<String>? dates,
     Value<DateTime>? startDate,
     Value<DateTime?>? endDate,
-    Value<int?>? minuteOfDay,
+    Value<String>? times,
     Value<double>? dose,
     Value<String>? doseUnit,
     Value<DateTime>? createdAt,
@@ -1879,7 +1871,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
       dates: dates ?? this.dates,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
-      minuteOfDay: minuteOfDay ?? this.minuteOfDay,
+      times: times ?? this.times,
       dose: dose ?? this.dose,
       doseUnit: doseUnit ?? this.doseUnit,
       createdAt: createdAt ?? this.createdAt,
@@ -1917,8 +1909,8 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
         $SchedulesTable.$converterendDaten.toSql(endDate.value),
       );
     }
-    if (minuteOfDay.present) {
-      map['minute_of_day'] = Variable<int>(minuteOfDay.value);
+    if (times.present) {
+      map['times'] = Variable<String>(times.value);
     }
     if (dose.present) {
       map['dose'] = Variable<double>(dose.value);
@@ -1945,7 +1937,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
           ..write('dates: $dates, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
-          ..write('minuteOfDay: $minuteOfDay, ')
+          ..write('times: $times, ')
           ..write('dose: $dose, ')
           ..write('doseUnit: $doseUnit, ')
           ..write('createdAt: $createdAt, ')
@@ -1993,6 +1985,16 @@ class $IntakeLogsTable extends IntakeLogs
         type: DriftSqlType.string,
         requiredDuringInsert: true,
       ).withConverter<DateTime>($IntakeLogsTable.$converterday);
+  static const VerificationMeta _slotMeta = const VerificationMeta('slot');
+  @override
+  late final GeneratedColumn<int> slot = GeneratedColumn<int>(
+    'slot',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(untimedSlot),
+  );
   static const VerificationMeta _takenAtMeta = const VerificationMeta(
     'takenAt',
   );
@@ -2005,7 +2007,7 @@ class $IntakeLogsTable extends IntakeLogs
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, scheduleId, day, takenAt];
+  List<GeneratedColumn> get $columns => [id, scheduleId, day, slot, takenAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2031,6 +2033,12 @@ class $IntakeLogsTable extends IntakeLogs
     } else if (isInserting) {
       context.missing(_scheduleIdMeta);
     }
+    if (data.containsKey('slot')) {
+      context.handle(
+        _slotMeta,
+        slot.isAcceptableOrUnknown(data['slot']!, _slotMeta),
+      );
+    }
     if (data.containsKey('taken_at')) {
       context.handle(
         _takenAtMeta,
@@ -2046,7 +2054,7 @@ class $IntakeLogsTable extends IntakeLogs
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {scheduleId, day},
+    {scheduleId, day, slot},
   ];
   @override
   IntakeLogRow map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -2066,6 +2074,10 @@ class $IntakeLogsTable extends IntakeLogs
           data['${effectivePrefix}day'],
         )!,
       ),
+      slot: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}slot'],
+      )!,
       takenAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}taken_at'],
@@ -2086,11 +2098,16 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
   final String id;
   final String scheduleId;
   final DateTime day;
+
+  /// Minutes from midnight of the taken intake, [untimedSlot] if untimed
+  /// (not NULL, because NULLs never collide in a unique key).
+  final int slot;
   final DateTime takenAt;
   const IntakeLogRow({
     required this.id,
     required this.scheduleId,
     required this.day,
+    required this.slot,
     required this.takenAt,
   });
   @override
@@ -2101,6 +2118,7 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
     {
       map['day'] = Variable<String>($IntakeLogsTable.$converterday.toSql(day));
     }
+    map['slot'] = Variable<int>(slot);
     map['taken_at'] = Variable<DateTime>(takenAt);
     return map;
   }
@@ -2110,6 +2128,7 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       id: Value(id),
       scheduleId: Value(scheduleId),
       day: Value(day),
+      slot: Value(slot),
       takenAt: Value(takenAt),
     );
   }
@@ -2123,6 +2142,7 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       id: serializer.fromJson<String>(json['id']),
       scheduleId: serializer.fromJson<String>(json['scheduleId']),
       day: serializer.fromJson<DateTime>(json['day']),
+      slot: serializer.fromJson<int>(json['slot']),
       takenAt: serializer.fromJson<DateTime>(json['takenAt']),
     );
   }
@@ -2133,6 +2153,7 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       'id': serializer.toJson<String>(id),
       'scheduleId': serializer.toJson<String>(scheduleId),
       'day': serializer.toJson<DateTime>(day),
+      'slot': serializer.toJson<int>(slot),
       'takenAt': serializer.toJson<DateTime>(takenAt),
     };
   }
@@ -2141,11 +2162,13 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
     String? id,
     String? scheduleId,
     DateTime? day,
+    int? slot,
     DateTime? takenAt,
   }) => IntakeLogRow(
     id: id ?? this.id,
     scheduleId: scheduleId ?? this.scheduleId,
     day: day ?? this.day,
+    slot: slot ?? this.slot,
     takenAt: takenAt ?? this.takenAt,
   );
   IntakeLogRow copyWithCompanion(IntakeLogsCompanion data) {
@@ -2155,6 +2178,7 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
           ? data.scheduleId.value
           : this.scheduleId,
       day: data.day.present ? data.day.value : this.day,
+      slot: data.slot.present ? data.slot.value : this.slot,
       takenAt: data.takenAt.present ? data.takenAt.value : this.takenAt,
     );
   }
@@ -2165,13 +2189,14 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
           ..write('id: $id, ')
           ..write('scheduleId: $scheduleId, ')
           ..write('day: $day, ')
+          ..write('slot: $slot, ')
           ..write('takenAt: $takenAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, scheduleId, day, takenAt);
+  int get hashCode => Object.hash(id, scheduleId, day, slot, takenAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2179,6 +2204,7 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
           other.id == this.id &&
           other.scheduleId == this.scheduleId &&
           other.day == this.day &&
+          other.slot == this.slot &&
           other.takenAt == this.takenAt);
 }
 
@@ -2186,12 +2212,14 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
   final Value<String> id;
   final Value<String> scheduleId;
   final Value<DateTime> day;
+  final Value<int> slot;
   final Value<DateTime> takenAt;
   final Value<int> rowid;
   const IntakeLogsCompanion({
     this.id = const Value.absent(),
     this.scheduleId = const Value.absent(),
     this.day = const Value.absent(),
+    this.slot = const Value.absent(),
     this.takenAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2199,6 +2227,7 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     required String id,
     required String scheduleId,
     required DateTime day,
+    this.slot = const Value.absent(),
     required DateTime takenAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2209,6 +2238,7 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     Expression<String>? id,
     Expression<String>? scheduleId,
     Expression<String>? day,
+    Expression<int>? slot,
     Expression<DateTime>? takenAt,
     Expression<int>? rowid,
   }) {
@@ -2216,6 +2246,7 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
       if (id != null) 'id': id,
       if (scheduleId != null) 'schedule_id': scheduleId,
       if (day != null) 'day': day,
+      if (slot != null) 'slot': slot,
       if (takenAt != null) 'taken_at': takenAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2225,6 +2256,7 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     Value<String>? id,
     Value<String>? scheduleId,
     Value<DateTime>? day,
+    Value<int>? slot,
     Value<DateTime>? takenAt,
     Value<int>? rowid,
   }) {
@@ -2232,6 +2264,7 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
       id: id ?? this.id,
       scheduleId: scheduleId ?? this.scheduleId,
       day: day ?? this.day,
+      slot: slot ?? this.slot,
       takenAt: takenAt ?? this.takenAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2251,6 +2284,9 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
         $IntakeLogsTable.$converterday.toSql(day.value),
       );
     }
+    if (slot.present) {
+      map['slot'] = Variable<int>(slot.value);
+    }
     if (takenAt.present) {
       map['taken_at'] = Variable<DateTime>(takenAt.value);
     }
@@ -2266,6 +2302,7 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
           ..write('id: $id, ')
           ..write('scheduleId: $scheduleId, ')
           ..write('day: $day, ')
+          ..write('slot: $slot, ')
           ..write('takenAt: $takenAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3586,7 +3623,7 @@ typedef $$SchedulesTableCreateCompanionBuilder = SchedulesCompanion Function({
   Value<String> dates,
   required DateTime startDate,
   Value<DateTime?> endDate,
-  Value<int?> minuteOfDay,
+  Value<String> times,
   required double dose,
   required String doseUnit,
   required DateTime createdAt,
@@ -3600,7 +3637,7 @@ typedef $$SchedulesTableUpdateCompanionBuilder = SchedulesCompanion Function({
   Value<String> dates,
   Value<DateTime> startDate,
   Value<DateTime?> endDate,
-  Value<int?> minuteOfDay,
+  Value<String> times,
   Value<double> dose,
   Value<String> doseUnit,
   Value<DateTime> createdAt,
@@ -3689,8 +3726,8 @@ class $$SchedulesTableFilterComposer
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
 
-  ColumnFilters<int> get minuteOfDay => $composableBuilder(
-    column: $table.minuteOfDay,
+  ColumnFilters<String> get times => $composableBuilder(
+    column: $table.times,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3797,8 +3834,8 @@ class $$SchedulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get minuteOfDay => $composableBuilder(
-    column: $table.minuteOfDay,
+  ColumnOrderings<String> get times => $composableBuilder(
+    column: $table.times,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3868,10 +3905,8 @@ class $$SchedulesTableAnnotationComposer
   GeneratedColumnWithTypeConverter<DateTime?, String> get endDate =>
       $composableBuilder(column: $table.endDate, builder: (column) => column);
 
-  GeneratedColumn<int> get minuteOfDay => $composableBuilder(
-    column: $table.minuteOfDay,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get times =>
+      $composableBuilder(column: $table.times, builder: (column) => column);
 
   GeneratedColumn<double> get dose =>
       $composableBuilder(column: $table.dose, builder: (column) => column);
@@ -3966,7 +4001,7 @@ class $$SchedulesTableTableManager
                 Value<String> dates = const Value.absent(),
                 Value<DateTime> startDate = const Value.absent(),
                 Value<DateTime?> endDate = const Value.absent(),
-                Value<int?> minuteOfDay = const Value.absent(),
+                Value<String> times = const Value.absent(),
                 Value<double> dose = const Value.absent(),
                 Value<String> doseUnit = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -3979,7 +4014,7 @@ class $$SchedulesTableTableManager
                 dates: dates,
                 startDate: startDate,
                 endDate: endDate,
-                minuteOfDay: minuteOfDay,
+                times: times,
                 dose: dose,
                 doseUnit: doseUnit,
                 createdAt: createdAt,
@@ -3994,7 +4029,7 @@ class $$SchedulesTableTableManager
                 Value<String> dates = const Value.absent(),
                 required DateTime startDate,
                 Value<DateTime?> endDate = const Value.absent(),
-                Value<int?> minuteOfDay = const Value.absent(),
+                Value<String> times = const Value.absent(),
                 required double dose,
                 required String doseUnit,
                 required DateTime createdAt,
@@ -4007,7 +4042,7 @@ class $$SchedulesTableTableManager
                 dates: dates,
                 startDate: startDate,
                 endDate: endDate,
-                minuteOfDay: minuteOfDay,
+                times: times,
                 dose: dose,
                 doseUnit: doseUnit,
                 createdAt: createdAt,
@@ -4105,6 +4140,7 @@ typedef $$IntakeLogsTableCreateCompanionBuilder = IntakeLogsCompanion Function({
   required String id,
   required String scheduleId,
   required DateTime day,
+  Value<int> slot,
   required DateTime takenAt,
   Value<int> rowid,
 });
@@ -4112,6 +4148,7 @@ typedef $$IntakeLogsTableUpdateCompanionBuilder = IntakeLogsCompanion Function({
   Value<String> id,
   Value<String> scheduleId,
   Value<DateTime> day,
+  Value<int> slot,
   Value<DateTime> takenAt,
   Value<int> rowid,
 });
@@ -4157,6 +4194,11 @@ class $$IntakeLogsTableFilterComposer
         column: $table.day,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
+
+  ColumnFilters<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get takenAt => $composableBuilder(
     column: $table.takenAt,
@@ -4206,6 +4248,11 @@ class $$IntakeLogsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get takenAt => $composableBuilder(
     column: $table.takenAt,
     builder: (column) => ColumnOrderings(column),
@@ -4249,6 +4296,9 @@ class $$IntakeLogsTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<DateTime, String> get day =>
       $composableBuilder(column: $table.day, builder: (column) => column);
+
+  GeneratedColumn<int> get slot =>
+      $composableBuilder(column: $table.slot, builder: (column) => column);
 
   GeneratedColumn<DateTime> get takenAt =>
       $composableBuilder(column: $table.takenAt, builder: (column) => column);
@@ -4308,12 +4358,14 @@ class $$IntakeLogsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> scheduleId = const Value.absent(),
                 Value<DateTime> day = const Value.absent(),
+                Value<int> slot = const Value.absent(),
                 Value<DateTime> takenAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => IntakeLogsCompanion(
                 id: id,
                 scheduleId: scheduleId,
                 day: day,
+                slot: slot,
                 takenAt: takenAt,
                 rowid: rowid,
               ),
@@ -4322,12 +4374,14 @@ class $$IntakeLogsTableTableManager
                 required String id,
                 required String scheduleId,
                 required DateTime day,
+                Value<int> slot = const Value.absent(),
                 required DateTime takenAt,
                 Value<int> rowid = const Value.absent(),
               }) => IntakeLogsCompanion.insert(
                 id: id,
                 scheduleId: scheduleId,
                 day: day,
+                slot: slot,
                 takenAt: takenAt,
                 rowid: rowid,
               ),

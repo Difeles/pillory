@@ -16,7 +16,7 @@ class NewSchedule {
     this.weekdays = const {},
     this.dates = const [],
     this.endDate,
-    this.minuteOfDay,
+    this.times = const [],
   });
 
   final String medicineId;
@@ -32,8 +32,8 @@ class NewSchedule {
   final DateTime startDate;
   final DateTime? endDate;
 
-  /// Optional time of day, minutes from midnight.
-  final int? minuteOfDay;
+  /// Times of day, minutes from midnight. Empty means one untimed intake.
+  final List<int> times;
 }
 
 class Schedule extends NewSchedule {
@@ -48,7 +48,7 @@ class Schedule extends NewSchedule {
     super.weekdays,
     super.dates,
     super.endDate,
-    super.minuteOfDay,
+    super.times,
   });
 
   final String id;
@@ -77,8 +77,7 @@ NewSchedule validateNewSchedule(NewSchedule d) {
   if (end != null && end.isBefore(start)) {
     throw const InvalidScheduleException('Дата окончания раньше даты начала');
   }
-  final m = d.minuteOfDay;
-  if (m != null && (m < 0 || m >= 24 * 60)) {
+  if (d.times.any((m) => m < 0 || m >= 24 * 60)) {
     throw const InvalidScheduleException('Некорректное время');
   }
   return NewSchedule(
@@ -92,7 +91,7 @@ NewSchedule validateNewSchedule(NewSchedule d) {
         : const [],
     startDate: start,
     endDate: end,
-    minuteOfDay: m,
+    times: ({...d.times}.toList()..sort()),
   );
 }
 
@@ -108,16 +107,24 @@ bool occursOn(NewSchedule s, DateTime day) {
   };
 }
 
+/// The intakes of [s] on a scheduled day: one per time, or a single untimed
+/// one (null).
+List<int?> slotsOf(NewSchedule s) => s.times.isEmpty ? [null] : s.times;
+
 /// One scheduled intake on one day, with whether it was marked taken.
 class DayIntake {
   const DayIntake({
     required this.schedule,
     required this.medicineName,
+    this.minuteOfDay,
     this.takenAt,
   });
 
   final Schedule schedule;
   final String medicineName;
+
+  /// Which of the schedule's times this is; null for an untimed intake.
+  final int? minuteOfDay;
   final DateTime? takenAt;
 
   bool get taken => takenAt != null;
@@ -125,7 +132,7 @@ class DayIntake {
 
 /// Timed intakes first by time, then untimed ones, each by medicine name.
 int compareIntakes(DayIntake a, DayIntake b) {
-  final ta = a.schedule.minuteOfDay, tb = b.schedule.minuteOfDay;
+  final ta = a.minuteOfDay, tb = b.minuteOfDay;
   if (ta != tb) {
     if (ta == null) return 1;
     if (tb == null) return -1;
@@ -178,9 +185,14 @@ abstract class ScheduleRepository {
   /// Returns the new schedule id. Throws [InvalidScheduleException].
   Future<String> createSchedule(NewSchedule draft);
 
-  /// Marks the intake of [scheduleId] on [day] as taken and deducts the dose
-  /// from stock, recording inventory transactions, atomically. A second call
-  /// for the same intake does nothing. Throws [InsufficientStockException]
+  /// Marks the intake of [scheduleId] at [minuteOfDay] (null if untimed) on
+  /// [day] as taken and deducts one dose from stock, recording inventory
+  /// transactions, atomically. A second call for the same intake does nothing;
+  /// other times of the same schedule are unaffected. Throws [InsufficientStockException]
   /// (nothing written) if stock is short.
-  Future<void> markTaken({required String scheduleId, required DateTime day});
+  Future<void> markTaken({
+    required String scheduleId,
+    required DateTime day,
+    int? minuteOfDay,
+  });
 }

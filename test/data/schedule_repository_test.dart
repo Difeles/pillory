@@ -28,20 +28,59 @@ void main() {
         NewMedicine(name: name, initialQuantity: qty, unit: 'шт.'),
       );
 
-  NewSchedule daily(String medicineId, {double dose = 1, int? minute}) =>
-      NewSchedule(
-        medicineId: medicineId,
-        kind: ScheduleKind.daily,
-        dose: dose,
-        doseUnit: 'шт.',
-        startDate: DateTime(2026, 10, 1),
-        minuteOfDay: minute,
-      );
+  NewSchedule daily(
+    String medicineId, {
+    double dose = 1,
+    List<int> times = const [],
+  }) => NewSchedule(
+    medicineId: medicineId,
+    kind: ScheduleKind.daily,
+    dose: dose,
+    doseUnit: 'шт.',
+    startDate: DateTime(2026, 10, 1),
+    times: times,
+  );
 
   Future<List<DayIntake>> intakes([DateTime? d]) =>
       repo.watchDay(d ?? day).first;
   Future<double> total() async =>
       (await inventory.watchStock().first).single.totalQuantity;
+
+  test('several times give independent intakes and doses', () async {
+    final id = await medicine(10);
+    final sid = await repo.createSchedule(
+      daily(id, dose: 2, times: [20 * 60, 8 * 60, 8 * 60]),
+    );
+    final list = await intakes();
+    expect(list.map((i) => i.minuteOfDay), [480, 1200]);
+
+    await repo.markTaken(scheduleId: sid, day: day, minuteOfDay: 1200);
+    expect((await intakes()).map((i) => i.taken), [false, true]);
+    expect(await total(), 8);
+
+    // Repeat of the same time is a no-op; the other time still deducts.
+    await repo.markTaken(scheduleId: sid, day: day, minuteOfDay: 1200);
+    expect(await total(), 8);
+    await repo.markTaken(scheduleId: sid, day: day, minuteOfDay: 480);
+    expect(await total(), 6);
+    expect((await intakes()).every((i) => i.taken), isTrue);
+
+    expect(
+      () => repo.markTaken(scheduleId: sid, day: day, minuteOfDay: 600),
+      throwsArgumentError,
+    );
+    expect(
+      () => repo.markTaken(scheduleId: sid, day: day),
+      throwsArgumentError,
+    );
+  });
+
+  test('rejects an out-of-range time', () {
+    expect(
+      () => repo.createSchedule(daily('m', times: [24 * 60])),
+      throwsA(isA<InvalidScheduleException>()),
+    );
+  });
 
   test(
     'a schedule references the existing medicine and shows on its days',
@@ -205,8 +244,8 @@ void main() {
       final id = await inv.createMedicine(
         const NewMedicine(name: 'Нурофен', initialQuantity: 8, unit: 'шт.'),
       );
-      final sid = await r.createSchedule(daily(id, minute: 8 * 60 + 30));
-      await r.markTaken(scheduleId: sid, day: day);
+      final sid = await r.createSchedule(daily(id, times: [8 * 60 + 30]));
+      await r.markTaken(scheduleId: sid, day: day, minuteOfDay: 510);
       await first.close();
 
       final second = AppDatabase(NativeDatabase(file));
@@ -214,10 +253,68 @@ void main() {
       final inv2 = DriftInventoryRepository(second);
       final r2 = DriftScheduleRepository(second, inv2);
       final i = (await r2.watchDay(day).first).single;
-      expect(i.schedule.minuteOfDay, 510);
+      expect(i.minuteOfDay, 510);
       expect(i.taken, isTrue);
       expect((await inv2.watchStock().first).single.totalQuantity, 7);
     });
+
+    test(
+      'a v2 database upgrades keeping schedules and marks per time',
+      () async {
+        final old = AppDatabase(NativeDatabase(file));
+        final inv = DriftInventoryRepository(old);
+        final mid = await inv.createMedicine(
+          const NewMedicine(name: 'Старое', initialQuantity: 5, unit: 'шт.'),
+        );
+        await old.customStatement('DROP TABLE intake_logs');
+        await old.customStatement('DROP TABLE schedules');
+        await old.customStatement('''CREATE TABLE schedules (
+        id TEXT NOT NULL PRIMARY KEY,
+        medicine_id TEXT NOT NULL REFERENCES medicines (id) ON DELETE CASCADE,
+        kind TEXT NOT NULL, weekdays TEXT NOT NULL DEFAULT '',
+        dates TEXT NOT NULL DEFAULT '', start_date TEXT NOT NULL,
+        end_date TEXT, minute_of_day INTEGER,
+        dose REAL NOT NULL CHECK (dose > 0), dose_unit TEXT NOT NULL,
+        created_at INTEGER NOT NULL)''');
+        await old.customStatement('''CREATE TABLE intake_logs (
+        id TEXT NOT NULL PRIMARY KEY,
+        schedule_id TEXT NOT NULL REFERENCES schedules (id) ON DELETE CASCADE,
+        day TEXT NOT NULL, taken_at INTEGER NOT NULL,
+        UNIQUE (schedule_id, day))''');
+        await old.customStatement(
+          "INSERT INTO schedules VALUES ('timed', '$mid', 'daily', '', '', "
+          "'2026-10-01', NULL, 480, 1, 'шт.', 0), "
+          "('untimed', '$mid', 'daily', '', '', '2026-10-01', NULL, NULL, 1, "
+          "'шт.', 0)",
+        );
+        await old.customStatement(
+          "INSERT INTO intake_logs VALUES ('l1', 'timed', '2026-10-19', 0), "
+          "('l2', 'untimed', '2026-10-19', 0)",
+        );
+        await old.customStatement('PRAGMA user_version = 2');
+        await old.close();
+
+        final db3 = AppDatabase(NativeDatabase(file));
+        addTearDown(db3.close);
+        final r = DriftScheduleRepository(db3, DriftInventoryRepository(db3));
+        final list = await r.watchDay(day).first;
+        expect(list.map((i) => (i.minuteOfDay, i.taken)), [
+          (480, true),
+          (null, true),
+        ]);
+        // A later time on the migrated schedule is still independent.
+        await db3.customStatement(
+          "UPDATE schedules SET times = '480,1200' WHERE id = 'timed'",
+        );
+        db3.markTablesUpdated([db3.schedules]);
+        final again = await r.watchDay(day).first;
+        expect(again.map((i) => (i.minuteOfDay, i.taken)), [
+          (480, true),
+          (1200, false),
+          (null, true),
+        ]);
+      },
+    );
 
     test('a v1 database upgrades to v2 and keeps its data', () async {
       final v1 = AppDatabase(NativeDatabase(file));

@@ -30,15 +30,26 @@ class DriftScheduleRepository implements ScheduleRepository {
       leftOuterJoin(l, l.scheduleId.equalsExp(s.id) & l.day.equalsValue(d)),
     ]);
     // The join reads all three tables, so new schedules and marks re-emit.
+    // A schedule yields one row per mark of the day (or one without marks).
     return query.watch().map((rows) {
+      final bySchedule = <String, List<TypedResult>>{};
+      for (final r in rows) {
+        (bySchedule[r.readTable(s).id] ??= []).add(r);
+      }
       final list = [
-        for (final r in rows)
-          if (occursOn(_schedule(r.readTable(s)), d))
-            DayIntake(
-              schedule: _schedule(r.readTable(s)),
-              medicineName: r.readTable(m).name,
-              takenAt: r.readTableOrNull(l)?.takenAt,
-            ),
+        for (final group in bySchedule.values)
+          if (occursOn(_schedule(group.first.readTable(s)), d))
+            for (final slot in slotsOf(_schedule(group.first.readTable(s))))
+              DayIntake(
+                schedule: _schedule(group.first.readTable(s)),
+                medicineName: group.first.readTable(m).name,
+                minuteOfDay: slot,
+                takenAt: group
+                    .map((r) => r.readTableOrNull(l))
+                    .where((x) => x != null && x.slot == (slot ?? untimedSlot))
+                    .firstOrNull
+                    ?.takenAt,
+              ),
       ]..sort(compareIntakes);
       return list;
     });
@@ -59,7 +70,7 @@ class DriftScheduleRepository implements ScheduleRepository {
             dates: Value(d.dates.map(_dates.toSql).join(',')),
             startDate: d.startDate,
             endDate: Value(d.endDate),
-            minuteOfDay: Value(d.minuteOfDay),
+            times: Value(d.times.join(',')),
             dose: d.dose,
             doseUnit: d.doseUnit,
             createdAt: _now(),
@@ -69,8 +80,13 @@ class DriftScheduleRepository implements ScheduleRepository {
   }
 
   @override
-  Future<void> markTaken({required String scheduleId, required DateTime day}) {
+  Future<void> markTaken({
+    required String scheduleId,
+    required DateTime day,
+    int? minuteOfDay,
+  }) {
     final d = dateOnly(day);
+    final slot = minuteOfDay ?? untimedSlot;
     return _db.transaction(() async {
       final row = await (_db.select(
         _db.schedules,
@@ -80,9 +96,15 @@ class DriftScheduleRepository implements ScheduleRepository {
       if (!occursOn(schedule, d)) {
         throw ArgumentError.value(day, 'day', 'no intake scheduled that day');
       }
+      if (!slotsOf(schedule).contains(minuteOfDay)) {
+        throw ArgumentError.value(minuteOfDay, 'minuteOfDay', 'not a time');
+      }
       final done =
           await (_db.select(_db.intakeLogs)..where(
-                (l) => l.scheduleId.equals(scheduleId) & l.day.equalsValue(d),
+                (l) =>
+                    l.scheduleId.equals(scheduleId) &
+                    l.day.equalsValue(d) &
+                    l.slot.equals(slot),
               ))
               .getSingleOrNull();
       if (done != null) return;
@@ -119,6 +141,7 @@ class DriftScheduleRepository implements ScheduleRepository {
               id: generateId(),
               scheduleId: scheduleId,
               day: d,
+              slot: Value(slot),
               takenAt: _now(),
             ),
           );
@@ -142,6 +165,9 @@ class DriftScheduleRepository implements ScheduleRepository {
     ],
     startDate: r.startDate,
     endDate: r.endDate,
-    minuteOfDay: r.minuteOfDay,
+    times: [
+      for (final x in r.times.split(','))
+        if (x.isNotEmpty) int.parse(x),
+    ],
   );
 }

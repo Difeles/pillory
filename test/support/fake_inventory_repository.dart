@@ -114,7 +114,8 @@ class FakeScheduleRepository implements ScheduleRepository {
   final _taken = <String, DateTime>{}; // "scheduleId|yyyy-MM-dd" -> takenAt
   final _changes = StreamController<void>.broadcast(sync: true);
 
-  String _key(String id, DateTime day) => '$id|${dateOnly(day)}';
+  String _key(String id, DateTime day, int? minute) =>
+      '$id|${dateOnly(day)}|$minute';
 
   @override
   Stream<List<DayIntake>> watchDay(DateTime day) async* {
@@ -123,14 +124,16 @@ class FakeScheduleRepository implements ScheduleRepository {
       return [
         for (final s in _schedules)
           if (occursOn(s, day))
-            DayIntake(
-              schedule: s,
-              medicineName: stock
-                  .firstWhere((m) => m.medicine.id == s.medicineId)
-                  .medicine
-                  .name,
-              takenAt: _taken[_key(s.id, day)],
-            ),
+            for (final slot in slotsOf(s))
+              DayIntake(
+                schedule: s,
+                medicineName: stock
+                    .firstWhere((m) => m.medicine.id == s.medicineId)
+                    .medicine
+                    .name,
+                minuteOfDay: slot,
+                takenAt: _taken[_key(s.id, day, slot)],
+              ),
       ]..sort(compareIntakes);
     }
 
@@ -154,7 +157,7 @@ class FakeScheduleRepository implements ScheduleRepository {
       dates: d.dates,
       startDate: d.startDate,
       endDate: d.endDate,
-      minuteOfDay: d.minuteOfDay,
+      times: d.times,
     );
     _schedules.add(s);
     _changes.add(null);
@@ -165,9 +168,10 @@ class FakeScheduleRepository implements ScheduleRepository {
   Future<void> markTaken({
     required String scheduleId,
     required DateTime day,
+    int? minuteOfDay,
   }) async {
     final s = _schedules.firstWhere((s) => s.id == scheduleId);
-    if (_taken.containsKey(_key(scheduleId, day))) return;
+    if (_taken.containsKey(_key(scheduleId, day, minuteOfDay))) return;
     final stock = await _inventory.watchStock().first;
     final packages = stock
         .firstWhere((m) => m.medicine.id == s.medicineId)
@@ -178,7 +182,7 @@ class FakeScheduleRepository implements ScheduleRepository {
         delta: -step.amount,
       );
     }
-    _taken[_key(scheduleId, day)] = DateTime.now();
+    _taken[_key(scheduleId, day, minuteOfDay)] = DateTime.now();
     _changes.add(null);
   }
 }

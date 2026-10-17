@@ -90,7 +90,9 @@ class Schedules extends Table {
   TextColumn get dates => text().withDefault(const Constant(''))();
   TextColumn get startDate => text().map(const DateOnlyConverter())();
   TextColumn get endDate => text().map(const DateOnlyConverter()).nullable()();
-  IntColumn get minuteOfDay => integer().nullable()();
+
+  /// Comma-separated minutes from midnight; empty means one untimed intake.
+  TextColumn get times => text().withDefault(const Constant(''))();
 
   /// Per intake; independent of any package quantity.
   RealColumn get dose => real().check(dose.isBiggerThanValue(0))();
@@ -101,6 +103,8 @@ class Schedules extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+const untimedSlot = -1;
+
 /// One taken intake. The unique key is what makes a repeated mark a no-op.
 @DataClassName('IntakeLogRow')
 class IntakeLogs extends Table {
@@ -108,6 +112,10 @@ class IntakeLogs extends Table {
   TextColumn get scheduleId =>
       text().references(Schedules, #id, onDelete: KeyAction.cascade)();
   TextColumn get day => text().map(const DateOnlyConverter())();
+
+  /// Minutes from midnight of the taken intake, [untimedSlot] if untimed
+  /// (not NULL, because NULLs never collide in a unique key).
+  IntColumn get slot => integer().withDefault(const Constant(untimedSlot))();
   DateTimeColumn get takenAt => dateTime()();
 
   @override
@@ -115,6 +123,6 @@ class IntakeLogs extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {scheduleId, day},
+    {scheduleId, day, slot},
   ];
 }

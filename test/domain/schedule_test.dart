@@ -123,6 +123,7 @@ void main() {
   test('intakes sort timed first by time, then untimed by name', () {
     DayIntake i(String name, int? minute) => DayIntake(
       medicineName: name,
+      minuteOfDay: minute,
       schedule: Schedule(
         id: name,
         createdAt: DateTime(2026),
@@ -131,7 +132,6 @@ void main() {
         dose: 1,
         doseUnit: 'шт.',
         startDate: DateTime(2026),
-        minuteOfDay: minute,
       ),
     );
     final l = [i('Б', null), i('А', null), i('В', 600), i('Г', 480)]
