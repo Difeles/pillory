@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/app_database.dart';
+import '../data/drift_backup_repository.dart';
 import '../data/drift_inventory_repository.dart';
 import '../data/drift_schedule_repository.dart';
 import '../domain/inventory_repository.dart';
 import '../domain/reminder_scheduler.dart';
 import '../domain/schedule.dart';
+import 'reminder_sync.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -28,3 +30,16 @@ final scheduleRepositoryProvider = Provider<ScheduleRepository>(
 final reminderSchedulerProvider = Provider<ReminderScheduler>(
   (ref) => const NoopReminderScheduler(),
 );
+
+final backupRepositoryProvider = Provider<DriftBackupRepository>(
+  (ref) => DriftBackupRepository(ref.watch(appDatabaseProvider)),
+);
+
+final reminderSyncProvider = Provider<ReminderSync>((ref) {
+  final sync = ReminderSync(
+    ref.watch(scheduleRepositoryProvider),
+    ref.watch(reminderSchedulerProvider),
+  );
+  ref.onDispose(sync.dispose);
+  return sync;
+});

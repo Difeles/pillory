@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/inventory/inventory_screen.dart';
-import '../features/placeholder_screen.dart';
+import '../features/profile/profile_screen.dart';
 import '../features/today/today_providers.dart';
 import '../features/today/today_screen.dart';
 
@@ -32,7 +32,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       children: [
         const TodayScreen(),
         InventoryScreen(active: _index == 1),
-        const PlaceholderScreen(title: 'Профиль', icon: Icons.person_outline),
+        const ProfileScreen(),
       ],
     ),
     bottomNavigationBar: NavigationBar(

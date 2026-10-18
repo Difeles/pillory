@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and older (also used by 12+ when targeting 11 or lower).
+     One include per flag, so the files are taken for either transport: an
+     encrypted cloud backup or a device-to-device transfer, never a plain
+     cloud one. Android 8.1 and older do not know the flags and back up nothing. -->
+<full-backup-content>
+    <include domain="root" path="." requireFlags="clientSideEncryption" />
+    <include domain="root" path="." requireFlags="deviceToDeviceTransfer" />
+</full-backup-content>

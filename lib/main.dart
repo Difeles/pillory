@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'app/providers.dart';
-import 'app/reminder_sync.dart';
 import 'data/local_notifications_scheduler.dart';
 import 'domain/reminder_scheduler.dart';
 import 'domain/reminders.dart';
@@ -29,7 +28,7 @@ Future<void> main() async {
   container = ProviderContainer(
     overrides: [reminderSchedulerProvider.overrideWithValue(scheduler)],
   );
-  ReminderSync(container.read(scheduleRepositoryProvider), scheduler).start();
+  container.read(reminderSyncProvider).start();
   runApp(
     UncontrolledProviderScope(container: container, child: const PilloryApp()),
   );

@@ -45,6 +45,15 @@ class ReminderSync with WidgetsBindingObserver {
     }
   }
 
+  /// Plans once from the data as it is now and completes when that pass is
+  /// done; for after a bulk change such as a restore.
+  Future<void> resync() async {
+    _latest = await _repo.watchReminderSource(dateOnly(_now())).first;
+    _dirty = true;
+    _worker ??= _drain();
+    await idle;
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // The planning window moves with the clock and the zone may have changed.

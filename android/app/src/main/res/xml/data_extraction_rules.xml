@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+. Medical data goes to the cloud backup only if it is
+     end-to-end encrypted (the device has a screen lock); without that, no
+     cloud backup. Device-to-device transfer never leaves the two devices, so
+     it keeps working and takes the default rules (everything but caches). -->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true" />
+    <device-transfer />
+</data-extraction-rules>
