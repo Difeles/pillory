@@ -62,7 +62,7 @@ void main() {
     tester,
   ) async {
     await openMedicine(tester);
-    expect(find.text('Остаток: 10 шт.'), findsOneWidget);
+    expect(find.bySemanticsLabel('Остаток: 10 шт.'), findsOneWidget);
 
     await tester.tap(find.text('Добавить упаковку'));
     await tester.pumpAndSettle();
@@ -71,7 +71,7 @@ void main() {
     await tester.tap(find.text('Добавить'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Остаток: 15 шт.'), findsOneWidget);
+    expect(find.bySemanticsLabel('Остаток: 15 шт.'), findsOneWidget);
     expect(find.text('5 шт.'), findsOneWidget);
   });
 
@@ -86,7 +86,7 @@ void main() {
     );
     await tester.tap(find.text('Сохранить'));
     await tester.pumpAndSettle();
-    expect(find.text('Остаток: 7 шт.'), findsOneWidget);
+    expect(find.bySemanticsLabel('Остаток: 7 шт.'), findsOneWidget);
 
     await menu(tester, 'Упаковка', 'История движения');
     expect(find.textContaining('Коррекция'), findsOneWidget);
@@ -103,7 +103,7 @@ void main() {
     await tester.tap(find.text('Сохранить'));
     await tester.pumpAndSettle();
     expect(find.text('Введите число 0 или больше'), findsOneWidget);
-    expect(find.text('Остаток: 10 шт.'), findsOneWidget);
+    expect(find.bySemanticsLabel('Остаток: 10 шт.'), findsOneWidget);
   });
 
   testWidgets('editing renames the medicine', (tester) async {
@@ -169,5 +169,89 @@ void main() {
     await back(tester);
     await tester.pumpAndSettle();
     expect(find.byTooltip('Уменьшить остаток'), findsNothing);
+  });
+
+  testWidgets('several packages: one card each, the total sums them', (
+    tester,
+  ) async {
+    await openMedicine(tester);
+    final id = (await inventory.watchStock().first).single.medicine.id;
+    await inventory.addPackage(
+      medicineId: id,
+      quantity: 4,
+      unit: 'шт.',
+      expiresOn: DateTime(2000, 1, 1),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('Остаток: 14 шт.'), findsOneWidget);
+    expect(find.text('10 шт.'), findsOneWidget);
+    expect(find.text('4 шт.'), findsOneWidget);
+    expect(find.text('Срок годности истёк 01.01.2000'), findsOneWidget);
+    expect(find.byTooltip('Упаковка'), findsNWidgets(2));
+  });
+
+  testWidgets('a package in another unit is flagged and left out', (
+    tester,
+  ) async {
+    await openMedicine(tester);
+    final id = (await inventory.watchStock().first).single.medicine.id;
+    // Legacy data: the repository no longer accepts a foreign unit.
+    await inventory.addPackage(medicineId: id, quantity: 50, unit: 'мл');
+    await tester.pumpAndSettle();
+
+    expect(find.text('50 мл'), findsOneWidget);
+    expect(
+      find.text(
+        'Другая единица: не входит в остаток и не расходуется приёмами',
+      ),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel('Остаток: 10 шт.'), findsOneWidget);
+  });
+
+  testWidgets('the package menu keeps every action', (tester) async {
+    await openMedicine(tester);
+    await tester.tap(find.byTooltip('Упаковка'));
+    await tester.pumpAndSettle();
+    for (final item in [
+      'Скорректировать остаток',
+      'Срок годности',
+      'История движения',
+    ]) {
+      expect(find.text(item), findsOneWidget);
+    }
+    // Clearing is offered only once there is a date.
+    expect(find.text('Убрать срок годности'), findsNothing);
+  });
+
+  testWidgets('an archived medicine keeps its packages and history', (
+    tester,
+  ) async {
+    await openMedicine(tester);
+    await menu(tester, 'Лекарство', 'В архив');
+    await tester.tap(find.widgetWithText(FilledButton, 'В архив'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('В архиве'), findsOneWidget);
+    expect(find.byTooltip('Упаковка'), findsOneWidget);
+    // Adding is refused for the archive, so it is not offered.
+    expect(find.text('Добавить упаковку'), findsNothing);
+    await menu(tester, 'Упаковка', 'История движения');
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('История движения'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('the medicine menu offers edit and archive', (tester) async {
+    await openMedicine(tester);
+    await tester.tap(find.byTooltip('Лекарство'));
+    await tester.pumpAndSettle();
+    expect(find.text('Изменить'), findsOneWidget);
+    expect(find.text('В архив'), findsOneWidget);
   });
 }

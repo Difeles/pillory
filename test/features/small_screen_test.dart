@@ -13,9 +13,6 @@ import 'package:pillory/features/today/today_screen.dart';
 
 import '../support/fake_inventory_repository.dart';
 
-// shortcut: skipped tests are a known overflow (the medicine card row in
-// medicine_card.dart); un-skip them in the stage-2 cabinet redesign.
-
 /// Each main screen at the narrowest supported width with doubled system
 /// text: any RenderFlex overflow fails the test. Screens are pumped alone
 /// because the shell keeps every tab laid out at once.
@@ -98,14 +95,54 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Принято'), findsOneWidget);
   });
 
-  testWidgets('Cabinet fits', skip: true, (tester) async {
+  testWidgets('Cabinet fits', (tester) async {
     await pumpSmall(tester, screen(() => const InventoryScreen()));
     expect(find.text('Ибупрофен форте'), findsOneWidget);
   });
 
-  testWidgets('Whole app with navigation fits', skip: true, (tester) async {
+  testWidgets('Whole app with navigation fits', (tester) async {
     await pumpSmall(tester, const PilloryApp());
     expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('Cabinet: an empty filter offers to show all', (tester) async {
+    await pumpSmall(tester, screen(() => const InventoryScreen()));
+    final expired = find.widgetWithText(ChoiceChip, 'Просрочено');
+    await tester.ensureVisible(expired);
+    await tester.tap(expired);
+    await tester.pumpAndSettle();
+    expect(find.text('Нет лекарств с таким статусом'), findsOneWidget);
+
+    // Below the fold at ×2; the empty state scrolls to it.
+    await tester.ensureVisible(find.text('Показать все'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Показать все'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ибупрофен форте'), findsOneWidget);
+  });
+
+  testWidgets('Cabinet: a card with two packages fits, without ±', (
+    tester,
+  ) async {
+    await pumpSmall(tester, screen(() => const InventoryScreen()));
+    await inventory.addPackage(
+      medicineId: medicineId,
+      quantity: 10,
+      unit: 'шт.',
+      expiresOn: null,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('12 шт.'), findsOneWidget);
+    expect(find.byTooltip('Уменьшить остаток'), findsNothing);
+  });
+
+  testWidgets('Archive fits', (tester) async {
+    await pumpSmall(tester, screen(() => const InventoryScreen()));
+    await inventory.archiveMedicine(medicineId);
+    await tester.tap(find.byTooltip('Архив'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ибупрофен форте'), findsOneWidget);
+    expect(find.byTooltip('Уменьшить остаток'), findsNothing);
   });
 
   testWidgets('Medicine screen fits', (tester) async {
@@ -114,6 +151,31 @@ void main() {
       screen(() => MedicineScreen(medicineId: medicineId)),
     );
     expect(find.text('Упаковки'), findsOneWidget);
+  });
+
+  testWidgets('Medicine screen with mixed packages, archived, fits', (
+    tester,
+  ) async {
+    await pumpSmall(
+      tester,
+      screen(() => MedicineScreen(medicineId: medicineId)),
+    );
+    await inventory.addPackage(
+      medicineId: medicineId,
+      quantity: 4,
+      unit: 'шт.',
+      expiresOn: DateTime(2000, 1, 1),
+    );
+    await inventory.addPackage(
+      medicineId: medicineId,
+      quantity: 50,
+      unit: 'мл',
+    );
+    await inventory.archiveMedicine(medicineId);
+    await tester.pumpAndSettle();
+    expect(find.text('В архиве'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('50 мл'), 100);
+    expect(find.byTooltip('Упаковка').hitTestable(), findsWidgets);
   });
 
   testWidgets('Profile fits', (tester) async {

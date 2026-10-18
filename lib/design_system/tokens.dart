@@ -52,6 +52,10 @@ abstract final class AppSizes {
   static const illustration = 96.0;
   static const illustrationIcon = 48.0;
   static const badgeIcon = 16.0;
+
+  /// The tinted square that shows a medicine's form.
+  static const avatar = 48.0;
+  static const avatarIcon = 24.0;
 }
 
 abstract final class AppShadows {

@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
+import '../../design_system/widgets/app_card.dart';
+import '../../design_system/widgets/confirm_dialog.dart';
+import '../../design_system/widgets/section_header.dart';
+import '../../design_system/widgets/states.dart';
+import '../../design_system/widgets/status_badge.dart';
 import '../../domain/errors.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/models.dart';
@@ -10,6 +15,7 @@ import '../../domain/stock_status.dart';
 import 'add_medicine_screen.dart';
 import 'format.dart';
 import 'inventory_providers.dart';
+import 'medicine_card.dart';
 
 /// One medicine: its details, its packages and what can be done with them.
 class MedicineScreen extends ConsumerWidget {
@@ -27,7 +33,10 @@ class MedicineScreen extends ConsumerWidget {
     if (stock == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const Center(child: CircularProgressIndicator()),
+        body: ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: const [LoadingState(cards: 2)],
+        ),
       );
     }
     final medicine = stock.medicine;
@@ -37,9 +46,10 @@ class MedicineScreen extends ConsumerWidget {
       if (medicine.form != null) medicine.form!.label,
       if (medicine.strength != null) medicine.strength!,
     ].join(' · ');
+    final quantity = '${formatQuantity(stock.totalQuantity)} ${stock.unit}';
     return Scaffold(
+      // The name is the header below, so it is not repeated here.
       appBar: AppBar(
-        title: Text(medicine.name),
         actions: [
           PopupMenuButton<VoidCallback>(
             tooltip: 'Лекарство',
@@ -63,65 +73,109 @@ class MedicineScreen extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.xl,
+        ),
         children: [
-          if (archived)
+          AppCard(
+            variant: archived ? AppCardVariant.muted : AppCardVariant.normal,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    MedicineAvatar(form: medicine.form),
+                    const SizedBox(width: AppSpacing.ms),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Semantics(
+                            header: true,
+                            child: Text(
+                              medicine.name,
+                              style: text.headlineSmall,
+                            ),
+                          ),
+                          if (details.isNotEmpty)
+                            Text(
+                              details,
+                              style: text.bodyMedium?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          if (archived) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            const StatusBadge(
+                              label: 'В архиве',
+                              icon: Icons.inventory_2_outlined,
+                              tone: StatusTone.accent,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // One announcement for the caption and the number.
+                MergeSemantics(
+                  child: Semantics(
+                    label: 'Остаток: $quantity',
+                    excludeSemantics: true,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Общий остаток',
+                          style: text.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        Text(quantity, style: AppType.numeric),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SectionHeader(title: 'Упаковки'),
+          for (final p in stock.packages)
             Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Text(
-                'В архиве',
-                style: text.titleMedium?.copyWith(color: AppColors.danger),
+              padding: const EdgeInsets.only(bottom: AppSpacing.ms),
+              child: _PackageTile(
+                package: p,
+                counted: p.unit == stock.unit,
+                unit: stock.unit,
               ),
             ),
-          if (details.isNotEmpty) Text(details, style: text.bodyLarge),
-          Text(
-            'Остаток: ${formatQuantity(stock.totalQuantity)} ${stock.unit}',
-            style: text.titleMedium,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text('Упаковки', style: text.titleMedium),
-          for (final p in stock.packages)
-            _PackageTile(
-              package: p,
-              counted: p.unit == stock.unit,
-              unit: stock.unit,
-            ),
-          if (!archived) ...[
-            const SizedBox(height: AppSpacing.md),
+          if (!archived)
             FilledButton.tonalIcon(
               onPressed: () => _addPackage(context, ref, stock),
               icon: const Icon(Icons.add),
               label: const Text('Добавить упаковку'),
             ),
-          ],
         ],
       ),
     );
   }
 
   Future<void> _archive(BuildContext context, WidgetRef ref) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Убрать в архив?'),
-        content: const Text(
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Убрать в архив?',
+      message:
           'Действующие расписания этого лекарства будут завершены, '
           'напоминания отключены. Прошлые приёмы и история остатков '
           'сохранятся.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('Отмена'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('В архив'),
-          ),
-        ],
-      ),
+      confirmLabel: 'В архив',
     );
-    if (ok == true) {
+    if (ok) {
       await ref.read(inventoryRepositoryProvider).archiveMedicine(medicineId);
     }
   }
@@ -177,46 +231,96 @@ class _PackageTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
     final expiry = package.expiresOn;
-    final expired = isExpired(expiry, DateTime.now());
-    final lines = [
+    final today = DateTime.now();
+    final badges = [
       if (expiry != null)
-        expired
-            ? 'Срок годности истёк ${formatDate(expiry)}'
-            : 'Годен до ${formatDate(expiry)}',
-      if (counted && package.quantity <= 0) 'Закончилась',
+        isExpired(expiry, today)
+            ? StatusBadge(
+                label: 'Срок годности истёк ${formatDate(expiry)}',
+                icon: Icons.error_outline,
+                tone: StatusTone.danger,
+              )
+            : StatusBadge(
+                label: 'Годен до ${formatDate(expiry)}',
+                icon: Icons.event_outlined,
+              ),
+      if (counted && package.quantity <= 0)
+        const StatusBadge(
+          label: 'Закончилась',
+          icon: Icons.remove_circle_outline,
+          tone: StatusTone.danger,
+        ),
       if (counted &&
-          packageStatus(package, DateTime.now()) == PackageStatus.expiringSoon)
-        'Скоро истекает',
+          packageStatus(package, today) == PackageStatus.expiringSoon)
+        const StatusBadge(
+          label: 'Скоро истекает',
+          icon: Icons.schedule,
+          tone: StatusTone.warning,
+        ),
       if (!counted)
-        'Другая единица: не входит в остаток и не расходуется приёмами',
+        const StatusBadge(
+          label:
+              'Другая единица: не входит в остаток и не расходуется приёмами',
+          icon: Icons.info_outline,
+          tone: StatusTone.warning,
+        ),
     ];
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text('${formatQuantity(package.quantity)} ${package.unit}'),
-      subtitle: lines.isEmpty ? null : Text(lines.join('\n')),
-      trailing: PopupMenuButton<VoidCallback>(
-        tooltip: 'Упаковка',
-        onSelected: (action) => action(),
-        itemBuilder: (_) => [
-          PopupMenuItem(
-            value: () => _correct(context, ref),
-            child: const Text('Скорректировать остаток'),
-          ),
-          PopupMenuItem(
-            value: () => _pickExpiry(context, ref),
-            child: const Text('Срок годности'),
-          ),
-          if (expiry != null)
-            PopupMenuItem(
-              value: () => ref
-                  .read(inventoryRepositoryProvider)
-                  .updatePackageExpiry(package.id, null),
-              child: const Text('Убрать срок годности'),
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.ms,
+        AppSpacing.xs,
+        AppSpacing.ms,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${formatQuantity(package.quantity)} ${package.unit}',
+                  style: text.titleMedium?.copyWith(
+                    fontFeatures: AppType.numeric.fontFeatures,
+                  ),
+                ),
+                if (badges.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: badges,
+                  ),
+                ],
+              ],
             ),
-          PopupMenuItem(
-            value: () => _history(context, ref),
-            child: const Text('История движения'),
+          ),
+          PopupMenuButton<VoidCallback>(
+            tooltip: 'Упаковка',
+            onSelected: (action) => action(),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: () => _correct(context, ref),
+                child: const Text('Скорректировать остаток'),
+              ),
+              PopupMenuItem(
+                value: () => _pickExpiry(context, ref),
+                child: const Text('Срок годности'),
+              ),
+              if (expiry != null)
+                PopupMenuItem(
+                  value: () => ref
+                      .read(inventoryRepositoryProvider)
+                      .updatePackageExpiry(package.id, null),
+                  child: const Text('Убрать срок годности'),
+                ),
+              PopupMenuItem(
+                value: () => _history(context, ref),
+                child: const Text('История движения'),
+              ),
+            ],
           ),
         ],
       ),

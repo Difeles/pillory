@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
+import '../../design_system/widgets/app_card.dart';
+import '../../design_system/widgets/quantity_stepper.dart';
+import '../../design_system/widgets/status_badge.dart';
 import '../../domain/errors.dart';
+import '../../domain/medicine_form.dart';
 import '../../domain/models.dart';
 import '../../domain/stock_status.dart';
 import 'format.dart';
@@ -44,117 +48,166 @@ class MedicineCard extends ConsumerWidget {
     // Archived medicines are left out of the stock checks.
     final today = DateTime.now();
     final assessment = archived ? null : assess(stock, today);
-    final (status, statusColor) = _status(assessment, today);
+    final status = _status(assessment, today);
+    final quantity = '${formatQuantity(stock.totalQuantity)} ${stock.unit}';
 
     // +/- act on one package, so they are offered only when there is one.
     final quick = !archived && stock.packages.length == 1;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return AppCard(
+      variant: archived ? AppCardVariant.muted : AppCardVariant.normal,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => MedicineScreen(medicineId: medicine.id),
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          boxShadow: AppShadows.card,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    medicine.name,
-                    style: text.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (details.isNotEmpty)
-                    Text(
-                      details,
-                      style: text.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MedicineAvatar(form: medicine.form),
+              const SizedBox(width: AppSpacing.ms),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(medicine.name, style: text.titleMedium),
+                    if (details.isNotEmpty)
+                      Text(
+                        details,
+                        style: text.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                    ),
-                  const SizedBox(height: AppSpacing.sm),
-                  if (status != null)
-                    Text(
+                    if (status != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
                       status,
-                      style: text.bodySmall?.copyWith(color: statusColor),
-                    ),
-                  if (assessment?.problem == StockProblem.expired)
-                    Text(
-                      'Проверьте инструкцию и местные правила утилизации',
-                      style: text.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                    ],
+                    if (assessment?.problem == StockProblem.expired) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Проверьте инструкцию и местные правила утилизации',
+                        style: text.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                    ),
-                ],
+                    ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            if (quick)
-              IconButton.filledTonal(
-                tooltip: 'Уменьшить остаток',
-                onPressed: package.quantity > 0
-                    ? () => _change(context, ref, -1)
-                    : null,
-                icon: const Icon(Icons.remove),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.ms),
+          // Wraps instead of overflowing: with large text the stepper moves
+          // under the label.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: AppSpacing.xs,
+            children: [
+              Text(
+                'Остаток',
+                style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
               ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: Text(
-                '${formatQuantity(stock.totalQuantity)} ${stock.unit}',
-                style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ),
-            if (quick)
-              IconButton.filledTonal(
-                tooltip: 'Увеличить остаток',
-                onPressed: () => _change(context, ref, 1),
-                icon: const Icon(Icons.add),
-              ),
-          ],
-        ),
+              if (quick)
+                QuantityStepper(
+                  value: quantity,
+                  onDecrement: package.quantity > 0
+                      ? () => _change(context, ref, -1)
+                      : null,
+                  onIncrement: () => _change(context, ref, 1),
+                )
+              else
+                Text(quantity, style: AppType.numeric),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-/// The single status line of a card: the most important problem, else the
+/// The form's icon on its pastel square; shared by the card and the
+/// medicine screen.
+class MedicineAvatar extends StatelessWidget {
+  const MedicineAvatar({super.key, required this.form});
+
+  final MedicineForm? form;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, fill) = _formLook(form);
+    return Container(
+      width: AppSizes.avatar,
+      height: AppSizes.avatar,
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      child: Icon(
+        icon,
+        size: AppSizes.avatarIcon,
+        color: AppColors.textPrimary,
+      ),
+    );
+  }
+}
+
+/// Icon and pastel fill for a form; pastels are only ever backgrounds.
+(IconData, Color) _formLook(MedicineForm? form) => switch (form) {
+  MedicineForm.tablet ||
+  MedicineForm.capsule ||
+  MedicineForm.suppository => (Icons.medication_outlined, AppColors.pink),
+  MedicineForm.syrup ||
+  MedicineForm.solution => (Icons.medication_liquid_outlined, AppColors.blue),
+  MedicineForm.drops => (Icons.water_drop_outlined, AppColors.blue),
+  MedicineForm.ointment ||
+  MedicineForm.cream => (Icons.healing_outlined, AppColors.mint),
+  MedicineForm.spray => (Icons.sanitizer_outlined, AppColors.mint),
+  MedicineForm.powder => (Icons.grain, AppColors.orange),
+  MedicineForm.other ||
+  null => (Icons.medical_services_outlined, AppColors.tint),
+};
+
+/// The single status of a card: the most important problem, else the
 /// nearest expiry date.
-(String?, Color) _status(StockAssessment? a, DateTime today) {
-  if (a == null) return (null, AppColors.textSecondary);
+StatusBadge? _status(StockAssessment? a, DateTime today) {
+  if (a == null) return null;
   switch (a.problem) {
     case StockProblem.expired:
-      return (
-        'Просрочено с ${formatDate(a.earliestExpired!)}',
-        AppColors.danger,
+      return StatusBadge(
+        label: 'Просрочено с ${formatDate(a.earliestExpired!)}',
+        icon: Icons.error_outline,
+        tone: StatusTone.danger,
       );
     case StockProblem.expiringSoon:
       final days = daysUntil(a.nearestExpiring!, today);
       final when = days == 0 ? 'сегодня' : 'через $days дн.';
-      return (
-        'Скоро истекает: до ${formatDate(a.nearestExpiring!)} ($when)',
-        AppColors.warning,
+      return StatusBadge(
+        label: 'Скоро истекает: до ${formatDate(a.nearestExpiring!)} ($when)',
+        icon: Icons.schedule,
+        tone: StatusTone.warning,
       );
     case StockProblem.out:
-      return ('Закончилось', AppColors.danger);
+      return const StatusBadge(
+        label: 'Закончилось',
+        icon: Icons.remove_circle_outline,
+        tone: StatusTone.danger,
+      );
     case StockProblem.low:
-      return (
-        'Мало: осталось ${formatQuantity(a.usable)} ${a.stock.unit}',
-        AppColors.warning,
+      return StatusBadge(
+        label: 'Мало: осталось ${formatQuantity(a.usable)} ${a.stock.unit}',
+        icon: Icons.trending_down,
+        tone: StatusTone.warning,
       );
     case null:
       final expiry = a.stock.nearestExpiry;
-      return (
-        expiry == null ? null : 'Годен до ${formatDate(expiry)}',
-        AppColors.textSecondary,
-      );
+      return expiry == null
+          ? null
+          : StatusBadge(
+              label: 'Годен до ${formatDate(expiry)}',
+              icon: Icons.event_outlined,
+            );
   }
 }
