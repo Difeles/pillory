@@ -32,10 +32,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       children: [
         const TodayScreen(),
         const InventoryScreen(),
-        const PlaceholderScreen(
-          title: 'Покупки',
-          icon: Icons.shopping_basket_outlined,
-        ),
         const PlaceholderScreen(title: 'Профиль', icon: Icons.person_outline),
       ],
     ),
@@ -47,10 +43,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         NavigationDestination(
           icon: Icon(Icons.medication_outlined),
           label: 'Аптечка',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.shopping_basket_outlined),
-          label: 'Покупки',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline),
