@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
+import '../../design_system/widgets/date_field.dart';
+import '../../design_system/widgets/form_save_bar.dart';
+import '../../design_system/widgets/section_header.dart';
 import '../../domain/errors.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/models.dart';
@@ -172,16 +175,22 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
   @override
   Widget build(BuildContext context) {
     final stock = ref.watch(medicineStockProvider).value ?? const [];
-    final gap = const SizedBox(height: AppSpacing.md);
+    const gap = SizedBox(height: AppSpacing.md);
+    const chipGap = AppSpacing.sm;
     return Scaffold(
       appBar: AppBar(
         title: Text(_editing == null ? 'Новый приём' : 'Расписание'),
       ),
+      bottomNavigationBar: FormSaveBar(
+        saving: _saving,
+        onSave: () => _save(stock),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: formPadding,
           children: [
+            const SectionHeader(title: 'Лекарство и дозировка'),
             if (stock.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(bottom: AppSpacing.sm),
@@ -191,6 +200,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
               DropdownButtonFormField<String>(
                 // Re-created when the selection is set from outside.
                 key: ValueKey(_medicineId),
+                isExpanded: true,
                 initialValue: stock.any((s) => s.medicine.id == _medicineId)
                     ? _medicineId
                     : null,
@@ -239,7 +249,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                     : null;
               },
             ),
-            gap,
+            const SectionHeader(title: 'Повторение'),
             SegmentedButton<ScheduleKind>(
               segments: const [
                 ButtonSegment(
@@ -255,13 +265,15 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                   label: Text('По датам'),
                 ),
               ],
+              showSelectedIcon: false,
               selected: {_kind},
               onSelectionChanged: (v) => setState(() => _kind = v.first),
             ),
-            gap,
-            if (_kind == ScheduleKind.weekdays)
+            if (_kind == ScheduleKind.weekdays) ...[
+              const SectionHeader(title: 'Дни недели'),
               Wrap(
-                spacing: AppSpacing.sm,
+                spacing: chipGap,
+                runSpacing: chipGap,
                 children: [
                   for (var i = 0; i < 7; i++)
                     FilterChip(
@@ -274,9 +286,12 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                     ),
                 ],
               ),
-            if (_kind == ScheduleKind.dates)
+            ],
+            if (_kind == ScheduleKind.dates) ...[
+              const SectionHeader(title: 'Даты'),
               Wrap(
-                spacing: AppSpacing.sm,
+                spacing: chipGap,
+                runSpacing: chipGap,
                 children: [
                   for (final d in _dates)
                     InputChip(
@@ -299,9 +314,11 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                   ),
                 ],
               ),
-            gap,
+            ],
+            const SectionHeader(title: 'Время приёма'),
             Wrap(
-              spacing: AppSpacing.sm,
+              spacing: chipGap,
+              runSpacing: chipGap,
               children: [
                 for (final t in ([..._times]..sort()))
                   InputChip(
@@ -328,42 +345,37 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
               ],
             ),
             if (_kind != ScheduleKind.dates) ...[
-              gap,
-              _PickerTile(
+              const SectionHeader(title: 'Период'),
+              DateField(
                 label: 'Начало',
-                value: formatDate(_start),
-                icon: Icons.calendar_today_outlined,
-                onTap: _started
+                helpText: 'Дата начала',
+                value: _start,
+                // A started schedule keeps its start.
+                onChanged: _started
                     ? null
-                    : () async {
-                        final p = await _pickDate(_start, 'Дата начала');
-                        if (p != null) setState(() => _start = dateOnly(p));
-                      },
+                    : (d) => setState(() => _start = dateOnly(d ?? _start)),
               ),
               gap,
-              _PickerTile(
+              DateField(
                 label: 'Окончание (необязательно)',
-                value: _end == null ? null : formatDate(_end!),
+                helpText: 'Дата окончания',
+                value: _end,
+                initialDate: _started ? _today : _start,
+                firstDate: _started ? _today : null,
                 icon: Icons.event_busy_outlined,
-                onClear: () => setState(() => _end = null),
-                onTap: () async {
-                  final p = await _pickDate(
-                    _end ?? (_started ? _today : _start),
-                    'Дата окончания',
-                    fromToday: _started,
-                  );
-                  if (p != null) setState(() => _end = dateOnly(p));
-                },
+                emptyText: 'Не указано',
+                clearTooltip: 'Очистить',
+                onChanged: (d) =>
+                    setState(() => _end = d == null ? null : dateOnly(d)),
               ),
             ],
-            const SizedBox(height: AppSpacing.xl),
-            FilledButton(
-              onPressed: _saving ? null : () => _save(stock),
-              child: const Text('Сохранить'),
-            ),
             if (_editing != null) ...[
-              gap,
+              const SizedBox(height: AppSpacing.xl),
               OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  side: const BorderSide(color: AppColors.danger),
+                ),
                 onPressed: _saving
                     ? null
                     : () async {
@@ -380,39 +392,4 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
       ),
     );
   }
-}
-
-class _PickerTile extends StatelessWidget {
-  const _PickerTile({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.onTap,
-    this.onClear,
-  });
-
-  final String label;
-  final String? value;
-  final IconData icon;
-  final VoidCallback? onTap;
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(AppRadii.sm),
-    onTap: onTap,
-    child: InputDecorator(
-      decoration: InputDecoration(
-        labelText: label,
-        suffixIcon: value != null && onClear != null
-            ? IconButton(
-                tooltip: 'Очистить',
-                icon: const Icon(Icons.close),
-                onPressed: onClear,
-              )
-            : Icon(icon),
-      ),
-      child: Text(value ?? 'Не указано'),
-    ),
-  );
 }

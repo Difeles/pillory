@@ -6,9 +6,11 @@ import 'package:pillory/app/providers.dart';
 import 'package:pillory/design_system/theme.dart';
 import 'package:pillory/domain/models.dart';
 import 'package:pillory/domain/schedule.dart';
+import 'package:pillory/features/inventory/add_medicine_screen.dart';
 import 'package:pillory/features/inventory/inventory_screen.dart';
 import 'package:pillory/features/inventory/medicine_screen.dart';
 import 'package:pillory/features/profile/profile_screen.dart';
+import 'package:pillory/features/today/add_intake_screen.dart';
 import 'package:pillory/features/today/today_screen.dart';
 
 import '../support/fake_inventory_repository.dart';
@@ -176,6 +178,106 @@ void main() {
     expect(find.text('В архиве'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('50 мл'), 100);
     expect(find.byTooltip('Упаковка').hitTestable(), findsWidgets);
+  });
+
+  /// Opens a 300 dp keyboard and checks "Сохранить" stays tappable above it.
+  Future<void> keyboardUp(WidgetTester tester) async {
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    final save = find.widgetWithText(FilledButton, 'Сохранить');
+    expect(save.hitTestable(), findsOneWidget);
+    expect(tester.getRect(save).bottom, lessThanOrEqualTo(640 - 300));
+  }
+
+  testWidgets('New medicine form fits, save stays above the keyboard', (
+    tester,
+  ) async {
+    await pumpSmall(tester, screen(() => const AddMedicineScreen()));
+    await keyboardUp(tester);
+    await tester.scrollUntilVisible(
+      find.text('Порог низкого остатка (необязательно)'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+  });
+
+  testWidgets('Medicine edit form fits', (tester) async {
+    await pumpSmall(tester, screen(() => const SizedBox()));
+    final medicine = (await inventory.watchStock().first).single.medicine;
+    await pumpSmall(tester, screen(() => AddMedicineScreen(editing: medicine)));
+    await keyboardUp(tester);
+  });
+
+  testWidgets('New schedule form fits in every kind, keyboard up', (
+    tester,
+  ) async {
+    await pumpSmall(tester, screen(() => const AddIntakeScreen()));
+    await keyboardUp(tester);
+    for (final (kind, section) in [
+      ('По дням', 'Дни недели'),
+      ('По датам', 'Даты'),
+      ('Каждый день', 'Период'),
+    ]) {
+      await tester.scrollUntilVisible(
+        find.text(kind),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text(kind));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(kind));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(section),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(section), findsOneWidget, reason: kind);
+    }
+    await tester.scrollUntilVisible(
+      find.text('Окончание (необязательно)'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+  });
+
+  testWidgets('Schedule edit form fits', (tester) async {
+    await pumpSmall(tester, screen(() => const TodayScreen()));
+    await tester.tap(find.byTooltip('Управление расписанием'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Изменить расписание'));
+    await tester.pumpAndSettle();
+    await keyboardUp(tester);
+    await tester.scrollUntilVisible(
+      find.text('Завершить расписание'),
+      100,
+      // Text fields have scrollables of their own; the form's list is first.
+      scrollable: find.byType(Scrollable).first,
+    );
+  });
+
+  testWidgets('Package dialogs fit with the keyboard up', (tester) async {
+    await pumpSmall(
+      tester,
+      screen(() => MedicineScreen(medicineId: medicineId)),
+    );
+    await tester.scrollUntilVisible(find.text('Добавить упаковку'), 100);
+    await tester.tap(find.text('Добавить упаковку'));
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    expect(find.text('Добавить').hitTestable(), findsOneWidget);
+    await tester.tap(find.text('Отмена'));
+    tester.view.resetViewInsets(); // the keyboard closes with the dialog
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byTooltip('Упаковка'));
+    await tester.tap(find.byTooltip('Упаковка'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Скорректировать остаток'));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    expect(find.text('Сохранить').hitTestable(), findsOneWidget);
   });
 
   testWidgets('Profile fits', (tester) async {

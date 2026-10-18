@@ -97,6 +97,9 @@ ThemeData buildAppTheme() {
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
+      // Wrapped, not cut off, at large text: the message must stay readable.
+      helperMaxLines: 3,
+      errorMaxLines: 3,
       filled: true,
       fillColor: AppColors.surface,
       border: field(AppColors.inputBorder),

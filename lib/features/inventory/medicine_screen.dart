@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
 import '../../design_system/widgets/app_card.dart';
 import '../../design_system/widgets/confirm_dialog.dart';
+import '../../design_system/widgets/date_field.dart';
 import '../../design_system/widgets/section_header.dart';
 import '../../design_system/widgets/states.dart';
 import '../../design_system/widgets/status_badge.dart';
@@ -452,6 +453,8 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+    // Scrolls rather than overflows at large text or with the keyboard up.
+    scrollable: true,
     title: const Text('Новая упаковка'),
     content: Column(
       mainAxisSize: MainAxisSize.min,
@@ -466,24 +469,11 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        InkWell(
-          borderRadius: BorderRadius.circular(AppRadii.sm),
-          onTap: () async {
-            final p = await showDatePicker(
-              context: context,
-              initialDate: _expiresOn ?? DateTime.now(),
-              firstDate: DateTime(2000),
-              lastDate: DateTime(2100),
-              helpText: 'Срок годности',
-            );
-            if (p != null) setState(() => _expiresOn = p);
-          },
-          child: InputDecorator(
-            decoration: const InputDecoration(labelText: 'Срок годности'),
-            child: Text(
-              _expiresOn == null ? 'Не указан' : formatDate(_expiresOn!),
-            ),
-          ),
+        DateField(
+          label: 'Срок годности',
+          value: _expiresOn,
+          clearTooltip: 'Убрать срок годности',
+          onChanged: (d) => setState(() => _expiresOn = d),
         ),
       ],
     ),
@@ -530,6 +520,7 @@ class _CorrectDialogState extends State<_CorrectDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
     title: const Text('Скорректировать остаток'),
     content: TextField(
       controller: _quantity,
