@@ -7,11 +7,13 @@ import '../../design_system/widgets/app_card.dart';
 import '../../design_system/widgets/confirm_dialog.dart';
 import '../../design_system/widgets/states.dart';
 import '../../design_system/widgets/status_badge.dart';
+import '../../design_system/widgets/timeline.dart';
 import '../../domain/errors.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/reminders.dart';
 import '../../domain/schedule.dart';
 import '../inventory/format.dart';
+import '../inventory/medicine_card.dart';
 import 'add_intake_screen.dart';
 import 'history_screen.dart';
 import 'today_providers.dart';
@@ -75,6 +77,10 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   /// The intake a tapped reminder pointed at, marked until the day changes.
   OpenIntakeRequest? _highlight;
 
+  /// Set by a reminder; the list scrolls to [_highlight] once it has loaded.
+  bool _scrollPending = false;
+  final _highlightKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -83,7 +89,26 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     if (request != null) {
       _day = request.day;
       _highlight = request;
+      _scrollPending = true;
     }
+  }
+
+  /// Brings the highlighted intake into view after this frame, when its row
+  /// exists. A stale reminder matches no row; then nothing scrolls.
+  void _scrollToHighlight() {
+    _scrollPending = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _highlightKey.currentContext;
+      if (!mounted || target == null) return;
+      Scrollable.ensureVisible(
+        target,
+        alignment: 0.3,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : AppMotion.base,
+        curve: AppMotion.curve,
+      );
+    });
   }
 
   void _shift(int days) => setState(() {
@@ -131,6 +156,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
         setState(() {
           _day = request.day;
           _highlight = request;
+          _scrollPending = true;
         });
       }
     });
@@ -151,10 +177,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    _dayCaption(_day, today),
-                    style: text.titleSmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                    _dayCaption(_day, today).toUpperCase(),
+                    style: _overline(text, AppColors.textSecondary),
                   ),
                 ),
                 IconButton(
@@ -189,39 +213,17 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                 message: 'Не удалось загрузить приёмы',
                 onRetry: () => ref.invalidate(dayIntakesProvider(_day)),
               ),
-              data: (list) => list.isEmpty
-                  ? const EmptyState(
-                      icon: Icons.event_available,
-                      title: 'На этот день приёмов нет',
-                      message: 'Нажмите «+», чтобы добавить приём',
-                    )
-                  : Column(
-                      children: [
-                        for (final i in list)
-                          _IntakeCard(
-                            intake: i,
-                            // Marking a future dose as taken makes no sense.
-                            canMark: !_day.isAfter(today),
-                            // Only the live version of a schedule can be
-                            // changed; earlier ones are history.
-                            manageable: isCurrent(i.schedule, today),
-                            onEdit: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) =>
-                                    AddIntakeScreen(editing: i.schedule),
-                              ),
-                            ),
-                            onEnd: () =>
-                                confirmEndSchedule(context, ref, i.schedule),
-                            highlighted:
-                                _highlight?.scheduleId == i.schedule.id &&
-                                _highlight?.minuteOfDay == i.minuteOfDay,
-                            onTake: () => _take(i),
-                            onSkip: () => _skip(i),
-                            onReset: () => _reset(i),
-                          ),
-                      ],
-                    ),
+              data: (list) {
+                if (_scrollPending) _scrollToHighlight();
+                if (list.isEmpty) {
+                  return const EmptyState(
+                    icon: Icons.event_available,
+                    title: 'На этот день приёмов нет',
+                    message: 'Нажмите «+», чтобы добавить приём',
+                  );
+                }
+                return _timeline(list, today);
+              },
             ),
           ],
         ),
@@ -237,13 +239,138 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
       ),
     );
   }
+
+  Widget _timeline(List<DayIntake> list, DateTime today) {
+    final now = DateTime.now();
+    final nowMinute = now.hour * 60 + now.minute;
+    // Only today has a "next", and a time already past is not next.
+    final next = _day == today
+        ? list
+              .where(
+                (i) =>
+                    i.status == IntakeStatus.pending &&
+                    i.minuteOfDay != null &&
+                    i.minuteOfDay! >= nowMinute,
+              )
+              .firstOrNull
+        : null;
+    final timed = [
+      for (final i in list)
+        if (i.minuteOfDay != null) i,
+    ];
+    final untimed = [
+      for (final i in list)
+        if (i.minuteOfDay == null) i,
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        final timeWidth = scaler.scale(AppSizes.timelineTime);
+        // The time gets its own column only while the content keeps a
+        // readable width; otherwise it moves above the name.
+        final wide =
+            constraints.maxWidth - timeWidth - AppSizes.timelineRail >=
+            scaler.scale(220);
+        Widget group(List<DayIntake> intakes) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (k, i) in intakes.indexed)
+              _entry(
+                i,
+                today: today,
+                isNext: identical(i, next),
+                wide: wide,
+                timeWidth: timeWidth,
+                first: k == 0,
+                last: k == intakes.length - 1,
+              ),
+          ],
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (timed.isNotEmpty) group(timed),
+            if (untimed.isNotEmpty) ...[
+              if (timed.isNotEmpty) const SizedBox(height: AppSpacing.sm),
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.ms),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    'В ТЕЧЕНИЕ ДНЯ',
+                    style: _overline(
+                      Theme.of(context).textTheme,
+                      AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+              group(untimed),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _entry(
+    DayIntake i, {
+    required DateTime today,
+    required bool isNext,
+    required bool wide,
+    required double timeWidth,
+    required bool first,
+    required bool last,
+  }) {
+    final highlighted =
+        _highlight?.scheduleId == i.schedule.id &&
+        _highlight?.minuteOfDay == i.minuteOfDay;
+    return _IntakeEntry(
+      key: highlighted ? _highlightKey : null,
+      intake: i,
+      isNext: isNext,
+      highlighted: highlighted,
+      wide: wide,
+      timeWidth: timeWidth,
+      first: first,
+      last: last,
+      // Marking a future dose as taken makes no sense.
+      canMark: !_day.isAfter(today),
+      // Only the live version of a schedule can be changed; earlier ones
+      // are history.
+      manageable: isCurrent(i.schedule, today),
+      onEdit: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => AddIntakeScreen(editing: i.schedule),
+        ),
+      ),
+      onEnd: () => confirmEndSchedule(context, ref, i.schedule),
+      onTake: () => _take(i),
+      onSkip: () => _skip(i),
+      onReset: () => _reset(i),
+    );
+  }
 }
 
-class _IntakeCard extends StatelessWidget {
-  const _IntakeCard({
+TextStyle? _overline(TextTheme text, Color color) => text.labelMedium?.copyWith(
+  color: color,
+  fontWeight: FontWeight.w600,
+  letterSpacing: 1,
+);
+
+/// One intake on the day's timeline: the next one as a card with full
+/// actions, any other as a compact row.
+class _IntakeEntry extends StatelessWidget {
+  const _IntakeEntry({
+    super.key,
     required this.intake,
-    required this.canMark,
+    required this.isNext,
     required this.highlighted,
+    required this.wide,
+    required this.timeWidth,
+    required this.first,
+    required this.last,
+    required this.canMark,
     required this.manageable,
     required this.onEdit,
     required this.onEnd,
@@ -253,8 +380,15 @@ class _IntakeCard extends StatelessWidget {
   });
 
   final DayIntake intake;
-  final bool canMark;
+  final bool isNext;
   final bool highlighted;
+
+  /// Whether the time has a column of its own beside the rail.
+  final bool wide;
+  final double timeWidth;
+  final bool first;
+  final bool last;
+  final bool canMark;
   final bool manageable;
   final VoidCallback onEdit;
   final VoidCallback onEnd;
@@ -262,13 +396,91 @@ class _IntakeCard extends StatelessWidget {
   final VoidCallback onSkip;
   final VoidCallback onReset;
 
+  bool get _done => intake.status != IntakeStatus.pending;
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final s = intake.schedule;
-    final done = intake.status != IntakeStatus.pending;
+    final scaler = MediaQuery.textScalerOf(context);
     final minute = intake.minuteOfDay;
-    final actions = done
+    final time = minute == null ? null : formatMinute(minute);
+    final carded = isNext || highlighted;
+    // The first line sits this far down: the card's padding, if any.
+    final top = carded ? AppSpacing.md : 0.0;
+    final content = isNext ? _nextCard(context, time) : _row(context, time);
+    return TimelineEntry(
+      dot: switch (intake.status) {
+        IntakeStatus.taken => TimelineDotState.done,
+        IntakeStatus.skipped => TimelineDotState.skipped,
+        IntakeStatus.pending =>
+          isNext ? TimelineDotState.next : TimelineDotState.pending,
+      },
+      first: first,
+      last: last,
+      // Centred on the first line of text, which grows with the text scale.
+      dotTop: top + scaler.scale(AppSpacing.ms),
+      leadingWidth: wide ? timeWidth : 0,
+      leading: wide && time != null
+          ? Padding(
+              padding: EdgeInsets.only(top: top),
+              child: Text(time, style: _timeStyle(text.titleMedium)),
+            )
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        child: !isNext && highlighted
+            ? AppCard(variant: AppCardVariant.highlighted, child: content)
+            : content,
+      ),
+    );
+  }
+
+  TextStyle? _timeStyle(TextStyle? base) => base?.copyWith(
+    fontFeatures: AppType.numeric.fontFeatures,
+    color: isNext
+        ? AppColors.primaryDeep
+        : _done
+        ? AppColors.textSecondary
+        : AppColors.textPrimary,
+  );
+
+  String? get _details {
+    final parts = [
+      if (intake.medicineForm != null) intake.medicineForm!.label,
+      if (intake.medicineStrength != null) intake.medicineStrength!,
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  String get _dose =>
+      '${formatQuantity(intake.schedule.dose)} ${intake.schedule.doseUnit}';
+
+  Widget _menu() => PopupMenuButton<VoidCallback>(
+    tooltip: 'Управление расписанием',
+    onSelected: (action) => action(),
+    itemBuilder: (_) => manageable
+        ? [
+            PopupMenuItem(
+              value: onEdit,
+              child: const Text('Изменить расписание'),
+            ),
+            PopupMenuItem(
+              value: onEnd,
+              child: const Text('Завершить расписание'),
+            ),
+          ]
+        : const [
+            PopupMenuItem(
+              enabled: false,
+              child: Text('Расписание уже изменено или завершено'),
+            ),
+          ],
+  );
+
+  Widget _row(BuildContext context, String? time) {
+    final text = Theme.of(context).textTheme;
+    final details = _details;
+    final actions = _done
         ? [
             _statusBadge(intake.status),
             if (intake.canReset)
@@ -279,101 +491,139 @@ class _IntakeCard extends StatelessWidget {
               ),
           ]
         : [
-            FilledButton.tonal(
+            IconButton.filledTonal(
+              tooltip: 'Пропустить',
+              icon: const Icon(Icons.skip_next),
               onPressed: canMark ? onSkip : null,
-              child: const Text('Пропустить'),
             ),
-            FilledButton(
+            IconButton.filled(
+              tooltip: 'Принято',
+              icon: const Icon(Icons.check),
               onPressed: canMark ? onTake : null,
-              child: const Text('Принято'),
             ),
           ];
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.ms),
-      child: AppCard(
-        variant: highlighted
-            ? AppCardVariant.highlighted
-            : done
-            ? AppCardVariant.muted
-            : AppCardVariant.normal,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (minute != null)
-                        Text(
-                          formatMinute(minute),
-                          style: text.titleSmall?.copyWith(
-                            color: AppColors.primaryDeep,
-                            fontFeatures: AppType.numeric.fontFeatures,
-                          ),
-                        ),
-                      Text(
-                        intake.medicineName,
-                        style: text.titleMedium?.copyWith(
-                          color: done ? AppColors.textSecondary : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<VoidCallback>(
-                  tooltip: 'Управление расписанием',
-                  onSelected: (action) => action(),
-                  itemBuilder: (_) => manageable
-                      ? [
-                          PopupMenuItem(
-                            value: onEdit,
-                            child: const Text('Изменить расписание'),
-                          ),
-                          PopupMenuItem(
-                            value: onEnd,
-                            child: const Text('Завершить расписание'),
-                          ),
-                        ]
-                      : const [
-                          PopupMenuItem(
-                            enabled: false,
-                            child: Text(
-                              'Расписание уже изменено или завершено',
-                            ),
-                          ),
-                        ],
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            // Wraps instead of overflowing: on a narrow screen or with large
-            // text the actions move under the dose.
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              runSpacing: AppSpacing.sm,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.sm),
-                  child: Text(
-                    '${formatQuantity(s.dose)} ${s.doseUnit}',
-                    style: text.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!wide && time != null)
+                    Text(time, style: _timeStyle(text.titleSmall)),
+                  Text(
+                    intake.medicineName,
+                    style: text.titleMedium?.copyWith(
+                      color: _done ? AppColors.textSecondary : null,
+                      decoration: intake.skipped
+                          ? TextDecoration.lineThrough
+                          : null,
                     ),
                   ),
+                  if (details != null)
+                    Text(
+                      details,
+                      style: text.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            _menu(),
+          ],
+        ),
+        // Wraps instead of overflowing: with large text the actions move
+        // under the dose.
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          runSpacing: AppSpacing.xs,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: Text(
+                _dose,
+                style: text.bodyMedium?.copyWith(
+                  color: AppColors.textSecondary,
                 ),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: actions,
-                ),
-              ],
+              ),
+            ),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: actions,
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _nextCard(BuildContext context, String? time) {
+    final text = Theme.of(context).textTheme;
+    final details = _details;
+    return AppCard(
+      variant: highlighted ? AppCardVariant.highlighted : AppCardVariant.normal,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  // Narrow: the time has no column, so it leads the card.
+                  wide || time == null ? 'СЛЕДУЮЩИЙ' : 'СЛЕДУЮЩИЙ · $time',
+                  style: _overline(text, AppColors.primaryDeep),
+                ),
+              ),
+              _menu(),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MedicineAvatar(form: intake.medicineForm),
+              const SizedBox(width: AppSpacing.ms),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(intake.medicineName, style: text.titleLarge),
+                    if (details != null)
+                      Text(
+                        details,
+                        style: text.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    Text(_dose, style: text.bodyLarge),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.ms),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilledButton.tonal(
+                onPressed: canMark ? onSkip : null,
+                child: const Text('Пропустить'),
+              ),
+              FilledButton(
+                onPressed: canMark ? onTake : null,
+                child: const Text('Принято'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

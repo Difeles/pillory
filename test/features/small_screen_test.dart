@@ -46,8 +46,8 @@ void main() {
         kind: ScheduleKind.daily,
         dose: 1,
         doseUnit: 'шт.',
+        // Untimed: whether a timed intake is "next" depends on the clock.
         startDate: DateTime.now(),
-        times: const [9 * 60],
       ),
     );
     await tester.pumpWidget(
@@ -76,13 +76,13 @@ void main() {
     tester,
   ) async {
     await pumpSmall(tester, screen(() => const TodayScreen()));
-    final take = find.widgetWithText(FilledButton, 'Принято');
+    final take = find.byTooltip('Принято');
     await tester.ensureVisible(take);
     await tester.pumpAndSettle();
     await tester.tap(take);
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(FilledButton, 'Принято'), findsNothing);
+    expect(find.byTooltip('Принято'), findsNothing);
     expect(find.text('Принято'), findsOneWidget); // the status badge
     for (final tooltip in ['Отменить отметку', 'Управление расписанием']) {
       final action = find.byTooltip(tooltip);
@@ -94,7 +94,50 @@ void main() {
     // Undo works from the narrow layout too.
     await tester.tap(find.byTooltip('Отменить отметку'));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, 'Принято'), findsOneWidget);
+    expect(find.byTooltip('Принято'), findsOneWidget);
+  });
+
+  testWidgets('Today timeline fits: next card, taken and skipped rows', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final nowMinute = now.hour * 60 + now.minute;
+    if (nowMinute < 2 || nowMinute >= 1439) return; // no past and future slot
+    await pumpSmall(tester, screen(() => const TodayScreen()));
+    await schedules.createSchedule(
+      NewSchedule(
+        medicineId: medicineId,
+        kind: ScheduleKind.daily,
+        dose: 1,
+        doseUnit: 'шт.',
+        startDate: now,
+        times: const [0, 1, 1439],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('СЛЕДУЮЩИЙ · 23:59'), findsOneWidget); // narrow: no column
+
+    Future<void> tapFirst(String tooltip) async {
+      final f = find.byTooltip(tooltip).first;
+      await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
+      await tester.tap(f);
+      await tester.pumpAndSettle();
+    }
+
+    await tapFirst('Пропустить');
+    await tapFirst('Принято');
+    expect(find.text('Пропущено'), findsOneWidget);
+    expect(find.text('Принято'), findsWidgets);
+    for (final f in [
+      find.byTooltip('Отменить отметку').first,
+      find.byTooltip('Управление расписанием').first,
+      find.widgetWithText(FilledButton, 'Принято'),
+    ]) {
+      await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
+      expect(f.hitTestable(), findsOneWidget);
+    }
   });
 
   testWidgets('Cabinet fits', (tester) async {

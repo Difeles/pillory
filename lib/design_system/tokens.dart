@@ -56,6 +56,12 @@ abstract final class AppSizes {
   /// The tinted square that shows a medicine's form.
   static const avatar = 48.0;
   static const avatarIcon = 24.0;
+
+  /// Day timeline: the rail column, its status dots and the time column
+  /// (the last scales with the text).
+  static const timelineRail = 24.0;
+  static const timelineDot = 14.0;
+  static const timelineTime = 56.0;
 }
 
 abstract final class AppShadows {

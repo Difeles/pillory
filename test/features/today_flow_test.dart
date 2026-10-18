@@ -98,9 +98,9 @@ void main() {
     expect(find.text('Аспирин'), findsOneWidget);
     expect(find.text('2 шт.'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Принято'));
+    await tester.tap(find.byTooltip('Принято'));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, 'Принято'), findsNothing);
+    expect(find.byTooltip('Принято'), findsNothing);
     expect(find.text('Принято'), findsOneWidget);
 
     // The new medicine is in the cabinet with the deducted stock.
@@ -136,7 +136,7 @@ void main() {
     await save(tester);
 
     expect(find.text('Нурофен'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Принято'), findsOneWidget);
+    expect(find.byTooltip('Принято'), findsOneWidget);
   });
 
   testWidgets('cancelling new medicine keeps the typed schedule', (
@@ -200,13 +200,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Пропустить'));
+    await tester.tap(find.byTooltip('Пропустить'));
     await tester.pumpAndSettle();
     expect(find.text('Пропущено'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Отменить отметку'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Принято'));
+    await tester.tap(find.byTooltip('Принято'));
     await tester.pumpAndSettle();
     expect(find.text('Принято'), findsOneWidget);
     expect((await inventory.watchStock().first).single.totalQuantity, 4);
@@ -214,9 +214,9 @@ void main() {
     await tester.tap(find.byTooltip('Отменить отметку'));
     await tester.pumpAndSettle();
     expect((await inventory.watchStock().first).single.totalQuantity, 5);
-    expect(find.widgetWithText(FilledButton, 'Пропустить'), findsOneWidget);
+    expect(find.byTooltip('Пропустить'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Пропустить'));
+    await tester.tap(find.byTooltip('Пропустить'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('История'));
     await tester.pumpAndSettle();
