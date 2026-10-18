@@ -120,7 +120,12 @@ void main() {
 
     test('total sums packages; nearest expiry ignores empty packages', () {
       final stock = MedicineStock(
-        medicine: Medicine(id: 'm', name: 'X', createdAt: DateTime(2026)),
+        medicine: Medicine(
+          id: 'm',
+          name: 'X',
+          unit: 'шт.',
+          createdAt: DateTime(2026),
+        ),
         packages: [
           pkg('a', 0, DateTime(2026, 2, 1), 0), // empty: its date is irrelevant
           pkg('b', 3, DateTime(2027, 5, 1), 1),

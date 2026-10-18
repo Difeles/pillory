@@ -263,4 +263,89 @@ void main() {
       findsOneWidget,
     );
   });
+
+  group('managing a schedule', () {
+    Future<void> setUpStarted(WidgetTester tester) async {
+      await pumpApp(tester);
+      final id = await inventory.createMedicine(
+        const NewMedicine(name: 'Аспирин', initialQuantity: 9, unit: 'шт.'),
+      );
+      final now = DateTime.now();
+      await schedules.createSchedule(
+        NewSchedule(
+          medicineId: id,
+          kind: ScheduleKind.daily,
+          dose: 1,
+          doseUnit: 'шт.',
+          startDate: DateTime(now.year, now.month, now.day - 3),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> menu(WidgetTester tester, String item) async {
+      await tester.tap(find.byTooltip('Управление расписанием'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(item));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('changing the dose applies from today, yesterday stays', (
+      tester,
+    ) async {
+      await setUpStarted(tester);
+      expect(find.text('1 шт.'), findsOneWidget);
+
+      await menu(tester, 'Изменить расписание');
+      expect(find.text('Расписание'), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Дозировка за один приём'),
+        '3',
+      );
+      await save(tester);
+      expect(find.text('3 шт.'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Предыдущий день'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 шт.'), findsOneWidget);
+      // The earlier version offers no way to edit, only a reason.
+      await tester.tap(find.byTooltip('Управление расписанием'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Расписание уже изменено или завершено'),
+        findsOneWidget,
+      );
+      expect(find.text('Изменить расписание'), findsNothing);
+      expect(find.text('Завершить расписание'), findsNothing);
+    });
+
+    testWidgets('ending asks first and keeps the past', (tester) async {
+      await setUpStarted(tester);
+
+      await menu(tester, 'Завершить расписание');
+      expect(find.text('Завершить расписание?'), findsOneWidget);
+      await tester.tap(find.text('Отмена'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 шт.'), findsOneWidget);
+
+      await menu(tester, 'Завершить расписание');
+      await tester.tap(find.text('Завершить'));
+      await tester.pumpAndSettle();
+      expect(find.text('На этот день приёмов нет'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Предыдущий день'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 шт.'), findsOneWidget);
+    });
+
+    testWidgets('the medicine cannot be changed while editing', (tester) async {
+      await setUpStarted(tester);
+      await menu(tester, 'Изменить расписание');
+      expect(find.text('Новое лекарство'), findsNothing);
+      final dropdown = tester.widget<DropdownButtonFormField<String>>(
+        find.byType(DropdownButtonFormField<String>),
+      );
+      expect(dropdown.onChanged, isNull);
+    });
+  });
 }

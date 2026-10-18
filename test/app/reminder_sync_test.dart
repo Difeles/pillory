@@ -28,8 +28,8 @@ void main() {
 
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
-    inventory = DriftInventoryRepository(db);
-    repo = DriftScheduleRepository(db, inventory);
+    inventory = DriftInventoryRepository(db, now: () => now);
+    repo = DriftScheduleRepository(db, inventory, now: () => now);
     scheduler = FakeReminderScheduler();
     sync = newSync()..start();
   });
@@ -206,5 +206,58 @@ void main() {
     expect(scheduler.scheduled, hasLength(reminderLimit));
     final last = fireTimes().reduce((a, b) => a.isAfter(b) ? a : b);
     expect(last, DateTime(2026, 11, 17, 20));
+  });
+
+  test('editing replaces the reminders, ending cancels them', () async {
+    final sid = await repo.createSchedule(
+      daily(await medicine(), end: DateTime(2026, 10, 20)),
+    );
+    await settle();
+    expect(fireTimes(), {DateTime(2026, 10, 19, 8), DateTime(2026, 10, 20, 8)});
+
+    await repo.updateSchedule(
+      sid,
+      ScheduleEdit(
+        kind: ScheduleKind.daily,
+        dose: 2,
+        times: const [9 * 60],
+        endDate: DateTime(2026, 10, 20),
+      ),
+    );
+    await settle();
+    // The old version's reminders are gone, the new version's are there.
+    expect(fireTimes(), {DateTime(2026, 10, 19, 9), DateTime(2026, 10, 20, 9)});
+
+    final current = (await db.select(db.schedules).get()).firstWhere(
+      (r) => r.id != sid,
+    );
+    await repo.endSchedule(current.id);
+    await settle();
+    expect(scheduler.scheduled, isEmpty);
+  });
+
+  test('renaming retitles the reminders, archiving cancels them', () async {
+    final id = await medicine();
+    await repo.createSchedule(daily(id, end: DateTime(2026, 10, 20)));
+    await settle();
+    expect(
+      scheduler.scheduled.values.map((r) => r.title),
+      everyElement('Аспирин'),
+    );
+
+    await inventory.updateMedicine(
+      id,
+      const MedicineEdit(name: 'Аспирин Кардио'),
+    );
+    await settle();
+    expect(scheduler.scheduled, hasLength(2));
+    expect(
+      scheduler.scheduled.values.map((r) => r.title),
+      everyElement('Аспирин Кардио'),
+    );
+
+    await inventory.archiveMedicine(id);
+    await settle();
+    expect(scheduler.scheduled, isEmpty);
   });
 }

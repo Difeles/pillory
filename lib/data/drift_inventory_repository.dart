@@ -5,7 +5,9 @@ import '../domain/errors.dart';
 import '../domain/inventory_repository.dart';
 import '../domain/inventory_rules.dart';
 import '../domain/models.dart';
+import '../domain/schedule.dart';
 import 'app_database.dart';
+import 'schedule_rows.dart';
 
 class DriftInventoryRepository implements InventoryRepository {
   DriftInventoryRepository(this._db, {DateTime Function()? now})
@@ -15,17 +17,28 @@ class DriftInventoryRepository implements InventoryRepository {
   final DateTime Function() _now;
 
   @override
-  Stream<List<MedicineStock>> watchStock() {
+  Stream<List<MedicineStock>> watchStock() => _watch(archived: false);
+
+  @override
+  Stream<List<MedicineStock>> watchArchived() => _watch(archived: true);
+
+  Stream<List<MedicineStock>> _watch({required bool archived}) {
     final query =
         _db.select(_db.medicines).join([
-          leftOuterJoin(
-            _db.medicinePackages,
-            _db.medicinePackages.medicineId.equalsExp(_db.medicines.id),
-          ),
-        ])..orderBy([
-          OrderingTerm.asc(_db.medicines.id),
-          OrderingTerm.asc(_db.medicinePackages.createdAt),
-        ]);
+            leftOuterJoin(
+              _db.medicinePackages,
+              _db.medicinePackages.medicineId.equalsExp(_db.medicines.id),
+            ),
+          ])
+          ..where(
+            archived
+                ? _db.medicines.archivedAt.isNotNull()
+                : _db.medicines.archivedAt.isNull(),
+          )
+          ..orderBy([
+            OrderingTerm.asc(_db.medicines.id),
+            OrderingTerm.asc(_db.medicinePackages.createdAt),
+          ]);
     // A join watches every table it reads, so package and quantity changes
     // re-emit too.
     return query.watch().map((rows) {
@@ -33,7 +46,7 @@ class DriftInventoryRepository implements InventoryRepository {
       final medicines = <String, Medicine>{};
       for (final row in rows) {
         final m = row.readTable(_db.medicines);
-        medicines.putIfAbsent(m.id, () => _medicine(m));
+        medicines.putIfAbsent(m.id, () => _toMedicine(m));
         final list = byMedicine.putIfAbsent(m.id, () => []);
         final p = row.readTableOrNull(_db.medicinePackages);
         if (p != null) list.add(_package(p));
@@ -71,6 +84,7 @@ class DriftInventoryRepository implements InventoryRepository {
               name: d.name,
               form: Value(d.form),
               strength: Value(d.strength),
+              unit: Value(d.unit),
               createdAt: now,
             ),
           );
@@ -97,15 +111,133 @@ class DriftInventoryRepository implements InventoryRepository {
         'Количество не может быть отрицательным',
       );
     }
-    return _db.transaction(
-      () => _insertPackage(
+    return _db.transaction(() async {
+      final medicine = await _medicine(medicineId);
+      if (medicine.archivedAt != null) {
+        throw const InvalidMedicineException('Лекарство в архиве');
+      }
+      // One unit per medicine: quantities are summed and used up together.
+      final own = medicine.unit;
+      if (own != null && unit.trim() != own) {
+        throw InvalidMedicineException('Единица должна быть «$own»');
+      }
+      return _insertPackage(
         medicineId: medicineId,
         quantity: normalizeQuantity(quantity),
         unit: unit.trim(),
         expiresOn: expiresOn == null ? null : dateOnly(expiresOn),
         now: _now(),
+      );
+    });
+  }
+
+  Future<MedicineRow> _medicine(String id) async {
+    final row = await (_db.select(
+      _db.medicines,
+    )..where((m) => m.id.equals(id))).getSingleOrNull();
+    if (row == null) throw MedicineNotFoundException(id);
+    return row;
+  }
+
+  @override
+  Future<void> updateMedicine(String medicineId, MedicineEdit edit) async {
+    final name = edit.name.trim();
+    if (name.isEmpty) {
+      throw const InvalidMedicineException('Название обязательно');
+    }
+    final strength = edit.strength?.trim();
+    await _medicine(medicineId);
+    await (_db.update(
+      _db.medicines,
+    )..where((m) => m.id.equals(medicineId))).write(
+      MedicinesCompanion(
+        name: Value(name),
+        form: Value(edit.form),
+        strength: Value(strength == null || strength.isEmpty ? null : strength),
       ),
     );
+  }
+
+  @override
+  Future<void> archiveMedicine(String medicineId) {
+    return _db.transaction(() async {
+      final medicine = await _medicine(medicineId);
+      if (medicine.archivedAt != null) return;
+      await (_db.update(_db.medicines)..where((m) => m.id.equals(medicineId)))
+          .write(MedicinesCompanion(archivedAt: Value(_now())));
+      // End its schedules the way ending one does, so today's marks stay.
+      final rows = await (_db.select(
+        _db.schedules,
+      )..where((s) => s.medicineId.equals(medicineId))).get();
+      for (final row in rows) {
+        final schedule = scheduleFromRow(row);
+        final from = await effectiveFrom(_db, row.id, _now());
+        if (!isCurrent(schedule, from)) continue;
+        await (_db.update(
+          _db.schedules,
+        )..where((s) => s.id.equals(row.id))).write(
+          SchedulesCompanion(endDate: Value(endDateFor(schedule, from))),
+        );
+      }
+    });
+  }
+
+  @override
+  Future<void> restoreMedicine(String medicineId) async {
+    await _medicine(medicineId);
+    await (_db.update(_db.medicines)..where((m) => m.id.equals(medicineId)))
+        .write(const MedicinesCompanion(archivedAt: Value(null)));
+  }
+
+  @override
+  Future<void> updatePackageExpiry(
+    String packageId,
+    DateTime? expiresOn,
+  ) async {
+    final changed =
+        await (_db.update(
+          _db.medicinePackages,
+        )..where((p) => p.id.equals(packageId))).write(
+          MedicinePackagesCompanion(
+            expiresOn: Value(expiresOn == null ? null : dateOnly(expiresOn)),
+          ),
+        );
+    if (changed == 0) throw PackageNotFoundException(packageId);
+  }
+
+  @override
+  Future<void> correctQuantity({
+    required String packageId,
+    required double from,
+    required double to,
+  }) async {
+    if (!to.isFinite || to < 0) {
+      throw const InvalidMedicineException(
+        'Остаток не может быть отрицательным',
+      );
+    }
+    return _db.transaction(() async {
+      final row = await (_db.select(
+        _db.medicinePackages,
+      )..where((p) => p.id.equals(packageId))).getSingleOrNull();
+      if (row == null) throw PackageNotFoundException(packageId);
+      if (row.quantity != normalizeQuantity(from)) {
+        throw StaleQuantityException(expected: from, actual: row.quantity);
+      }
+      final next = normalizeQuantity(to);
+      final delta = normalizeQuantity(next - row.quantity);
+      if (delta == 0) return;
+      await (_db.update(_db.medicinePackages)
+            ..where((p) => p.id.equals(packageId)))
+          .write(MedicinePackagesCompanion(quantity: Value(next)));
+      await _insertTransaction(
+        packageId: packageId,
+        kind: TransactionKind.correction,
+        delta: delta,
+        quantityAfter: next,
+        now: _now(),
+      );
+    });
   }
 
   /// Inserts the package and its `initial` history entry. Callers wrap this
@@ -212,11 +344,13 @@ class DriftInventoryRepository implements InventoryRepository {
         ),
       );
 
-  Medicine _medicine(MedicineRow m) => Medicine(
+  Medicine _toMedicine(MedicineRow m) => Medicine(
     id: m.id,
     name: m.name,
     form: m.form,
     strength: m.strength,
+    unit: m.unit ?? '',
+    archivedAt: m.archivedAt,
     createdAt: m.createdAt,
   );
 

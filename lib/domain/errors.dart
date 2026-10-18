@@ -61,3 +61,31 @@ class UntrackedIntakeException extends IntakeStateException {
   const UntrackedIntakeException()
     : super('Списания для этой отметки не сохранены');
 }
+
+/// The schedule was already changed or ended: there is nothing left to edit.
+class ScheduleEndedException implements Exception {
+  const ScheduleEndedException(this.scheduleId);
+  final String scheduleId;
+
+  @override
+  String toString() => 'ScheduleEndedException: $scheduleId';
+}
+
+class MedicineNotFoundException implements Exception {
+  const MedicineNotFoundException(this.medicineId);
+  final String medicineId;
+
+  @override
+  String toString() => 'MedicineNotFoundException: $medicineId';
+}
+
+/// A stock correction was made against a quantity that has since changed.
+class StaleQuantityException implements Exception {
+  const StaleQuantityException({required this.expected, required this.actual});
+  final double expected;
+  final double actual;
+
+  @override
+  String toString() =>
+      'StaleQuantityException: expected $expected, actual $actual';
+}

@@ -14,8 +14,12 @@ import 'today_screen.dart';
 
 const _weekdayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
+/// Creates a schedule, or changes [editing] (a live schedule: its medicine
+/// stays, and so does everything before the change).
 class AddIntakeScreen extends ConsumerStatefulWidget {
-  const AddIntakeScreen({super.key});
+  const AddIntakeScreen({super.key, this.editing});
+
+  final Schedule? editing;
 
   @override
   ConsumerState<AddIntakeScreen> createState() => _AddIntakeScreenState();
@@ -33,16 +37,44 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
   DateTime? _end;
   bool _saving = false;
 
+  Schedule? get _editing => widget.editing;
+
+  /// A started schedule keeps its start and its past: changes begin later.
+  bool get _started => _editing != null && _editing!.startDate.isBefore(_today);
+  DateTime get _today => dateOnly(DateTime.now());
+
+  @override
+  void initState() {
+    super.initState();
+    final e = _editing;
+    if (e == null) return;
+    _dose.text = formatQuantity(e.dose);
+    _medicineId = e.medicineId;
+    _kind = e.kind;
+    _weekdays.addAll(e.weekdays);
+    _dates.addAll([
+      for (final d in e.dates)
+        if (!_started || !dateOnly(d).isBefore(_today)) dateOnly(d),
+    ]);
+    _times.addAll(e.times);
+    _start = dateOnly(e.startDate);
+    _end = e.endDate == null ? null : dateOnly(e.endDate!);
+  }
+
   @override
   void dispose() {
     _dose.dispose();
     super.dispose();
   }
 
-  Future<DateTime?> _pickDate(DateTime initial, String help) => showDatePicker(
+  Future<DateTime?> _pickDate(
+    DateTime initial,
+    String help, {
+    bool fromToday = false,
+  }) => showDatePicker(
     context: context,
     initialDate: initial,
-    firstDate: DateTime(2000),
+    firstDate: fromToday ? _today : DateTime(2000),
     lastDate: DateTime(2100),
     helpText: help,
   );
@@ -59,13 +91,12 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
     if (!_formKey.currentState!.validate() || _saving) return;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    final doseUnit = stock.firstWhere((s) => s.medicine.id == _medicineId).unit;
     final dose = parseQuantity(_dose.text)!;
     NewSchedule draft(String medicineId) => NewSchedule(
       medicineId: medicineId,
       kind: _kind,
       dose: dose,
-      doseUnit: doseUnit,
+      doseUnit: stock.firstWhere((s) => s.medicine.id == _medicineId).unit,
       weekdays: _weekdays,
       dates: _dates,
       // A date list starts at its earliest date.
@@ -77,7 +108,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
     );
     setState(() => _saving = true);
     try {
-      validateNewSchedule(draft(_medicineId!));
+      if (_editing == null) validateNewSchedule(draft(_medicineId!));
       // Asked before saving, so the schedule is planned with the answer.
       var muted = false;
       if (_times.isNotEmpty) {
@@ -86,10 +117,37 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
             !await reminders.notificationsAllowed() &&
             !await reminders.requestPermission();
       }
-      await ref
-          .read(scheduleRepositoryProvider)
-          .createSchedule(draft(_medicineId!));
+      var from = _today;
+      if (_editing == null) {
+        await ref
+            .read(scheduleRepositoryProvider)
+            .createSchedule(draft(_medicineId!));
+      } else {
+        from = await ref
+            .read(scheduleRepositoryProvider)
+            .updateSchedule(
+              _editing!.id,
+              ScheduleEdit(
+                kind: _kind,
+                dose: dose,
+                times: _times.toList(),
+                weekdays: _weekdays,
+                dates: _dates,
+                startDate: _start,
+                endDate: _end,
+              ),
+            );
+      }
       navigator.pop();
+      if (from.isAfter(_today)) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Изменения вступят в силу с завтрашнего дня: сегодня уже есть отметка',
+            ),
+          ),
+        );
+      }
       if (muted) {
         messenger.showSnackBar(
           const SnackBar(
@@ -103,6 +161,11 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
     } on InvalidScheduleException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
       if (mounted) setState(() => _saving = false);
+    } on ScheduleEndedException {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Расписание уже изменено или завершено')),
+      );
+      navigator.pop();
     }
   }
 
@@ -111,7 +174,9 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
     final stock = ref.watch(medicineStockProvider).value ?? const [];
     final gap = const SizedBox(height: AppSpacing.md);
     return Scaffold(
-      appBar: AppBar(title: const Text('Новый приём')),
+      appBar: AppBar(
+        title: Text(_editing == null ? 'Новый приём' : 'Расписание'),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -138,16 +203,22 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                     ),
                 ],
                 validator: (v) => v == null ? 'Выберите лекарство' : null,
-                onChanged: (v) => setState(() => _medicineId = v),
+                // Changing the medicine would move its history to another one.
+                onChanged: _editing == null
+                    ? (v) => setState(() => _medicineId = v)
+                    : null,
               ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _newMedicine,
-                icon: const Icon(Icons.add),
-                label: const Text('Новое лекарство'),
-              ),
-            ),
+            if (_editing == null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _newMedicine,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Новое лекарство'),
+                ),
+              )
+            else
+              gap,
             gap,
             TextFormField(
               controller: _dose,
@@ -216,7 +287,11 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                     avatar: const Icon(Icons.add),
                     label: const Text('Добавить дату'),
                     onPressed: () async {
-                      final p = await _pickDate(DateTime.now(), 'Дата приёма');
+                      final p = await _pickDate(
+                        DateTime.now(),
+                        'Дата приёма',
+                        fromToday: _started,
+                      );
                       if (p != null && !_dates.contains(dateOnly(p))) {
                         setState(() => _dates.add(dateOnly(p)));
                       }
@@ -258,10 +333,12 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 label: 'Начало',
                 value: formatDate(_start),
                 icon: Icons.calendar_today_outlined,
-                onTap: () async {
-                  final p = await _pickDate(_start, 'Дата начала');
-                  if (p != null) setState(() => _start = dateOnly(p));
-                },
+                onTap: _started
+                    ? null
+                    : () async {
+                        final p = await _pickDate(_start, 'Дата начала');
+                        if (p != null) setState(() => _start = dateOnly(p));
+                      },
               ),
               gap,
               _PickerTile(
@@ -270,7 +347,11 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 icon: Icons.event_busy_outlined,
                 onClear: () => setState(() => _end = null),
                 onTap: () async {
-                  final p = await _pickDate(_end ?? _start, 'Дата окончания');
+                  final p = await _pickDate(
+                    _end ?? (_started ? _today : _start),
+                    'Дата окончания',
+                    fromToday: _started,
+                  );
                   if (p != null) setState(() => _end = dateOnly(p));
                 },
               ),
@@ -280,6 +361,20 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
               onPressed: _saving ? null : () => _save(stock),
               child: const Text('Сохранить'),
             ),
+            if (_editing != null) ...[
+              gap,
+              OutlinedButton(
+                onPressed: _saving
+                    ? null
+                    : () async {
+                        final navigator = Navigator.of(context);
+                        if (await confirmEndSchedule(context, ref, _editing!)) {
+                          navigator.pop();
+                        }
+                      },
+                child: const Text('Завершить расписание'),
+              ),
+            ],
           ],
         ),
       ),
@@ -299,7 +394,7 @@ class _PickerTile extends StatelessWidget {
   final String label;
   final String? value;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final VoidCallback? onClear;
 
   @override

@@ -5,13 +5,21 @@ class Medicine {
   const Medicine({
     required this.id,
     required this.name,
+    required this.unit,
     required this.createdAt,
     this.form,
     this.strength,
+    this.archivedAt,
   });
 
   final String id;
   final String name;
+
+  /// The unit every package of this medicine is counted in.
+  final String unit;
+
+  /// Null while the medicine is in the cabinet.
+  final DateTime? archivedAt;
   final MedicineForm? form;
 
   /// Dosage or concentration as the user wrote it, e.g. "500 мг".
@@ -43,7 +51,7 @@ class MedicinePackage {
   final DateTime createdAt;
 }
 
-enum TransactionKind { initial, increase, decrease }
+enum TransactionKind { initial, increase, decrease, correction }
 
 /// One entry in a package's stock history. Never edited after it is written.
 class InventoryTransaction {
@@ -77,17 +85,33 @@ class MedicineStock {
 
   /// The package the +/- buttons act on. With one package that is the only
   /// one; managing several is a later screen.
-  MedicinePackage get primaryPackage => packages.first;
+  MedicinePackage get primaryPackage => counted.firstOrNull ?? packages.first;
 
-  /// Sum over packages. Only meaningful when all packages share one unit.
-  double get totalQuantity => packages.fold(0.0, (sum, p) => sum + p.quantity);
+  /// The medicine's unit (a package's own unit only for a row that predates
+  /// the unit column).
+  String get unit =>
+      medicine.unit.isEmpty ? packages.first.unit : medicine.unit;
 
-  String get unit => primaryPackage.unit;
+  /// Packages counted in [unit]. Only these are summed and used up: packages
+  /// in another unit (possible in data from before units were enforced) are
+  /// kept, shown and correctable, but never mixed into the totals.
+  List<MedicinePackage> get counted => [
+    for (final p in packages)
+      if (p.unit == unit) p,
+  ];
 
-  /// Earliest expiry among packages that still have stock.
+  List<MedicinePackage> get foreign => [
+    for (final p in packages)
+      if (p.unit != unit) p,
+  ];
+
+  /// Sum over the [counted] packages.
+  double get totalQuantity => counted.fold(0.0, (sum, p) => sum + p.quantity);
+
+  /// Earliest expiry among counted packages that still have stock.
   DateTime? get nearestExpiry {
     final dates = [
-      for (final p in packages)
+      for (final p in counted)
         if (p.quantity > 0 && p.expiresOn != null) p.expiresOn!,
     ]..sort();
     return dates.isEmpty ? null : dates.first;
@@ -111,4 +135,14 @@ class NewMedicine {
   final double initialQuantity;
   final String unit;
   final DateTime? expiresOn;
+}
+
+/// New name, form and strength of an existing medicine. The unit and the
+/// packages are not editable here.
+class MedicineEdit {
+  const MedicineEdit({required this.name, this.form, this.strength});
+
+  final String name;
+  final MedicineForm? form;
+  final String? strength;
 }

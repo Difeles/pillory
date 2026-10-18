@@ -168,6 +168,17 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                             intake: i,
                             // Marking a future dose as taken makes no sense.
                             canMark: !_day.isAfter(today),
+                            // Only the live version of a schedule can be
+                            // changed; earlier ones are history.
+                            manageable: isCurrent(i.schedule, today),
+                            onEdit: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    AddIntakeScreen(editing: i.schedule),
+                              ),
+                            ),
+                            onEnd: () =>
+                                confirmEndSchedule(context, ref, i.schedule),
                             highlighted:
                                 _highlight?.scheduleId == i.schedule.id &&
                                 _highlight?.minuteOfDay == i.minuteOfDay,
@@ -199,6 +210,9 @@ class _IntakeCard extends StatelessWidget {
     required this.intake,
     required this.canMark,
     required this.highlighted,
+    required this.manageable,
+    required this.onEdit,
+    required this.onEnd,
     required this.onTake,
     required this.onSkip,
     required this.onReset,
@@ -207,6 +221,9 @@ class _IntakeCard extends StatelessWidget {
   final DayIntake intake;
   final bool canMark;
   final bool highlighted;
+  final bool manageable;
+  final VoidCallback onEdit;
+  final VoidCallback onEnd;
   final VoidCallback onTake;
   final VoidCallback onSkip;
   final VoidCallback onReset;
@@ -270,11 +287,71 @@ class _IntakeCard extends StatelessWidget {
                   onPressed: onReset,
                 ),
             ],
+            PopupMenuButton<VoidCallback>(
+              tooltip: 'Управление расписанием',
+              onSelected: (action) => action(),
+              itemBuilder: (_) => manageable
+                  ? [
+                      PopupMenuItem(
+                        value: onEdit,
+                        child: const Text('Изменить расписание'),
+                      ),
+                      PopupMenuItem(
+                        value: onEnd,
+                        child: const Text('Завершить расписание'),
+                      ),
+                    ]
+                  : const [
+                      PopupMenuItem(
+                        enabled: false,
+                        child: Text('Расписание уже изменено или завершено'),
+                      ),
+                    ],
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Asks, then ends [s] with effect from the next day it can; returns whether
+/// it was ended.
+Future<bool> confirmEndSchedule(
+  BuildContext context,
+  WidgetRef ref,
+  Schedule s,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: const Text('Завершить расписание?'),
+      content: const Text('Прошлые приёмы сохранятся, будущие исчезнут.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(c, false),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(c, true),
+          child: const Text('Завершить'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return false;
+  final from = await ref.read(scheduleRepositoryProvider).endSchedule(s.id);
+  if (from.isAfter(dateOnly(DateTime.now()))) {
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Расписание завершится со следующего дня: сегодня уже есть отметка',
+        ),
+      ),
+    );
+  }
+  return true;
 }
 
 /// Icon and name of a mark; shared by the day and history screens.

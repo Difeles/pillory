@@ -4,6 +4,7 @@ import 'package:pillory/core/ids.dart';
 import 'package:pillory/domain/errors.dart';
 import 'package:pillory/domain/inventory_repository.dart';
 import 'package:pillory/domain/inventory_rules.dart';
+import 'package:pillory/domain/medicine_form.dart';
 import 'package:pillory/domain/models.dart';
 import 'package:pillory/domain/reminders.dart';
 import 'package:pillory/domain/schedule.dart';
@@ -16,15 +17,37 @@ class FakeInventoryRepository implements InventoryRepository {
   final _packages = <MedicinePackage>[];
   final _changes = StreamController<void>.broadcast(sync: true);
 
-  List<MedicineStock> _snapshot() => [
-    for (final m in _medicines)
-      MedicineStock(
-        medicine: m,
-        packages: [
-          for (final p in _packages)
-            if (p.medicineId == m.id) p,
-        ],
+  final _history = <String, List<InventoryTransaction>>{};
+
+  void _log(
+    String packageId,
+    TransactionKind kind,
+    double delta,
+    double after,
+  ) {
+    (_history[packageId] ??= []).insert(
+      0,
+      InventoryTransaction(
+        id: generateId(),
+        packageId: packageId,
+        kind: kind,
+        delta: delta,
+        quantityAfter: after,
+        createdAt: DateTime.now(),
       ),
+    );
+  }
+
+  List<MedicineStock> _snapshot({bool archived = false}) => [
+    for (final m in _medicines)
+      if ((m.archivedAt != null) == archived)
+        MedicineStock(
+          medicine: m,
+          packages: [
+            for (final p in _packages)
+              if (p.medicineId == m.id) p,
+          ],
+        ),
   ];
 
   @override
@@ -33,6 +56,118 @@ class FakeInventoryRepository implements InventoryRepository {
     await for (final _ in _changes.stream) {
       yield _snapshot();
     }
+  }
+
+  @override
+  Stream<List<MedicineStock>> watchArchived() async* {
+    yield _snapshot(archived: true);
+    await for (final _ in _changes.stream) {
+      yield _snapshot(archived: true);
+    }
+  }
+
+  void _replaceMedicine(String id, Medicine Function(Medicine) change) {
+    final i = _medicines.indexWhere((m) => m.id == id);
+    if (i < 0) throw MedicineNotFoundException(id);
+    _medicines[i] = change(_medicines[i]);
+    _changes.add(null);
+  }
+
+  Medicine _copy(
+    Medicine m, {
+    String? name,
+    MedicineForm? form,
+    String? strength,
+    bool setFields = false,
+    DateTime? archivedAt,
+    bool setArchived = false,
+  }) => Medicine(
+    id: m.id,
+    name: setFields ? name! : m.name,
+    form: setFields ? form : m.form,
+    strength: setFields ? strength : m.strength,
+    unit: m.unit,
+    archivedAt: setArchived ? archivedAt : m.archivedAt,
+    createdAt: m.createdAt,
+  );
+
+  @override
+  Future<void> updateMedicine(String medicineId, MedicineEdit edit) async {
+    if (edit.name.trim().isEmpty) {
+      throw const InvalidMedicineException('Название обязательно');
+    }
+    final strength = edit.strength?.trim();
+    _replaceMedicine(
+      medicineId,
+      (m) => _copy(
+        m,
+        name: edit.name.trim(),
+        form: edit.form,
+        strength: strength == null || strength.isEmpty ? null : strength,
+        setFields: true,
+      ),
+    );
+  }
+
+  @override
+  Future<void> archiveMedicine(String medicineId) async => _replaceMedicine(
+    medicineId,
+    (m) => _copy(m, archivedAt: DateTime.now(), setArchived: true),
+  );
+
+  @override
+  Future<void> restoreMedicine(String medicineId) async =>
+      _replaceMedicine(medicineId, (m) => _copy(m, setArchived: true));
+
+  @override
+  Future<void> updatePackageExpiry(
+    String packageId,
+    DateTime? expiresOn,
+  ) async {
+    final i = _packages.indexWhere((p) => p.id == packageId);
+    if (i < 0) throw PackageNotFoundException(packageId);
+    final p = _packages[i];
+    _packages[i] = MedicinePackage(
+      id: p.id,
+      medicineId: p.medicineId,
+      initialQuantity: p.initialQuantity,
+      quantity: p.quantity,
+      unit: p.unit,
+      expiresOn: expiresOn,
+      createdAt: p.createdAt,
+    );
+    _changes.add(null);
+  }
+
+  @override
+  Future<void> correctQuantity({
+    required String packageId,
+    required double from,
+    required double to,
+  }) async {
+    if (to < 0) {
+      throw const InvalidMedicineException(
+        'Остаток не может быть отрицательным',
+      );
+    }
+    final i = _packages.indexWhere((p) => p.id == packageId);
+    if (i < 0) throw PackageNotFoundException(packageId);
+    final p = _packages[i];
+    if (p.quantity != from) {
+      throw StaleQuantityException(expected: from, actual: p.quantity);
+    }
+    if (to == from) return;
+    _packages[i] = MedicinePackage(
+      id: p.id,
+      medicineId: p.medicineId,
+      initialQuantity: p.initialQuantity,
+      quantity: to,
+      unit: p.unit,
+      expiresOn: p.expiresOn,
+      createdAt: p.createdAt,
+    );
+    _log(packageId, TransactionKind.correction, to - from, to);
+    _changes.add(null);
   }
 
   @override
@@ -45,6 +180,7 @@ class FakeInventoryRepository implements InventoryRepository {
         name: d.name,
         form: d.form,
         strength: d.strength,
+        unit: d.unit,
         createdAt: DateTime.now(),
       ),
     );
@@ -102,7 +238,8 @@ class FakeInventoryRepository implements InventoryRepository {
   }
 
   @override
-  Future<List<InventoryTransaction>> history(String packageId) async => [];
+  Future<List<InventoryTransaction>> history(String packageId) async =>
+      _history[packageId] ?? const [];
 }
 
 /// In-memory schedule repository for widget tests, on top of the fake
@@ -222,6 +359,63 @@ class FakeScheduleRepository implements ScheduleRepository {
     _schedules.add(s);
     _changes.add(null);
     return s.id;
+  }
+
+  (Schedule, DateTime) _forChange(String scheduleId) {
+    final old = _schedules.firstWhere((s) => s.id == scheduleId);
+    final today = dateOnly(DateTime.now());
+    final prefix = '$scheduleId|${today.year}-${today.month}-${today.day}|';
+    final marked = _marks.entries.any(
+      (e) => e.key.startsWith(prefix) && e.value != IntakeStatus.pending,
+    );
+    return (
+      old,
+      marked ? DateTime(today.year, today.month, today.day + 1) : today,
+    );
+  }
+
+  void _replace(String id, Schedule Function(Schedule) change) {
+    final i = _schedules.indexWhere((s) => s.id == id);
+    _schedules[i] = change(_schedules[i]);
+    _changes.add(null);
+  }
+
+  Schedule _copy(Schedule o, {NewSchedule? with_, DateTime? end}) => Schedule(
+    id: o.id,
+    createdAt: o.createdAt,
+    medicineId: o.medicineId,
+    kind: with_?.kind ?? o.kind,
+    dose: with_?.dose ?? o.dose,
+    doseUnit: o.doseUnit,
+    weekdays: with_?.weekdays ?? o.weekdays,
+    dates: with_?.dates ?? o.dates,
+    startDate: with_?.startDate ?? o.startDate,
+    endDate: with_ != null ? with_.endDate : (end ?? o.endDate),
+    times: with_?.times ?? o.times,
+  );
+
+  @override
+  Future<DateTime> updateSchedule(String scheduleId, ScheduleEdit edit) async {
+    final (old, from) = _forChange(scheduleId);
+    switch (planScheduleEdit(old, edit, from)) {
+      case ScheduleUnchanged():
+        break;
+      case ScheduleRewrite(:final draft):
+        _replace(scheduleId, (o) => _copy(o, with_: draft));
+      case ScheduleSplit(:final draft, :final closeOn):
+        _replace(scheduleId, (o) => _copy(o, end: closeOn));
+        await createSchedule(draft);
+    }
+    return from;
+  }
+
+  @override
+  Future<DateTime> endSchedule(String scheduleId) async {
+    final (old, from) = _forChange(scheduleId);
+    if (isCurrent(old, from)) {
+      _replace(scheduleId, (o) => _copy(o, end: endDateFor(old, from)));
+    }
+    return from;
   }
 
   @override

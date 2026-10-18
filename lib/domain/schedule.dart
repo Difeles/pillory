@@ -1,5 +1,6 @@
 import 'errors.dart';
 import 'inventory_rules.dart';
+import 'medicine_form.dart';
 import 'models.dart';
 import 'reminders.dart';
 
@@ -119,13 +120,20 @@ class DayIntake {
   const DayIntake({
     required this.schedule,
     required this.medicineName,
+    this.medicineForm,
+    this.medicineStrength,
     this.minuteOfDay,
     this.status = IntakeStatus.pending,
     this.deductionsTracked = false,
   });
 
   final Schedule schedule;
+
+  /// The medicine as it was when the intake was marked, or as it is now for
+  /// one that is not marked.
   final String medicineName;
+  final MedicineForm? medicineForm;
+  final String? medicineStrength;
 
   /// Which of the schedule's times this is; null for an untimed intake.
   final int? minuteOfDay;
@@ -149,6 +157,125 @@ int compareIntakes(DayIntake a, DayIntake b) {
     return ta.compareTo(tb);
   }
   return a.medicineName.toLowerCase().compareTo(b.medicineName.toLowerCase());
+}
+
+/// Whether [s] still has days from [day] on that nothing has closed: no end,
+/// or an end that is not before [day] and not before the start (a schedule
+/// ended before its first day never took effect).
+bool isCurrent(NewSchedule s, DateTime day) {
+  final e = s.endDate;
+  if (e == null) return true;
+  final end = dateOnly(e);
+  return !end.isBefore(dateOnly(s.startDate)) && !end.isBefore(dateOnly(day));
+}
+
+/// New settings for an existing schedule. The medicine and the dose unit are
+/// deliberately not here: history stays attached to the medicine.
+class ScheduleEdit {
+  const ScheduleEdit({
+    required this.kind,
+    required this.dose,
+    required this.times,
+    this.weekdays = const {},
+    this.dates = const [],
+    this.startDate,
+    this.endDate,
+  });
+
+  final ScheduleKind kind;
+  final double dose;
+  final List<int> times;
+  final Set<int> weekdays;
+  final List<DateTime> dates;
+
+  /// Used only while the schedule has not started; afterwards the new
+  /// settings start on the effective day.
+  final DateTime? startDate;
+  final DateTime? endDate;
+}
+
+sealed class ScheduleEditPlan {
+  const ScheduleEditPlan();
+}
+
+/// Nothing that matters changed: no new version.
+class ScheduleUnchanged extends ScheduleEditPlan {
+  const ScheduleUnchanged();
+}
+
+/// Not started yet, so there is no history to protect: edit in place.
+class ScheduleRewrite extends ScheduleEditPlan {
+  const ScheduleRewrite(this.draft);
+  final NewSchedule draft;
+}
+
+/// Started: the old schedule ends the day before the new one starts.
+class ScheduleSplit extends ScheduleEditPlan {
+  const ScheduleSplit(this.draft, this.closeOn);
+  final NewSchedule draft;
+  final DateTime closeOn;
+}
+
+/// What an edit of [old] does when it takes effect on [from]. Throws
+/// [ScheduleEndedException] if [old] has nothing left from [from] on and
+/// [InvalidScheduleException] for invalid settings.
+ScheduleEditPlan planScheduleEdit(
+  Schedule old,
+  ScheduleEdit edit,
+  DateTime from,
+) {
+  if (!isCurrent(old, from)) throw ScheduleEndedException(old.id);
+  final started = dateOnly(old.startDate).isBefore(from);
+  final byDates = edit.kind == ScheduleKind.dates;
+  // Past dates belong to the old version, which stays as it was.
+  final dates = [
+    for (final d in edit.dates)
+      if (!started || !dateOnly(d).isBefore(from)) d,
+  ];
+  final earliest = dates.isEmpty
+      ? null
+      : (dates.map(dateOnly).toList()..sort()).first;
+  final draft = validateNewSchedule(
+    NewSchedule(
+      medicineId: old.medicineId,
+      kind: edit.kind,
+      dose: edit.dose,
+      doseUnit: old.doseUnit,
+      weekdays: edit.weekdays,
+      dates: dates,
+      startDate: started
+          ? (byDates ? earliest ?? from : from)
+          : (byDates ? earliest : edit.startDate) ?? old.startDate,
+      endDate: byDates ? null : edit.endDate,
+      times: edit.times,
+    ),
+  );
+
+  bool same<T>(Iterable<T> a, Iterable<T> b) =>
+      a.length == b.length && a.toSet().containsAll(b);
+  final oldDates = [
+    for (final d in old.dates)
+      if (!started || !dateOnly(d).isBefore(from)) dateOnly(d),
+  ];
+  final unchanged =
+      draft.kind == old.kind &&
+      draft.dose == old.dose &&
+      same(draft.times, old.times) &&
+      same(draft.weekdays, old.weekdays) &&
+      same(draft.dates, oldDates) &&
+      draft.endDate == (old.endDate == null ? null : dateOnly(old.endDate!)) &&
+      (started || draft.startDate == dateOnly(old.startDate));
+  if (unchanged) return const ScheduleUnchanged();
+  if (!started) return ScheduleRewrite(draft);
+  return ScheduleSplit(draft, DateTime(from.year, from.month, from.day - 1));
+}
+
+/// The last day [s] keeps its intakes once it is ended with effect from
+/// [from]; before its start for a schedule that never began.
+DateTime endDateFor(Schedule s, DateTime from) {
+  final start = dateOnly(s.startDate);
+  final day = start.isBefore(from) ? from : start;
+  return DateTime(day.year, day.month, day.day - 1);
 }
 
 /// How to take [dose] out of [packages]: packages in date, earliest expiry
@@ -205,6 +332,20 @@ abstract class ScheduleRepository {
 
   /// Returns the new schedule id. Throws [InvalidScheduleException].
   Future<String> createSchedule(NewSchedule draft);
+
+  /// Changes a schedule and returns the day the change takes effect: today,
+  /// or tomorrow if today already has a mark on it. A schedule that has
+  /// started is closed the day before and continued as a new one, so past
+  /// days, marks and doses stay as they were; one that has not started is
+  /// edited in place. Nothing is written if nothing changed. Throws
+  /// [ScheduleEndedException] if there is nothing left to change and
+  /// [InvalidScheduleException] for invalid settings.
+  Future<DateTime> updateSchedule(String scheduleId, ScheduleEdit edit);
+
+  /// Ends a schedule from the same effective day as [updateSchedule] (so
+  /// today's marks stay visible) and returns that day. Past intakes and their
+  /// statuses are kept. Ending an ended schedule does nothing.
+  Future<DateTime> endSchedule(String scheduleId);
 
   /// Marks the intake of [scheduleId] at [minuteOfDay] (null if untimed) on
   /// [day] as taken and deducts one dose from stock, recording inventory

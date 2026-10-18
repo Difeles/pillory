@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pillory/data/app_database.dart';
@@ -261,5 +261,143 @@ void main() {
     expect(stock.primaryPackage.quantity, 5);
     expect(stock.primaryPackage.expiresOn, DateTime(2027, 1, 31));
     expect(await secondRepo.history(packageId), hasLength(2));
+  });
+
+  group('managing medicines and packages', () {
+    Future<String> medicineId() => repo.createMedicine(aspirin);
+    Future<String> packageId() async => (await only()).primaryPackage.id;
+
+    test('editing trims the text and clears an empty strength', () async {
+      final id = await medicineId();
+      await repo.updateMedicine(
+        id,
+        const MedicineEdit(name: '  Аспирин Кардио ', strength: '  '),
+      );
+      final m = (await only()).medicine;
+      expect((m.name, m.form, m.strength), ('Аспирин Кардио', null, null));
+    });
+
+    test('an empty name or unknown medicine changes nothing', () async {
+      final id = await medicineId();
+      await expectLater(
+        repo.updateMedicine(id, const MedicineEdit(name: ' ')),
+        throwsA(isA<InvalidMedicineException>()),
+      );
+      await expectLater(
+        repo.updateMedicine('nope', const MedicineEdit(name: 'X')),
+        throwsA(isA<MedicineNotFoundException>()),
+      );
+      expect((await only()).medicine.name, 'Аспирин');
+    });
+
+    test('a package must use the medicine unit', () async {
+      final id = await medicineId();
+      await expectLater(
+        repo.addPackage(medicineId: id, quantity: 5, unit: 'мл'),
+        throwsA(isA<InvalidMedicineException>()),
+      );
+      await expectLater(
+        repo.addPackage(medicineId: id, quantity: -1, unit: 'шт.'),
+        throwsA(isA<InvalidMedicineException>()),
+      );
+      expect((await only()).packages, hasLength(1));
+      final second = await repo.addPackage(
+        medicineId: id,
+        quantity: 5,
+        unit: ' шт. ',
+      );
+      expect((await repo.history(second)).single.kind, TransactionKind.initial);
+      expect((await only()).totalQuantity, 15);
+    });
+
+    test('changing the expiry leaves quantity and history alone', () async {
+      await medicineId();
+      final pid = await packageId();
+      await repo.updatePackageExpiry(pid, DateTime(2027, 3, 4, 15));
+      expect((await only()).primaryPackage.expiresOn, DateTime(2027, 3, 4));
+      await repo.updatePackageExpiry(pid, null);
+      expect((await only()).primaryPackage.expiresOn, equals(null));
+      expect((await only()).totalQuantity, 10);
+      expect(await repo.history(pid), hasLength(1));
+      await expectLater(
+        repo.updatePackageExpiry('nope', null),
+        throwsA(isA<PackageNotFoundException>()),
+      );
+    });
+
+    test('a correction sets the quantity and is recorded', () async {
+      await medicineId();
+      final pid = await packageId();
+      await repo.correctQuantity(packageId: pid, from: 10, to: 7.5);
+      await repo.correctQuantity(packageId: pid, from: 7.5, to: 7.5);
+      expect((await only()).totalQuantity, 7.5);
+      final h = await repo.history(pid);
+      expect(h, hasLength(2)); // equal quantity wrote nothing
+      expect(
+        (h.first.kind, h.first.delta, h.first.quantityAfter),
+        (TransactionKind.correction, -2.5, 7.5),
+      );
+    });
+
+    test('a negative or stale correction writes nothing', () async {
+      await medicineId();
+      final pid = await packageId();
+      await expectLater(
+        repo.correctQuantity(packageId: pid, from: 10, to: -1),
+        throwsA(isA<InvalidMedicineException>()),
+      );
+      await repo.adjustQuantity(packageId: pid, delta: -3);
+      await expectLater(
+        repo.correctQuantity(packageId: pid, from: 10, to: 20),
+        throwsA(isA<StaleQuantityException>()),
+      );
+      expect((await only()).totalQuantity, 7);
+      expect(await repo.history(pid), hasLength(2));
+    });
+
+    test('parallel corrections: one wins, the other is stale', () async {
+      await medicineId();
+      final pid = await packageId();
+      final results = await Future.wait([
+        for (final to in [1.0, 2.0, 3.0])
+          repo
+              .correctQuantity(packageId: pid, from: 10, to: to)
+              .then<Object>((_) => 'ok')
+              .catchError((Object e) => e),
+      ]);
+      expect(results.where((r) => r == 'ok'), hasLength(1));
+      expect(results.whereType<StaleQuantityException>(), hasLength(2));
+      expect(await repo.history(pid), hasLength(2));
+    });
+
+    test('archiving hides the medicine and deletes nothing', () async {
+      final id = await medicineId();
+      final pid = await packageId();
+      await repo.adjustQuantity(packageId: pid, delta: -2);
+      await repo.archiveMedicine(id);
+      await repo.archiveMedicine(id); // repeating changes nothing
+      expect(await repo.watchStock().first, isEmpty);
+      final archived = (await repo.watchArchived().first).single;
+      expect(archived.medicine.archivedAt, isNotNull);
+      expect(archived.totalQuantity, 8);
+      expect(await repo.history(pid), hasLength(2));
+
+      await repo.restoreMedicine(id);
+      expect(await repo.watchArchived().first, isEmpty);
+      expect((await only()).medicine.archivedAt, equals(null));
+      await expectLater(
+        repo.archiveMedicine('nope'),
+        throwsA(isA<MedicineNotFoundException>()),
+      );
+    });
+
+    test('an archived medicine takes no new packages', () async {
+      final id = await medicineId();
+      await repo.archiveMedicine(id);
+      await expectLater(
+        repo.addPackage(medicineId: id, quantity: 1, unit: 'шт.'),
+        throwsA(isA<InvalidMedicineException>()),
+      );
+    });
   });
 }

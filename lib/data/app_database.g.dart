@@ -48,6 +48,26 @@ class $MedicinesTable extends Medicines
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _unitMeta = const VerificationMeta('unit');
+  @override
+  late final GeneratedColumn<String> unit = GeneratedColumn<String>(
+    'unit',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _archivedAtMeta = const VerificationMeta(
+    'archivedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> archivedAt = GeneratedColumn<DateTime>(
+    'archived_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -60,7 +80,15 @@ class $MedicinesTable extends Medicines
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, form, strength, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    form,
+    strength,
+    unit,
+    archivedAt,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -90,6 +118,18 @@ class $MedicinesTable extends Medicines
       context.handle(
         _strengthMeta,
         strength.isAcceptableOrUnknown(data['strength']!, _strengthMeta),
+      );
+    }
+    if (data.containsKey('unit')) {
+      context.handle(
+        _unitMeta,
+        unit.isAcceptableOrUnknown(data['unit']!, _unitMeta),
+      );
+    }
+    if (data.containsKey('archived_at')) {
+      context.handle(
+        _archivedAtMeta,
+        archivedAt.isAcceptableOrUnknown(data['archived_at']!, _archivedAtMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -127,6 +167,14 @@ class $MedicinesTable extends Medicines
         DriftSqlType.string,
         data['${effectivePrefix}strength'],
       ),
+      unit: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit'],
+      ),
+      archivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}archived_at'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -150,12 +198,22 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
   final String name;
   final MedicineForm? form;
   final String? strength;
+
+  /// The one unit all packages of this medicine are counted in. Nullable only
+  /// because older rows are filled in by the v5 migration.
+  final String? unit;
+
+  /// Set when the medicine is archived: hidden from the cabinet, nothing is
+  /// deleted.
+  final DateTime? archivedAt;
   final DateTime createdAt;
   const MedicineRow({
     required this.id,
     required this.name,
     this.form,
     this.strength,
+    this.unit,
+    this.archivedAt,
     required this.createdAt,
   });
   @override
@@ -171,6 +229,12 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     if (!nullToAbsent || strength != null) {
       map['strength'] = Variable<String>(strength);
     }
+    if (!nullToAbsent || unit != null) {
+      map['unit'] = Variable<String>(unit);
+    }
+    if (!nullToAbsent || archivedAt != null) {
+      map['archived_at'] = Variable<DateTime>(archivedAt);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -183,6 +247,10 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
       strength: strength == null && nullToAbsent
           ? const Value.absent()
           : Value(strength),
+      unit: unit == null && nullToAbsent ? const Value.absent() : Value(unit),
+      archivedAt: archivedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(archivedAt),
       createdAt: Value(createdAt),
     );
   }
@@ -199,6 +267,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
         serializer.fromJson<String?>(json['form']),
       ),
       strength: serializer.fromJson<String?>(json['strength']),
+      unit: serializer.fromJson<String?>(json['unit']),
+      archivedAt: serializer.fromJson<DateTime?>(json['archivedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -212,6 +282,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
         $MedicinesTable.$converterformn.toJson(form),
       ),
       'strength': serializer.toJson<String?>(strength),
+      'unit': serializer.toJson<String?>(unit),
+      'archivedAt': serializer.toJson<DateTime?>(archivedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -221,12 +293,16 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     String? name,
     Value<MedicineForm?> form = const Value.absent(),
     Value<String?> strength = const Value.absent(),
+    Value<String?> unit = const Value.absent(),
+    Value<DateTime?> archivedAt = const Value.absent(),
     DateTime? createdAt,
   }) => MedicineRow(
     id: id ?? this.id,
     name: name ?? this.name,
     form: form.present ? form.value : this.form,
     strength: strength.present ? strength.value : this.strength,
+    unit: unit.present ? unit.value : this.unit,
+    archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
     createdAt: createdAt ?? this.createdAt,
   );
   MedicineRow copyWithCompanion(MedicinesCompanion data) {
@@ -235,6 +311,10 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
       name: data.name.present ? data.name.value : this.name,
       form: data.form.present ? data.form.value : this.form,
       strength: data.strength.present ? data.strength.value : this.strength,
+      unit: data.unit.present ? data.unit.value : this.unit,
+      archivedAt: data.archivedAt.present
+          ? data.archivedAt.value
+          : this.archivedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -246,13 +326,16 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
           ..write('name: $name, ')
           ..write('form: $form, ')
           ..write('strength: $strength, ')
+          ..write('unit: $unit, ')
+          ..write('archivedAt: $archivedAt, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, form, strength, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, form, strength, unit, archivedAt, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -261,6 +344,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
           other.name == this.name &&
           other.form == this.form &&
           other.strength == this.strength &&
+          other.unit == this.unit &&
+          other.archivedAt == this.archivedAt &&
           other.createdAt == this.createdAt);
 }
 
@@ -269,6 +354,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
   final Value<String> name;
   final Value<MedicineForm?> form;
   final Value<String?> strength;
+  final Value<String?> unit;
+  final Value<DateTime?> archivedAt;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const MedicinesCompanion({
@@ -276,6 +363,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     this.name = const Value.absent(),
     this.form = const Value.absent(),
     this.strength = const Value.absent(),
+    this.unit = const Value.absent(),
+    this.archivedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -284,6 +373,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     required String name,
     this.form = const Value.absent(),
     this.strength = const Value.absent(),
+    this.unit = const Value.absent(),
+    this.archivedAt = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -294,6 +385,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     Expression<String>? name,
     Expression<String>? form,
     Expression<String>? strength,
+    Expression<String>? unit,
+    Expression<DateTime>? archivedAt,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -302,6 +395,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
       if (name != null) 'name': name,
       if (form != null) 'form': form,
       if (strength != null) 'strength': strength,
+      if (unit != null) 'unit': unit,
+      if (archivedAt != null) 'archived_at': archivedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -312,6 +407,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     Value<String>? name,
     Value<MedicineForm?>? form,
     Value<String?>? strength,
+    Value<String?>? unit,
+    Value<DateTime?>? archivedAt,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -320,6 +417,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
       name: name ?? this.name,
       form: form ?? this.form,
       strength: strength ?? this.strength,
+      unit: unit ?? this.unit,
+      archivedAt: archivedAt ?? this.archivedAt,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -342,6 +441,12 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     if (strength.present) {
       map['strength'] = Variable<String>(strength.value);
     }
+    if (unit.present) {
+      map['unit'] = Variable<String>(unit.value);
+    }
+    if (archivedAt.present) {
+      map['archived_at'] = Variable<DateTime>(archivedAt.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -358,6 +463,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
           ..write('name: $name, ')
           ..write('form: $form, ')
           ..write('strength: $strength, ')
+          ..write('unit: $unit, ')
+          ..write('archivedAt: $archivedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2031,6 +2138,37 @@ class $IntakeLogsTable extends IntakeLogs
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _medicineNameMeta = const VerificationMeta(
+    'medicineName',
+  );
+  @override
+  late final GeneratedColumn<String> medicineName = GeneratedColumn<String>(
+    'medicine_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<MedicineForm?, String>
+  medicineForm = GeneratedColumn<String>(
+    'medicine_form',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<MedicineForm?>($IntakeLogsTable.$convertermedicineFormn);
+  static const VerificationMeta _medicineStrengthMeta = const VerificationMeta(
+    'medicineStrength',
+  );
+  @override
+  late final GeneratedColumn<String> medicineStrength = GeneratedColumn<String>(
+    'medicine_strength',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2040,6 +2178,9 @@ class $IntakeLogsTable extends IntakeLogs
     status,
     deductionsTracked,
     takenAt,
+    medicineName,
+    medicineForm,
+    medicineStrength,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2089,6 +2230,24 @@ class $IntakeLogsTable extends IntakeLogs
     } else if (isInserting) {
       context.missing(_takenAtMeta);
     }
+    if (data.containsKey('medicine_name')) {
+      context.handle(
+        _medicineNameMeta,
+        medicineName.isAcceptableOrUnknown(
+          data['medicine_name']!,
+          _medicineNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('medicine_strength')) {
+      context.handle(
+        _medicineStrengthMeta,
+        medicineStrength.isAcceptableOrUnknown(
+          data['medicine_strength']!,
+          _medicineStrengthMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2134,6 +2293,20 @@ class $IntakeLogsTable extends IntakeLogs
         DriftSqlType.dateTime,
         data['${effectivePrefix}taken_at'],
       )!,
+      medicineName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}medicine_name'],
+      ),
+      medicineForm: $IntakeLogsTable.$convertermedicineFormn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}medicine_form'],
+        ),
+      ),
+      medicineStrength: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}medicine_strength'],
+      ),
     );
   }
 
@@ -2146,6 +2319,14 @@ class $IntakeLogsTable extends IntakeLogs
       const DateOnlyConverter();
   static JsonTypeConverter2<IntakeStatus, String, String> $converterstatus =
       const EnumNameConverter<IntakeStatus>(IntakeStatus.values);
+  static JsonTypeConverter2<MedicineForm, String, String>
+  $convertermedicineForm = const EnumNameConverter<MedicineForm>(
+    MedicineForm.values,
+  );
+  static JsonTypeConverter2<MedicineForm?, String?, String?>
+  $convertermedicineFormn = JsonTypeConverter2.asNullable(
+    $convertermedicineForm,
+  );
 }
 
 class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
@@ -2163,6 +2344,13 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
   /// undone, as the stock cannot be restored exactly.
   final bool deductionsTracked;
   final DateTime takenAt;
+
+  /// The medicine as it was when the intake was marked, so history reads the
+  /// same after a rename. All null for marks made before v5 (and while
+  /// pending): those follow the current medicine.
+  final String? medicineName;
+  final MedicineForm? medicineForm;
+  final String? medicineStrength;
   const IntakeLogRow({
     required this.id,
     required this.scheduleId,
@@ -2171,6 +2359,9 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
     required this.status,
     required this.deductionsTracked,
     required this.takenAt,
+    this.medicineName,
+    this.medicineForm,
+    this.medicineStrength,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2188,6 +2379,17 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
     }
     map['deductions_tracked'] = Variable<bool>(deductionsTracked);
     map['taken_at'] = Variable<DateTime>(takenAt);
+    if (!nullToAbsent || medicineName != null) {
+      map['medicine_name'] = Variable<String>(medicineName);
+    }
+    if (!nullToAbsent || medicineForm != null) {
+      map['medicine_form'] = Variable<String>(
+        $IntakeLogsTable.$convertermedicineFormn.toSql(medicineForm),
+      );
+    }
+    if (!nullToAbsent || medicineStrength != null) {
+      map['medicine_strength'] = Variable<String>(medicineStrength);
+    }
     return map;
   }
 
@@ -2200,6 +2402,15 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       status: Value(status),
       deductionsTracked: Value(deductionsTracked),
       takenAt: Value(takenAt),
+      medicineName: medicineName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(medicineName),
+      medicineForm: medicineForm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(medicineForm),
+      medicineStrength: medicineStrength == null && nullToAbsent
+          ? const Value.absent()
+          : Value(medicineStrength),
     );
   }
 
@@ -2218,6 +2429,11 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       ),
       deductionsTracked: serializer.fromJson<bool>(json['deductionsTracked']),
       takenAt: serializer.fromJson<DateTime>(json['takenAt']),
+      medicineName: serializer.fromJson<String?>(json['medicineName']),
+      medicineForm: $IntakeLogsTable.$convertermedicineFormn.fromJson(
+        serializer.fromJson<String?>(json['medicineForm']),
+      ),
+      medicineStrength: serializer.fromJson<String?>(json['medicineStrength']),
     );
   }
   @override
@@ -2233,6 +2449,11 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
       ),
       'deductionsTracked': serializer.toJson<bool>(deductionsTracked),
       'takenAt': serializer.toJson<DateTime>(takenAt),
+      'medicineName': serializer.toJson<String?>(medicineName),
+      'medicineForm': serializer.toJson<String?>(
+        $IntakeLogsTable.$convertermedicineFormn.toJson(medicineForm),
+      ),
+      'medicineStrength': serializer.toJson<String?>(medicineStrength),
     };
   }
 
@@ -2244,6 +2465,9 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
     IntakeStatus? status,
     bool? deductionsTracked,
     DateTime? takenAt,
+    Value<String?> medicineName = const Value.absent(),
+    Value<MedicineForm?> medicineForm = const Value.absent(),
+    Value<String?> medicineStrength = const Value.absent(),
   }) => IntakeLogRow(
     id: id ?? this.id,
     scheduleId: scheduleId ?? this.scheduleId,
@@ -2252,6 +2476,11 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
     status: status ?? this.status,
     deductionsTracked: deductionsTracked ?? this.deductionsTracked,
     takenAt: takenAt ?? this.takenAt,
+    medicineName: medicineName.present ? medicineName.value : this.medicineName,
+    medicineForm: medicineForm.present ? medicineForm.value : this.medicineForm,
+    medicineStrength: medicineStrength.present
+        ? medicineStrength.value
+        : this.medicineStrength,
   );
   IntakeLogRow copyWithCompanion(IntakeLogsCompanion data) {
     return IntakeLogRow(
@@ -2266,6 +2495,15 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
           ? data.deductionsTracked.value
           : this.deductionsTracked,
       takenAt: data.takenAt.present ? data.takenAt.value : this.takenAt,
+      medicineName: data.medicineName.present
+          ? data.medicineName.value
+          : this.medicineName,
+      medicineForm: data.medicineForm.present
+          ? data.medicineForm.value
+          : this.medicineForm,
+      medicineStrength: data.medicineStrength.present
+          ? data.medicineStrength.value
+          : this.medicineStrength,
     );
   }
 
@@ -2278,7 +2516,10 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
           ..write('slot: $slot, ')
           ..write('status: $status, ')
           ..write('deductionsTracked: $deductionsTracked, ')
-          ..write('takenAt: $takenAt')
+          ..write('takenAt: $takenAt, ')
+          ..write('medicineName: $medicineName, ')
+          ..write('medicineForm: $medicineForm, ')
+          ..write('medicineStrength: $medicineStrength')
           ..write(')'))
         .toString();
   }
@@ -2292,6 +2533,9 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
     status,
     deductionsTracked,
     takenAt,
+    medicineName,
+    medicineForm,
+    medicineStrength,
   );
   @override
   bool operator ==(Object other) =>
@@ -2303,7 +2547,10 @@ class IntakeLogRow extends DataClass implements Insertable<IntakeLogRow> {
           other.slot == this.slot &&
           other.status == this.status &&
           other.deductionsTracked == this.deductionsTracked &&
-          other.takenAt == this.takenAt);
+          other.takenAt == this.takenAt &&
+          other.medicineName == this.medicineName &&
+          other.medicineForm == this.medicineForm &&
+          other.medicineStrength == this.medicineStrength);
 }
 
 class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
@@ -2314,6 +2561,9 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
   final Value<IntakeStatus> status;
   final Value<bool> deductionsTracked;
   final Value<DateTime> takenAt;
+  final Value<String?> medicineName;
+  final Value<MedicineForm?> medicineForm;
+  final Value<String?> medicineStrength;
   final Value<int> rowid;
   const IntakeLogsCompanion({
     this.id = const Value.absent(),
@@ -2323,6 +2573,9 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     this.status = const Value.absent(),
     this.deductionsTracked = const Value.absent(),
     this.takenAt = const Value.absent(),
+    this.medicineName = const Value.absent(),
+    this.medicineForm = const Value.absent(),
+    this.medicineStrength = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   IntakeLogsCompanion.insert({
@@ -2333,6 +2586,9 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     this.status = const Value.absent(),
     this.deductionsTracked = const Value.absent(),
     required DateTime takenAt,
+    this.medicineName = const Value.absent(),
+    this.medicineForm = const Value.absent(),
+    this.medicineStrength = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        scheduleId = Value(scheduleId),
@@ -2346,6 +2602,9 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     Expression<String>? status,
     Expression<bool>? deductionsTracked,
     Expression<DateTime>? takenAt,
+    Expression<String>? medicineName,
+    Expression<String>? medicineForm,
+    Expression<String>? medicineStrength,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2356,6 +2615,9 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
       if (status != null) 'status': status,
       if (deductionsTracked != null) 'deductions_tracked': deductionsTracked,
       if (takenAt != null) 'taken_at': takenAt,
+      if (medicineName != null) 'medicine_name': medicineName,
+      if (medicineForm != null) 'medicine_form': medicineForm,
+      if (medicineStrength != null) 'medicine_strength': medicineStrength,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2368,6 +2630,9 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     Value<IntakeStatus>? status,
     Value<bool>? deductionsTracked,
     Value<DateTime>? takenAt,
+    Value<String?>? medicineName,
+    Value<MedicineForm?>? medicineForm,
+    Value<String?>? medicineStrength,
     Value<int>? rowid,
   }) {
     return IntakeLogsCompanion(
@@ -2378,6 +2643,9 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
       status: status ?? this.status,
       deductionsTracked: deductionsTracked ?? this.deductionsTracked,
       takenAt: takenAt ?? this.takenAt,
+      medicineName: medicineName ?? this.medicineName,
+      medicineForm: medicineForm ?? this.medicineForm,
+      medicineStrength: medicineStrength ?? this.medicineStrength,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2410,6 +2678,17 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
     if (takenAt.present) {
       map['taken_at'] = Variable<DateTime>(takenAt.value);
     }
+    if (medicineName.present) {
+      map['medicine_name'] = Variable<String>(medicineName.value);
+    }
+    if (medicineForm.present) {
+      map['medicine_form'] = Variable<String>(
+        $IntakeLogsTable.$convertermedicineFormn.toSql(medicineForm.value),
+      );
+    }
+    if (medicineStrength.present) {
+      map['medicine_strength'] = Variable<String>(medicineStrength.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2426,6 +2705,9 @@ class IntakeLogsCompanion extends UpdateCompanion<IntakeLogRow> {
           ..write('status: $status, ')
           ..write('deductionsTracked: $deductionsTracked, ')
           ..write('takenAt: $takenAt, ')
+          ..write('medicineName: $medicineName, ')
+          ..write('medicineForm: $medicineForm, ')
+          ..write('medicineStrength: $medicineStrength, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2907,6 +3189,8 @@ typedef $$MedicinesTableCreateCompanionBuilder = MedicinesCompanion Function({
   required String name,
   Value<MedicineForm?> form,
   Value<String?> strength,
+  Value<String?> unit,
+  Value<DateTime?> archivedAt,
   required DateTime createdAt,
   Value<int> rowid,
 });
@@ -2915,6 +3199,8 @@ typedef $$MedicinesTableUpdateCompanionBuilder = MedicinesCompanion Function({
   Value<String> name,
   Value<MedicineForm?> form,
   Value<String?> strength,
+  Value<String?> unit,
+  Value<DateTime?> archivedAt,
   Value<DateTime> createdAt,
   Value<int> rowid,
 });
@@ -2989,6 +3275,16 @@ class $$MedicinesTableFilterComposer
 
   ColumnFilters<String> get strength => $composableBuilder(
     column: $table.strength,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unit => $composableBuilder(
+    column: $table.unit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get archivedAt => $composableBuilder(
+    column: $table.archivedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3077,6 +3373,16 @@ class $$MedicinesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get unit => $composableBuilder(
+    column: $table.unit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get archivedAt => $composableBuilder(
+    column: $table.archivedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3103,6 +3409,14 @@ class $$MedicinesTableAnnotationComposer
 
   GeneratedColumn<String> get strength =>
       $composableBuilder(column: $table.strength, builder: (column) => column);
+
+  GeneratedColumn<String> get unit =>
+      $composableBuilder(column: $table.unit, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get archivedAt => $composableBuilder(
+    column: $table.archivedAt,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3193,6 +3507,8 @@ class $$MedicinesTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<MedicineForm?> form = const Value.absent(),
                 Value<String?> strength = const Value.absent(),
+                Value<String?> unit = const Value.absent(),
+                Value<DateTime?> archivedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MedicinesCompanion(
@@ -3200,6 +3516,8 @@ class $$MedicinesTableTableManager
                 name: name,
                 form: form,
                 strength: strength,
+                unit: unit,
+                archivedAt: archivedAt,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -3209,6 +3527,8 @@ class $$MedicinesTableTableManager
                 required String name,
                 Value<MedicineForm?> form = const Value.absent(),
                 Value<String?> strength = const Value.absent(),
+                Value<String?> unit = const Value.absent(),
+                Value<DateTime?> archivedAt = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => MedicinesCompanion.insert(
@@ -3216,6 +3536,8 @@ class $$MedicinesTableTableManager
                 name: name,
                 form: form,
                 strength: strength,
+                unit: unit,
+                archivedAt: archivedAt,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -4767,6 +5089,9 @@ typedef $$IntakeLogsTableCreateCompanionBuilder = IntakeLogsCompanion Function({
   Value<IntakeStatus> status,
   Value<bool> deductionsTracked,
   required DateTime takenAt,
+  Value<String?> medicineName,
+  Value<MedicineForm?> medicineForm,
+  Value<String?> medicineStrength,
   Value<int> rowid,
 });
 typedef $$IntakeLogsTableUpdateCompanionBuilder = IntakeLogsCompanion Function({
@@ -4777,6 +5102,9 @@ typedef $$IntakeLogsTableUpdateCompanionBuilder = IntakeLogsCompanion Function({
   Value<IntakeStatus> status,
   Value<bool> deductionsTracked,
   Value<DateTime> takenAt,
+  Value<String?> medicineName,
+  Value<MedicineForm?> medicineForm,
+  Value<String?> medicineStrength,
   Value<int> rowid,
 });
 
@@ -4860,6 +5188,22 @@ class $$IntakeLogsTableFilterComposer
 
   ColumnFilters<DateTime> get takenAt => $composableBuilder(
     column: $table.takenAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get medicineName => $composableBuilder(
+    column: $table.medicineName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<MedicineForm?, MedicineForm, String>
+  get medicineForm => $composableBuilder(
+    column: $table.medicineForm,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get medicineStrength => $composableBuilder(
+    column: $table.medicineStrength,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4951,6 +5295,21 @@ class $$IntakeLogsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get medicineName => $composableBuilder(
+    column: $table.medicineName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get medicineForm => $composableBuilder(
+    column: $table.medicineForm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get medicineStrength => $composableBuilder(
+    column: $table.medicineStrength,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$SchedulesTableOrderingComposer get scheduleId {
     final $$SchedulesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -5003,6 +5362,22 @@ class $$IntakeLogsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get takenAt =>
       $composableBuilder(column: $table.takenAt, builder: (column) => column);
+
+  GeneratedColumn<String> get medicineName => $composableBuilder(
+    column: $table.medicineName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<MedicineForm?, String> get medicineForm =>
+      $composableBuilder(
+        column: $table.medicineForm,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get medicineStrength => $composableBuilder(
+    column: $table.medicineStrength,
+    builder: (column) => column,
+  );
 
   $$SchedulesTableAnnotationComposer get scheduleId {
     final $$SchedulesTableAnnotationComposer composer = $composerBuilder(
@@ -5088,6 +5463,9 @@ class $$IntakeLogsTableTableManager
                 Value<IntakeStatus> status = const Value.absent(),
                 Value<bool> deductionsTracked = const Value.absent(),
                 Value<DateTime> takenAt = const Value.absent(),
+                Value<String?> medicineName = const Value.absent(),
+                Value<MedicineForm?> medicineForm = const Value.absent(),
+                Value<String?> medicineStrength = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => IntakeLogsCompanion(
                 id: id,
@@ -5097,6 +5475,9 @@ class $$IntakeLogsTableTableManager
                 status: status,
                 deductionsTracked: deductionsTracked,
                 takenAt: takenAt,
+                medicineName: medicineName,
+                medicineForm: medicineForm,
+                medicineStrength: medicineStrength,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5108,6 +5489,9 @@ class $$IntakeLogsTableTableManager
                 Value<IntakeStatus> status = const Value.absent(),
                 Value<bool> deductionsTracked = const Value.absent(),
                 required DateTime takenAt,
+                Value<String?> medicineName = const Value.absent(),
+                Value<MedicineForm?> medicineForm = const Value.absent(),
+                Value<String?> medicineStrength = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => IntakeLogsCompanion.insert(
                 id: id,
@@ -5117,6 +5501,9 @@ class $$IntakeLogsTableTableManager
                 status: status,
                 deductionsTracked: deductionsTracked,
                 takenAt: takenAt,
+                medicineName: medicineName,
+                medicineForm: medicineForm,
+                medicineStrength: medicineStrength,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

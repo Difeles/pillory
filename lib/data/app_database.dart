@@ -23,7 +23,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pillory'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -45,6 +45,9 @@ class AppDatabase extends _$AppDatabase {
               intakeLogs.slot,
               intakeLogs.status,
               intakeLogs.deductionsTracked,
+              intakeLogs.medicineName,
+              intakeLogs.medicineForm,
+              intakeLogs.medicineStrength,
             ],
             columnTransformer: {
               intakeLogs.slot: const CustomExpression(
@@ -69,9 +72,27 @@ class AppDatabase extends _$AppDatabase {
         // v4: skipped marks and undo. Existing marks stay taken, untracked.
         await m.addColumn(intakeLogs, intakeLogs.status);
         await m.addColumn(intakeLogs, intakeLogs.deductionsTracked);
+        await _addSnapshotColumns(m);
+      } else if (from < 5) {
+        // v5: marks keep a snapshot of the medicine. Existing marks have none
+        // and keep following the current medicine.
+        await _addSnapshotColumns(m);
       }
       if (from < 4) {
         await m.createTable(intakeDeductions);
+      }
+      if (from < 5) {
+        // medicines is never rebuilt above, so it lacks both columns here.
+        await m.addColumn(medicines, medicines.archivedAt);
+        await m.addColumn(medicines, medicines.unit);
+        // Existing medicines are not archived. Their unit is that of their
+        // oldest package; packages in another unit stay as they are and are
+        // kept out of totals and deductions (see MedicineStock.counted).
+        await customStatement(
+          'UPDATE medicines SET unit = (SELECT p.unit FROM medicine_packages p '
+          'WHERE p.medicine_id = medicines.id '
+          'ORDER BY p.created_at, p.rowid LIMIT 1)',
+        );
       }
     },
     beforeOpen: (details) async {
@@ -79,4 +100,10 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  Future<void> _addSnapshotColumns(Migrator m) async {
+    await m.addColumn(intakeLogs, intakeLogs.medicineName);
+    await m.addColumn(intakeLogs, intakeLogs.medicineForm);
+    await m.addColumn(intakeLogs, intakeLogs.medicineStrength);
+  }
 }

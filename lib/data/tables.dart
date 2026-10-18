@@ -31,6 +31,14 @@ class Medicines extends Table {
   TextColumn get name => text().withLength(min: 1)();
   TextColumn get form => textEnum<MedicineForm>().nullable()();
   TextColumn get strength => text().nullable()();
+
+  /// The one unit all packages of this medicine are counted in. Nullable only
+  /// because older rows are filled in by the v5 migration.
+  TextColumn get unit => text().nullable()();
+
+  /// Set when the medicine is archived: hidden from the cabinet, nothing is
+  /// deleted.
+  DateTimeColumn get archivedAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -127,6 +135,13 @@ class IntakeLogs extends Table {
   BoolColumn get deductionsTracked =>
       boolean().withDefault(const Constant(false))();
   DateTimeColumn get takenAt => dateTime()();
+
+  /// The medicine as it was when the intake was marked, so history reads the
+  /// same after a rename. All null for marks made before v5 (and while
+  /// pending): those follow the current medicine.
+  TextColumn get medicineName => text().nullable()();
+  TextColumn get medicineForm => textEnum<MedicineForm>().nullable()();
+  TextColumn get medicineStrength => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

@@ -8,6 +8,7 @@ import '../domain/models.dart';
 import '../domain/reminders.dart';
 import '../domain/schedule.dart';
 import 'app_database.dart';
+import 'schedule_rows.dart';
 import 'tables.dart';
 
 class DriftScheduleRepository implements ScheduleRepository {
@@ -45,7 +46,7 @@ class DriftScheduleRepository implements ScheduleRepository {
             l.day.isBiggerOrEqual(Constant(_dates.toSql(dateOnly(from)))) &
             l.status.equalsValue(IntakeStatus.pending).not(),
       ),
-    ]);
+    ])..where(m.archivedAt.isNull());
     return query.watch().map((rows) {
       final schedules = <String, ReminderSchedule>{};
       final settled = <String>{};
@@ -97,7 +98,8 @@ class DriftScheduleRepository implements ScheduleRepository {
       final result = <DateTime, List<DayIntake>>{};
       for (final group in bySchedule.values) {
         final schedule = _schedule(group.first.readTable(s));
-        final name = group.first.readTable(m).name;
+        final current = group.first.readTable(m);
+        final name = current.name;
         final logs = [
           for (final r in group)
             if (r.readTableOrNull(l) != null) r.readTable(l),
@@ -112,10 +114,16 @@ class DriftScheduleRepository implements ScheduleRepository {
             final log = logs
                 .where((x) => x.day == d && x.slot == (slot ?? untimedSlot))
                 .firstOrNull;
+            // A marked intake shows the medicine as it was when marked.
+            final snap = log?.medicineName != null;
             (result[d] ??= []).add(
               DayIntake(
                 schedule: schedule,
-                medicineName: name,
+                medicineName: snap ? log!.medicineName! : name,
+                medicineForm: snap ? log!.medicineForm : current.form,
+                medicineStrength: snap
+                    ? log!.medicineStrength
+                    : current.strength,
                 minuteOfDay: slot,
                 status: log?.status ?? IntakeStatus.pending,
                 deductionsTracked: log?.deductionsTracked ?? false,
@@ -134,6 +142,16 @@ class DriftScheduleRepository implements ScheduleRepository {
   @override
   Future<String> createSchedule(NewSchedule draft) async {
     final d = validateNewSchedule(draft);
+    final medicine = await (_db.select(
+      _db.medicines,
+    )..where((m) => m.id.equals(d.medicineId))).getSingleOrNull();
+    if (medicine?.archivedAt != null) {
+      throw const InvalidScheduleException('Лекарство в архиве');
+    }
+    return _insertSchedule(d);
+  }
+
+  Future<String> _insertSchedule(NewSchedule d) async {
     final id = generateId();
     await _db
         .into(_db.schedules)
@@ -153,6 +171,59 @@ class DriftScheduleRepository implements ScheduleRepository {
           ),
         );
     return id;
+  }
+
+  Future<(Schedule, DateTime)> _forChange(String scheduleId) async {
+    final row = await (_db.select(
+      _db.schedules,
+    )..where((s) => s.id.equals(scheduleId))).getSingleOrNull();
+    if (row == null) throw ScheduleNotFoundException(scheduleId);
+    return (_schedule(row), await effectiveFrom(_db, scheduleId, _now()));
+  }
+
+  Future<void> _setEnd(String scheduleId, DateTime? end) =>
+      (_db.update(_db.schedules)..where((s) => s.id.equals(scheduleId))).write(
+        SchedulesCompanion(endDate: Value(end)),
+      );
+
+  @override
+  Future<DateTime> updateSchedule(String scheduleId, ScheduleEdit edit) {
+    return _db.transaction(() async {
+      final (old, from) = await _forChange(scheduleId);
+      switch (planScheduleEdit(old, edit, from)) {
+        case ScheduleUnchanged():
+          break;
+        case ScheduleRewrite(:final draft):
+          await (_db.update(
+            _db.schedules,
+          )..where((s) => s.id.equals(scheduleId))).write(
+            SchedulesCompanion(
+              kind: Value(draft.kind),
+              weekdays: Value((draft.weekdays.toList()..sort()).join(',')),
+              dates: Value(draft.dates.map(_dates.toSql).join(',')),
+              startDate: Value(draft.startDate),
+              endDate: Value(draft.endDate),
+              times: Value(draft.times.join(',')),
+              dose: Value(draft.dose),
+            ),
+          );
+        case ScheduleSplit(:final draft, :final closeOn):
+          await _setEnd(scheduleId, closeOn);
+          await _insertSchedule(draft);
+      }
+      return from;
+    });
+  }
+
+  @override
+  Future<DateTime> endSchedule(String scheduleId) {
+    return _db.transaction(() async {
+      final (old, from) = await _forChange(scheduleId);
+      if (isCurrent(old, from)) {
+        await _setEnd(scheduleId, endDateFor(old, from));
+      }
+      return from;
+    });
   }
 
   /// Loads the schedule and the mark of one intake, validating the intake.
@@ -193,6 +264,7 @@ class DriftScheduleRepository implements ScheduleRepository {
     required int slot,
     required IntakeStatus status,
     required bool tracked,
+    MedicineRow? snapshot,
   }) async {
     if (log == null) {
       final id = generateId();
@@ -207,6 +279,9 @@ class DriftScheduleRepository implements ScheduleRepository {
               status: Value(status),
               deductionsTracked: Value(tracked),
               takenAt: _now(),
+              medicineName: Value(snapshot?.name),
+              medicineForm: Value(snapshot?.form),
+              medicineStrength: Value(snapshot?.strength),
             ),
           );
       return id;
@@ -220,10 +295,17 @@ class DriftScheduleRepository implements ScheduleRepository {
                 status: Value(status),
                 deductionsTracked: Value(tracked),
                 takenAt: Value(_now()),
+                medicineName: Value(snapshot?.name),
+                medicineForm: Value(snapshot?.form),
+                medicineStrength: Value(snapshot?.strength),
               ),
             );
     return changed == 1 ? log.id : null;
   }
+
+  Future<MedicineRow> _medicineOf(Schedule schedule) => (_db.select(
+    _db.medicines,
+  )..where((m) => m.id.equals(schedule.medicineId))).getSingle();
 
   @override
   Future<void> markTaken({
@@ -236,12 +318,16 @@ class DriftScheduleRepository implements ScheduleRepository {
       final (schedule, log) = await _load(scheduleId, d, minuteOfDay);
       if (log?.status == IntakeStatus.taken) return;
 
+      final medicine = await _medicineOf(schedule);
       final packages = await (_db.select(
         _db.medicinePackages,
       )..where((p) => p.medicineId.equals(schedule.medicineId))).get();
+      // Only packages in the medicine's unit are used up; others (legacy
+      // data) are left alone rather than mixed in.
+      final unit = medicine.unit ?? packages.firstOrNull?.unit;
       final plan = planDeduction(
         [
-          for (final p in packages)
+          for (final p in packages.where((p) => p.unit == unit))
             MedicinePackage(
               id: p.id,
               medicineId: p.medicineId,
@@ -264,6 +350,7 @@ class DriftScheduleRepository implements ScheduleRepository {
         slot: minuteOfDay ?? untimedSlot,
         status: IntakeStatus.taken,
         tracked: true,
+        snapshot: medicine,
       );
       if (logId == null) return;
       for (final step in plan) {
@@ -293,7 +380,7 @@ class DriftScheduleRepository implements ScheduleRepository {
   }) {
     final d = dateOnly(day);
     return _db.transaction(() async {
-      final (_, log) = await _load(scheduleId, d, minuteOfDay);
+      final (schedule, log) = await _load(scheduleId, d, minuteOfDay);
       if (log?.status == IntakeStatus.skipped) return;
       if (log?.status == IntakeStatus.taken) {
         throw const IntakeStateException('Приём уже отмечен как принятый');
@@ -305,6 +392,7 @@ class DriftScheduleRepository implements ScheduleRepository {
         slot: minuteOfDay ?? untimedSlot,
         status: IntakeStatus.skipped,
         tracked: false,
+        snapshot: await _medicineOf(schedule),
       );
     });
   }
@@ -347,26 +435,5 @@ class DriftScheduleRepository implements ScheduleRepository {
     });
   }
 
-  Schedule _schedule(ScheduleRow r) => Schedule(
-    id: r.id,
-    createdAt: r.createdAt,
-    medicineId: r.medicineId,
-    kind: r.kind,
-    dose: r.dose,
-    doseUnit: r.doseUnit,
-    weekdays: {
-      for (final w in r.weekdays.split(','))
-        if (w.isNotEmpty) int.parse(w),
-    },
-    dates: [
-      for (final x in r.dates.split(','))
-        if (x.isNotEmpty) _dates.fromSql(x),
-    ],
-    startDate: r.startDate,
-    endDate: r.endDate,
-    times: [
-      for (final x in r.times.split(','))
-        if (x.isNotEmpty) int.parse(x),
-    ],
-  );
+  Schedule _schedule(ScheduleRow r) => scheduleFromRow(r);
 }

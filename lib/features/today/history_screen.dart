@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design_system/tokens.dart';
 import '../inventory/format.dart';
+import '../../domain/schedule.dart';
 import 'today_providers.dart';
 import 'today_screen.dart';
 
@@ -44,7 +45,7 @@ class HistoryScreen extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               '${i.minuteOfDay == null ? '' : '${formatMinute(i.minuteOfDay!)} · '}'
-                              '${i.medicineName}, '
+                              '${i.medicineName}${_details(i)}, '
                               '${formatQuantity(i.schedule.dose)} ${i.schedule.doseUnit}',
                             ),
                           ),
@@ -61,4 +62,13 @@ class HistoryScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// " (Таблетки · 500 мг)": the form and strength the intake was marked with.
+String _details(DayIntake i) {
+  final parts = [
+    if (i.medicineForm != null) i.medicineForm!.label,
+    if (i.medicineStrength != null) i.medicineStrength!,
+  ];
+  return parts.isEmpty ? '' : ' (${parts.join(' · ')})';
 }

@@ -7,3 +7,8 @@ import '../../domain/models.dart';
 final medicineStockProvider = StreamProvider<List<MedicineStock>>(
   (ref) => ref.watch(inventoryRepositoryProvider).watchStock(),
 );
+
+/// Archived medicines, live from the database.
+final archivedStockProvider = StreamProvider<List<MedicineStock>>(
+  (ref) => ref.watch(inventoryRepositoryProvider).watchArchived(),
+);

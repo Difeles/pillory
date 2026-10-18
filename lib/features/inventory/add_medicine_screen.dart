@@ -8,8 +8,12 @@ import '../../domain/medicine_form.dart';
 import '../../domain/models.dart';
 import 'format.dart';
 
+/// Creates a medicine, or edits the name, form and strength of [editing].
+/// Packages and quantities are managed on the medicine's own screen.
 class AddMedicineScreen extends ConsumerStatefulWidget {
-  const AddMedicineScreen({super.key});
+  const AddMedicineScreen({super.key, this.editing});
+
+  final Medicine? editing;
 
   @override
   ConsumerState<AddMedicineScreen> createState() => _AddMedicineScreenState();
@@ -24,6 +28,16 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   String _unit = quantityUnits.first;
   DateTime? _expiresOn;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.editing;
+    if (e == null) return;
+    _name.text = e.name;
+    _strength.text = e.strength ?? '';
+    _form = e.form;
+  }
 
   @override
   void dispose() {
@@ -52,6 +66,21 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
+      final editing = widget.editing;
+      if (editing != null) {
+        await ref
+            .read(inventoryRepositoryProvider)
+            .updateMedicine(
+              editing.id,
+              MedicineEdit(
+                name: _name.text,
+                form: _form,
+                strength: _strength.text,
+              ),
+            );
+        navigator.pop();
+        return;
+      }
       final id = await ref
           .read(inventoryRepositoryProvider)
           .createMedicine(
@@ -75,7 +104,9 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Новое лекарство')),
+      appBar: AppBar(
+        title: Text(widget.editing == null ? 'Новое лекарство' : 'Лекарство'),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -109,62 +140,64 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                 hintText: 'Например, 500 мг',
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _quantity,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+            if (widget.editing == null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _quantity,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Начальное количество',
+                      ),
+                      validator: (v) {
+                        final q = parseQuantity(v ?? '');
+                        return (q == null || !q.isFinite || q < 0)
+                            ? 'Введите число 0 или больше'
+                            : null;
+                      },
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'Начальное количество',
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  SizedBox(
+                    width: 112,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _unit,
+                      decoration: const InputDecoration(labelText: 'Единица'),
+                      items: [
+                        for (final u in quantityUnits)
+                          DropdownMenuItem(value: u, child: Text(u)),
+                      ],
+                      onChanged: (v) => setState(() => _unit = v ?? _unit),
                     ),
-                    validator: (v) {
-                      final q = parseQuantity(v ?? '');
-                      return (q == null || !q.isFinite || q < 0)
-                          ? 'Введите число 0 или больше'
-                          : null;
-                    },
                   ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                SizedBox(
-                  width: 112,
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _unit,
-                    decoration: const InputDecoration(labelText: 'Единица'),
-                    items: [
-                      for (final u in quantityUnits)
-                        DropdownMenuItem(value: u, child: Text(u)),
-                    ],
-                    onChanged: (v) => setState(() => _unit = v ?? _unit),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              InkWell(
+                borderRadius: BorderRadius.circular(AppRadii.md),
+                onTap: _pickDate,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Срок годности',
+                    suffixIcon: _expiresOn == null
+                        ? const Icon(Icons.calendar_today_outlined)
+                        : IconButton(
+                            tooltip: 'Убрать срок годности',
+                            icon: const Icon(Icons.close),
+                            onPressed: () => setState(() => _expiresOn = null),
+                          ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            InkWell(
-              borderRadius: BorderRadius.circular(AppRadii.md),
-              onTap: _pickDate,
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  labelText: 'Срок годности',
-                  suffixIcon: _expiresOn == null
-                      ? const Icon(Icons.calendar_today_outlined)
-                      : IconButton(
-                          tooltip: 'Убрать срок годности',
-                          icon: const Icon(Icons.close),
-                          onPressed: () => setState(() => _expiresOn = null),
-                        ),
-                ),
-                child: Text(
-                  _expiresOn == null ? 'Не указан' : formatDate(_expiresOn!),
+                  child: Text(
+                    _expiresOn == null ? 'Не указан' : formatDate(_expiresOn!),
+                  ),
                 ),
               ),
-            ),
+            ],
             const SizedBox(height: AppSpacing.xl),
             FilledButton(
               onPressed: _saving ? null : _save,

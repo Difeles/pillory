@@ -6,27 +6,49 @@ import 'add_medicine_screen.dart';
 import 'inventory_providers.dart';
 import 'medicine_card.dart';
 
-class InventoryScreen extends ConsumerWidget {
+class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
+
+  @override
+  ConsumerState<InventoryScreen> createState() => _InventoryScreenState();
+}
+
+class _InventoryScreenState extends ConsumerState<InventoryScreen> {
+  bool _archive = false;
 
   void _add(BuildContext context) => Navigator.of(context)
       .push(MaterialPageRoute<void>(builder: (_) => const AddMedicineScreen()));
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stock = ref.watch(medicineStockProvider);
+  Widget build(BuildContext context) {
+    final stock = ref.watch(
+      _archive ? archivedStockProvider : medicineStockProvider,
+    );
     final isEmpty = stock.maybeWhen(
       data: (l) => l.isEmpty,
       orElse: () => false,
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Аптечка')),
+      appBar: AppBar(
+        title: Text(_archive ? 'Архив' : 'Аптечка'),
+        actions: [
+          IconButton(
+            tooltip: _archive ? 'Вернуться в аптечку' : 'Архив',
+            icon: Icon(
+              _archive ? Icons.medication_outlined : Icons.inventory_2_outlined,
+            ),
+            onPressed: () => setState(() => _archive = !_archive),
+          ),
+        ],
+      ),
       body: stock.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
             const Center(child: Text('Не удалось загрузить аптечку')),
         data: (items) => items.isEmpty
-            ? _EmptyState(onAdd: () => _add(context))
+            ? (_archive
+                  ? const Center(child: Text('Архив пуст'))
+                  : _EmptyState(onAdd: () => _add(context)))
             : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md,
@@ -37,10 +59,11 @@ class InventoryScreen extends ConsumerWidget {
                 itemCount: items.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(height: AppSpacing.md),
-                itemBuilder: (_, i) => MedicineCard(stock: items[i]),
+                itemBuilder: (_, i) =>
+                    MedicineCard(stock: items[i], archived: _archive),
               ),
       ),
-      floatingActionButton: isEmpty
+      floatingActionButton: isEmpty || _archive
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _add(context),

@@ -7,6 +7,7 @@ import 'package:pillory/data/app_database.dart';
 import 'package:pillory/data/drift_inventory_repository.dart';
 import 'package:pillory/data/drift_schedule_repository.dart';
 import 'package:pillory/domain/errors.dart';
+import 'package:pillory/domain/medicine_form.dart';
 import 'package:pillory/domain/models.dart';
 import 'package:pillory/domain/schedule.dart';
 
@@ -399,6 +400,396 @@ void main() {
     });
   });
 
+  group('editing and ending schedules', () {
+    // "Now" is 2026-10-19 12:00; the schedules started on 2026-10-01.
+    final d17 = DateTime(2026, 10, 17), d18 = DateTime(2026, 10, 18);
+    final d20 = DateTime(2026, 10, 20), d25 = DateTime(2026, 10, 25);
+    late DriftScheduleRepository edit;
+
+    setUp(
+      () => edit = DriftScheduleRepository(
+        db,
+        inventory,
+        now: () => DateTime(2026, 10, 19, 12),
+      ),
+    );
+
+    ScheduleEdit same({
+      List<int> times = const [8 * 60],
+      double dose = 1,
+      DateTime? start,
+      DateTime? end,
+    }) => ScheduleEdit(
+      kind: ScheduleKind.daily,
+      dose: dose,
+      times: times,
+      startDate: start,
+      endDate: end,
+    );
+
+    /// What the history shows for a day: time, status and dose.
+    Future<List<(int?, IntakeStatus, double)>> shown(DateTime d) async => [
+      for (final i in (await edit.watchHistory(d, d).first)[d] ?? <DayIntake>[])
+        (i.minuteOfDay, i.status, i.schedule.dose),
+    ];
+
+    Future<int> versions() async =>
+        (await db.select(db.schedules).get()).length;
+
+    Future<String> started(
+      String medicineId, {
+      List<int> times = const [8 * 60],
+    }) => edit.createSchedule(daily(medicineId, times: times));
+
+    test(
+      'editing a started schedule leaves past days, marks and stock alone',
+      () async {
+        final mid = await medicine(10);
+        final sid = await started(mid);
+        await edit.markTaken(scheduleId: sid, day: d17, minuteOfDay: 480);
+        await edit.markSkipped(scheduleId: sid, day: d18, minuteOfDay: 480);
+        final before = [await shown(d17), await shown(d18)];
+        final logs = await db.select(db.intakeLogs).get();
+
+        final from = await edit.updateSchedule(
+          sid,
+          same(times: [9 * 60], dose: 2),
+        );
+
+        expect(from, day);
+        expect([await shown(d17), await shown(d18)], before);
+        expect(await shown(day), [(540, IntakeStatus.pending, 2.0)]);
+        expect(await db.select(db.intakeLogs).get(), hasLength(logs.length));
+        expect(await total(), 9);
+        final rows = await db.select(db.schedules).get();
+        expect(rows, hasLength(2));
+        expect(rows.map((r) => r.medicineId).toSet(), {mid});
+        expect(rows.firstWhere((r) => r.id == sid).endDate, d18);
+        // The old mark can still be undone, by the packages it charged.
+        await edit.resetMark(scheduleId: sid, day: d17, minuteOfDay: 480);
+        expect(await total(), 10);
+      },
+    );
+
+    test('with a mark today the change starts tomorrow', () async {
+      final sid = await started(await medicine(10));
+      await edit.markTaken(scheduleId: sid, day: day, minuteOfDay: 480);
+
+      final from = await edit.updateSchedule(sid, same(dose: 3));
+
+      expect(from, d20);
+      expect(await shown(day), [(480, IntakeStatus.taken, 1.0)]);
+      expect(await shown(d20), [(480, IntakeStatus.pending, 3.0)]);
+    });
+
+    test('a schedule that has not started is edited in place', () async {
+      final sid = await edit.createSchedule(
+        daily(await medicine(10)).copyWithStart(d25),
+      );
+      final from = await edit.updateSchedule(
+        sid,
+        same(times: [7 * 60], start: DateTime(2026, 10, 27)),
+      );
+      expect(from, day);
+      expect(await versions(), 1);
+      expect(await shown(DateTime(2026, 10, 26)), isEmpty);
+      expect(await shown(DateTime(2026, 10, 27)), [
+        (420, IntakeStatus.pending, 1.0),
+      ]);
+    });
+
+    test('an edit that changes nothing creates no version', () async {
+      final sid = await started(await medicine(10), times: [20 * 60, 8 * 60]);
+      await edit.updateSchedule(sid, same(times: [8 * 60, 20 * 60]));
+      expect(await versions(), 1);
+      expect(
+        (await db.select(db.schedules).get()).single.endDate,
+        equals(null),
+      );
+    });
+
+    test('repeated and parallel edits make one version', () async {
+      final sid = await started(await medicine(10));
+      final results = await Future.wait([
+        for (var i = 0; i < 3; i++)
+          edit
+              .updateSchedule(sid, same(dose: 2))
+              .then<Object>((v) => v)
+              .catchError((Object e) => e),
+      ]);
+      expect(results.whereType<DateTime>(), hasLength(1));
+      expect(results.whereType<ScheduleEndedException>(), hasLength(2));
+      expect(await versions(), 2);
+      await expectLater(
+        edit.updateSchedule(sid, same(dose: 5)),
+        throwsA(isA<ScheduleEndedException>()),
+      );
+      expect(await versions(), 2);
+    });
+
+    test('specific dates: past dates stay with the old version', () async {
+      final sid = await edit.createSchedule(
+        NewSchedule(
+          medicineId: await medicine(10),
+          kind: ScheduleKind.dates,
+          dose: 1,
+          doseUnit: 'шт.',
+          startDate: d17,
+          dates: [d17, day, d25],
+          times: const [8 * 60],
+        ),
+      );
+      await edit.markTaken(scheduleId: sid, day: d17, minuteOfDay: 480);
+      ScheduleEdit dates(List<DateTime> l) => ScheduleEdit(
+        kind: ScheduleKind.dates,
+        dose: 1,
+        times: const [8 * 60],
+        dates: l,
+      );
+
+      // The same dates, including the past one: nothing to do.
+      await edit.updateSchedule(sid, dates([d17, day, d25]));
+      expect(await versions(), 1);
+
+      // Only past dates left: invalid, nothing written.
+      await expectLater(
+        edit.updateSchedule(sid, dates([d17])),
+        throwsA(isA<InvalidScheduleException>()),
+      );
+      expect(await versions(), 1);
+
+      final move = DateTime(2026, 10, 26);
+      await edit.updateSchedule(sid, dates([d17, day, move]));
+      expect(await versions(), 2);
+      expect(await shown(d17), [(480, IntakeStatus.taken, 1.0)]);
+      expect(await shown(d25), isEmpty);
+      expect(await shown(move), [(480, IntakeStatus.pending, 1.0)]);
+      expect(await shown(day), [(480, IntakeStatus.pending, 1.0)]);
+    });
+
+    test('an end before the start is refused and nothing changes', () async {
+      final sid = await started(await medicine(10));
+      await expectLater(
+        edit.updateSchedule(sid, same(end: d18)),
+        throwsA(isA<InvalidScheduleException>()),
+      );
+      final future = await edit.createSchedule(
+        daily(await medicine(10, name: 'Другое')).copyWithStart(d25),
+      );
+      await expectLater(
+        edit.updateSchedule(
+          future,
+          same(start: d25, end: DateTime(2026, 10, 24)),
+        ),
+        throwsA(isA<InvalidScheduleException>()),
+      );
+      expect(await versions(), 2);
+      expect(
+        (await db.select(db.schedules).get()).every((r) => r.endDate == null),
+        isTrue,
+      );
+    });
+
+    test('ending keeps the past and removes the future', () async {
+      final sid = await started(await medicine(10));
+      await edit.markTaken(scheduleId: sid, day: d18, minuteOfDay: 480);
+      final past = await shown(d18);
+
+      expect(await edit.endSchedule(sid), day);
+      expect(await shown(day), isEmpty);
+      expect(await shown(d20), isEmpty);
+      expect(await shown(d18), past);
+      expect(await edit.endSchedule(sid), day); // repeating changes nothing
+      expect((await db.select(db.schedules).get()).single.endDate, d18);
+      await expectLater(
+        edit.updateSchedule(sid, same(dose: 2)),
+        throwsA(isA<ScheduleEndedException>()),
+      );
+      await edit.resetMark(scheduleId: sid, day: d18, minuteOfDay: 480);
+      expect(await total(), 10);
+    });
+
+    test("ending keeps today's marks", () async {
+      final sid = await started(await medicine(10));
+      await edit.markTaken(scheduleId: sid, day: day, minuteOfDay: 480);
+      expect(await edit.endSchedule(sid), d20);
+      expect(await shown(day), [(480, IntakeStatus.taken, 1.0)]);
+      expect(await shown(d20), isEmpty);
+    });
+
+    test('ending before the first intake hides it without deleting', () async {
+      final sid = await edit.createSchedule(
+        daily(await medicine(10)).copyWithStart(d25),
+      );
+      await edit.endSchedule(sid);
+      expect(await versions(), 1);
+      for (final d in [day, d25, DateTime(2026, 11, 1)]) {
+        expect(await shown(d), isEmpty);
+      }
+      expect(
+        isCurrent(
+          (await edit.watchReminderSource(day).first).schedules.single.schedule,
+          day,
+        ),
+        isFalse,
+      );
+      await expectLater(
+        edit.updateSchedule(sid, same()),
+        throwsA(isA<ScheduleEndedException>()),
+      );
+    });
+  });
+
+  group('medicine changes and history', () {
+    final d17 = DateTime(2026, 10, 17), d18 = DateTime(2026, 10, 18);
+    late DriftScheduleRepository r;
+    late DriftInventoryRepository inv; // archiving reads the clock too
+    setUp(() {
+      final fixed = DateTime(2026, 10, 19, 12);
+      inv = DriftInventoryRepository(db, now: () => fixed);
+      r = DriftScheduleRepository(db, inv, now: () => fixed);
+    });
+
+    Future<String> tablets() => inventory.createMedicine(
+      const NewMedicine(
+        name: 'Аспирин',
+        form: MedicineForm.tablet,
+        strength: '500 мг',
+        initialQuantity: 10,
+        unit: 'шт.',
+      ),
+    );
+
+    Future<(String, String, String?)> look(DateTime d) async {
+      final i = ((await r.watchHistory(d, d).first)[d]!).single;
+      return (i.medicineName, i.medicineForm?.label ?? '-', i.medicineStrength);
+    }
+
+    test('marked intakes keep the medicine as it was marked', () async {
+      final mid = await tablets();
+      final sid = await r.createSchedule(daily(mid));
+      await r.markTaken(scheduleId: sid, day: d17);
+      await r.markSkipped(scheduleId: sid, day: d18);
+      await inventory.updateMedicine(
+        mid,
+        const MedicineEdit(
+          name: 'Аспирин Кардио',
+          form: MedicineForm.capsule,
+          strength: '100 мг',
+        ),
+      );
+
+      expect(await look(d17), ('Аспирин', 'Таблетки', '500 мг'));
+      expect(await look(d18), ('Аспирин', 'Таблетки', '500 мг'));
+      // Not marked: today follows the medicine.
+      expect(await look(day), ('Аспирин Кардио', 'Капсулы', '100 мг'));
+      // The day screen shows the same.
+      expect((await r.watchDay(d17).first).single.medicineName, 'Аспирин');
+
+      // Undoing the mark removes the fact; it follows the medicine again.
+      await r.resetMark(scheduleId: sid, day: d17);
+      expect(await look(d17), ('Аспирин Кардио', 'Капсулы', '100 мг'));
+      // Marking again records the medicine as it is now.
+      await r.markTaken(scheduleId: sid, day: d17);
+      await inventory.updateMedicine(mid, const MedicineEdit(name: 'Другое'));
+      expect(await look(d17), ('Аспирин Кардио', 'Капсулы', '100 мг'));
+    });
+
+    test('a mark without a snapshot follows the current medicine', () async {
+      final mid = await tablets();
+      final sid = await r.createSchedule(daily(mid));
+      await db
+          .into(db.intakeLogs)
+          .insert(
+            IntakeLogsCompanion.insert(
+              id: 'old',
+              scheduleId: sid,
+              day: d17,
+              takenAt: DateTime(2026, 10, 17),
+            ),
+          );
+      await inventory.updateMedicine(mid, const MedicineEdit(name: 'Новое'));
+      expect((await look(d17)).$1, 'Новое');
+    });
+
+    test('archiving ends schedules and keeps the history and stock', () async {
+      final mid = await tablets();
+      final sid = await r.createSchedule(daily(mid));
+      await r.markTaken(scheduleId: sid, day: d17);
+      final stock = await total();
+      await inv.archiveMedicine(mid);
+
+      expect(await r.watchDay(day).first, isEmpty);
+      expect(await r.watchDay(DateTime(2026, 10, 20)).first, isEmpty);
+      expect(await look(d17), ('Аспирин', 'Таблетки', '500 мг'));
+      expect((await r.watchDay(d17).first).single.taken, isTrue);
+      expect((await db.select(db.schedules).get()).single.endDate, d18);
+      expect(
+        (await db.select(db.medicinePackages).get()).single.quantity,
+        stock,
+      );
+      expect(await db.select(db.intakeDeductions).get(), hasLength(1));
+
+      // A past mark can still be undone, into the archived medicine's package.
+      await r.resetMark(scheduleId: sid, day: d17);
+      expect((await db.select(db.medicinePackages).get()).single.quantity, 10);
+
+      // No new schedules, no reminders.
+      await expectLater(
+        r.createSchedule(daily(mid)),
+        throwsA(isA<InvalidScheduleException>()),
+      );
+      expect((await r.watchReminderSource(day).first).schedules, isEmpty);
+    });
+
+    test("archiving keeps today's marks: the schedule ends tomorrow", () async {
+      final mid = await tablets();
+      final sid = await r.createSchedule(daily(mid));
+      await r.markTaken(scheduleId: sid, day: day);
+      await inv.archiveMedicine(mid);
+      expect((await r.watchDay(day).first).single.taken, isTrue);
+      expect(await r.watchDay(DateTime(2026, 10, 20)).first, isEmpty);
+    });
+
+    test('packages in another unit are never mixed in or used up', () async {
+      final mid = await tablets(); // 10 шт.
+      await db
+          .into(db.medicinePackages)
+          .insert(
+            MedicinePackagesCompanion.insert(
+              id: 'ml',
+              medicineId: mid,
+              initialQuantity: 100,
+              quantity: 100,
+              unit: 'мл',
+              createdAt: DateTime(2020), // older, so it would be used first
+            ),
+          );
+      final sid = await r.createSchedule(daily(mid, dose: 4));
+      await r.markTaken(scheduleId: sid, day: day);
+      final q = {
+        for (final p in await db.select(db.medicinePackages).get())
+          p.id: p.quantity,
+      };
+      expect(q['ml'], 100);
+      expect(q.values.where((v) => v != 100).single, 6);
+      expect(await total(), 6);
+
+      // More than the counted stock: refused, the foreign package is no help.
+      final big = await r.createSchedule(daily(mid, dose: 50));
+      await expectLater(
+        r.markTaken(scheduleId: big, day: day),
+        throwsA(isA<InsufficientStockException>()),
+      );
+      expect(
+        (await db.select(db.medicinePackages).get())
+            .firstWhere((p) => p.id == 'ml')
+            .quantity,
+        100,
+      );
+    });
+  });
+
   group('on disk', () {
     late File file;
     setUp(() async {
@@ -440,6 +831,10 @@ void main() {
         final mid = await inv.createMedicine(
           const NewMedicine(name: 'Старое', initialQuantity: 5, unit: 'шт.'),
         );
+        await old.customStatement(
+          'ALTER TABLE medicines DROP COLUMN archived_at',
+        );
+        await old.customStatement('ALTER TABLE medicines DROP COLUMN unit');
         await old.customStatement('DROP TABLE intake_logs');
         await old.customStatement('DROP TABLE schedules');
         await old.customStatement('''CREATE TABLE schedules (
@@ -503,6 +898,11 @@ void main() {
       await r.markTaken(scheduleId: sid, day: day);
       // Turn the file back into a v3 database (no status/tracking, no
       // deductions table).
+      await v3.customStatement('ALTER TABLE medicines DROP COLUMN archived_at');
+      await v3.customStatement('ALTER TABLE medicines DROP COLUMN unit');
+      for (final c in ['medicine_name', 'medicine_form', 'medicine_strength']) {
+        await v3.customStatement('ALTER TABLE intake_logs DROP COLUMN $c');
+      }
       await v3.customStatement('DROP TABLE intake_deductions');
       await v3.customStatement('ALTER TABLE intake_logs DROP COLUMN status');
       await v3.customStatement(
@@ -528,6 +928,78 @@ void main() {
       );
     });
 
+    test(
+      'a v4 database upgrades: medicines active, one unit, marks as before',
+      () async {
+        final v4 = AppDatabase(NativeDatabase(file));
+        final inv = DriftInventoryRepository(v4);
+        final r = DriftScheduleRepository(v4, inv);
+        final mid = await inv.createMedicine(
+          const NewMedicine(name: 'Старое', initialQuantity: 5, unit: 'шт.'),
+        );
+        // A package in another unit, as data from before units were enforced.
+        await v4
+            .into(v4.medicinePackages)
+            .insert(
+              MedicinePackagesCompanion.insert(
+                id: 'foreign',
+                medicineId: mid,
+                initialQuantity: 100,
+                quantity: 100,
+                unit: 'мл',
+                createdAt: DateTime.now().add(const Duration(days: 1)),
+              ),
+            );
+        final sid = await r.createSchedule(daily(mid));
+        await r.markTaken(scheduleId: sid, day: day);
+        final stockBefore = await v4.select(v4.medicinePackages).get();
+        final logsBefore = await v4.select(v4.intakeLogs).get();
+
+        // Turn the file back into a v4 database.
+        await v4.customStatement(
+          'ALTER TABLE medicines DROP COLUMN archived_at',
+        );
+        await v4.customStatement('ALTER TABLE medicines DROP COLUMN unit');
+        for (final c in [
+          'medicine_name',
+          'medicine_form',
+          'medicine_strength',
+        ]) {
+          await v4.customStatement('ALTER TABLE intake_logs DROP COLUMN $c');
+        }
+        await v4.customStatement('PRAGMA user_version = 4');
+        await v4.close();
+
+        final v5 = AppDatabase(NativeDatabase(file));
+        addTearDown(v5.close);
+        final med = (await v5.select(v5.medicines).get()).single;
+        expect(med.unit, 'шт.'); // the oldest package's unit
+        expect(med.archivedAt, equals(null));
+        // Nothing was removed or changed.
+        expect(
+          (await v5.select(v5.medicinePackages).get()).map(
+            (p) => (p.id, p.quantity, p.unit),
+          ),
+          unorderedEquals(stockBefore.map((p) => (p.id, p.quantity, p.unit))),
+        );
+        final logs = await v5.select(v5.intakeLogs).get();
+        expect(
+          logs.map((l) => (l.id, l.status, l.deductionsTracked)),
+          logsBefore.map((l) => (l.id, l.status, l.deductionsTracked)),
+        );
+        expect(logs.single.medicineName, equals(null));
+        // The foreign-unit package is kept but never counted.
+        final inv2 = DriftInventoryRepository(v5);
+        final stock = (await inv2.watchStock().first).single;
+        expect(stock.unit, 'шт.');
+        expect(stock.totalQuantity, 4);
+        expect(stock.foreign.map((p) => p.id), ['foreign']);
+        // History still shows the current name for the old mark.
+        final r2 = DriftScheduleRepository(v5, inv2);
+        expect((await r2.watchDay(day).first).single.medicineName, 'Старое');
+      },
+    );
+
     test('a v1 database upgrades to v2 and keeps its data', () async {
       final v1 = AppDatabase(NativeDatabase(file));
       final inv = DriftInventoryRepository(v1);
@@ -535,6 +1007,8 @@ void main() {
         const NewMedicine(name: 'Старое', initialQuantity: 3, unit: 'шт.'),
       );
       // Turn the file back into a v1 database.
+      await v1.customStatement('ALTER TABLE medicines DROP COLUMN archived_at');
+      await v1.customStatement('ALTER TABLE medicines DROP COLUMN unit');
       await v1.customStatement('DROP TABLE intake_logs');
       await v1.customStatement('DROP TABLE schedules');
       await v1.customStatement('PRAGMA user_version = 1');
@@ -551,4 +1025,15 @@ void main() {
       expect((await inv2.watchStock().first).single.totalQuantity, 2);
     });
   });
+}
+
+extension on NewSchedule {
+  NewSchedule copyWithStart(DateTime start) => NewSchedule(
+    medicineId: medicineId,
+    kind: kind,
+    dose: dose,
+    doseUnit: doseUnit,
+    startDate: start,
+    times: times,
+  );
 }
