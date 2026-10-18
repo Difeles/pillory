@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pillory/app/app.dart';
 import 'package:pillory/app/providers.dart';
+import 'package:pillory/design_system/widgets/app_card.dart';
 import 'package:pillory/domain/models.dart';
 import 'package:pillory/domain/reminders.dart';
 import 'package:pillory/domain/schedule.dart';
@@ -199,7 +200,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Пропустить'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Пропустить'));
     await tester.pumpAndSettle();
     expect(find.text('Пропущено'), findsOneWidget);
 
@@ -213,9 +214,9 @@ void main() {
     await tester.tap(find.byTooltip('Отменить отметку'));
     await tester.pumpAndSettle();
     expect((await inventory.watchStock().first).single.totalQuantity, 5);
-    expect(find.byTooltip('Пропустить'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Пропустить'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Пропустить'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Пропустить'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('История'));
     await tester.pumpAndSettle();
@@ -255,10 +256,7 @@ void main() {
     expect(find.textContaining('08:00'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
-        (w) =>
-            w is Container &&
-            w.decoration is BoxDecoration &&
-            (w.decoration! as BoxDecoration).border != null,
+        (w) => w is AppCard && w.variant == AppCardVariant.highlighted,
       ),
       findsOneWidget,
     );

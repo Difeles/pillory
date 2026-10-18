@@ -13,9 +13,8 @@ import 'package:pillory/features/today/today_screen.dart';
 
 import '../support/fake_inventory_repository.dart';
 
-// shortcut: skipped tests are known overflows (the intake card row in
-// today_screen.dart, the medicine card row in medicine_card.dart); un-skip
-// them in the stage-2 screen redesign.
+// shortcut: skipped tests are a known overflow (the medicine card row in
+// medicine_card.dart); un-skip them in the stage-2 cabinet redesign.
 
 /// Each main screen at the narrowest supported width with doubled system
 /// text: any RenderFlex overflow fails the test. Screens are pumped alone
@@ -69,9 +68,34 @@ void main() {
     home: Builder(builder: (_) => build()),
   );
 
-  testWidgets('Today fits', skip: true, (tester) async {
+  testWidgets('Today fits', (tester) async {
     await pumpSmall(tester, screen(() => const TodayScreen()));
     expect(find.text('Ибупрофен форте'), findsOneWidget);
+  });
+
+  testWidgets('Today fits after a mark, actions stay reachable', (
+    tester,
+  ) async {
+    await pumpSmall(tester, screen(() => const TodayScreen()));
+    final take = find.widgetWithText(FilledButton, 'Принято');
+    await tester.ensureVisible(take);
+    await tester.pumpAndSettle();
+    await tester.tap(take);
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilledButton, 'Принято'), findsNothing);
+    expect(find.text('Принято'), findsOneWidget); // the status badge
+    for (final tooltip in ['Отменить отметку', 'Управление расписанием']) {
+      final action = find.byTooltip(tooltip);
+      await tester.ensureVisible(action);
+      await tester.pumpAndSettle();
+      expect(action.hitTestable(), findsOneWidget, reason: tooltip);
+    }
+
+    // Undo works from the narrow layout too.
+    await tester.tap(find.byTooltip('Отменить отметку'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilledButton, 'Принято'), findsOneWidget);
   });
 
   testWidgets('Cabinet fits', skip: true, (tester) async {

@@ -142,6 +142,7 @@ class _LoadingStateState extends State<LoadingState>
         child: FadeTransition(
           opacity: _pulse,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (var i = 0; i < widget.cards; i++)
                 Container(
@@ -152,6 +153,7 @@ class _LoadingStateState extends State<LoadingState>
                     borderRadius: BorderRadius.circular(AppRadii.md),
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       bar(0.6, AppSpacing.md),
                       const SizedBox(height: AppSpacing.sm),

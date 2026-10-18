@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
+import '../../design_system/widgets/app_card.dart';
+import '../../design_system/widgets/confirm_dialog.dart';
+import '../../design_system/widgets/states.dart';
+import '../../design_system/widgets/status_badge.dart';
 import '../../domain/errors.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/reminders.dart';
@@ -28,6 +32,31 @@ const _months = [
 ]; // prettier-ignore
 
 String formatDay(DateTime d) => '${d.day} ${_months[d.month - 1]}';
+
+const _weekdays = [
+  'Понедельник',
+  'Вторник',
+  'Среда',
+  'Четверг',
+  'Пятница',
+  'Суббота',
+  'Воскресенье',
+];
+
+/// "Сегодня · суббота" next to today, else just the weekday.
+String _dayCaption(DateTime day, DateTime today) {
+  final weekday = _weekdays[day.weekday - 1];
+  // Calendar days, not hours: a DST day is 23 or 25 hours long.
+  DateTime shifted(int d) => DateTime(today.year, today.month, today.day + d);
+  final relative = day == today
+      ? 'Сегодня'
+      : day == shifted(-1)
+      ? 'Вчера'
+      : day == shifted(1)
+      ? 'Завтра'
+      : null;
+  return relative == null ? weekday : '$relative · ${weekday.toLowerCase()}';
+}
 
 String formatMinute(int m) =>
     '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
@@ -107,60 +136,65 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     });
     final text = Theme.of(context).textTheme;
     final today = dateOnly(DateTime.now());
-    final isToday = _day == today;
     final intakes = ref.watch(dayIntakesProvider(_day));
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Сегодня'),
-        actions: [
-          IconButton(
-            tooltip: 'История',
-            icon: const Icon(Icons.history),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const HistoryScreen()),
-            ),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
-            AppSpacing.md,
+            AppSpacing.sm,
             AppSpacing.md,
             96,
           ),
           children: [
             Row(
               children: [
+                Expanded(
+                  child: Text(
+                    _dayCaption(_day, today),
+                    style: text.titleSmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
                 IconButton(
                   tooltip: 'Предыдущий день',
                   icon: const Icon(Icons.chevron_left),
                   onPressed: () => _shift(-1),
-                ),
-                Expanded(
-                  child: Text(
-                    isToday ? 'Сегодня, ${formatDay(_day)}' : formatDay(_day),
-                    textAlign: TextAlign.center,
-                    style: text.titleMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
                 ),
                 IconButton(
                   tooltip: 'Следующий день',
                   icon: const Icon(Icons.chevron_right),
                   onPressed: () => _shift(1),
                 ),
+                IconButton(
+                  tooltip: 'История',
+                  icon: const Icon(Icons.history),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const HistoryScreen(),
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
+            Semantics(
+              header: true,
+              child: Text(formatDay(_day), style: text.displaySmall),
+            ),
+            const SizedBox(height: AppSpacing.lg),
             intakes.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) =>
-                  const Center(child: Text('Не удалось загрузить приёмы')),
+              loading: () => const LoadingState(),
+              error: (e, _) => ErrorState(
+                message: 'Не удалось загрузить приёмы',
+                onRetry: () => ref.invalidate(dayIntakesProvider(_day)),
+              ),
               data: (list) => list.isEmpty
-                  ? const _Empty()
+                  ? const EmptyState(
+                      icon: Icons.event_available,
+                      title: 'На этот день приёмов нет',
+                      message: 'Нажмите «+», чтобы добавить приём',
+                    )
                   : Column(
                       children: [
                         for (final i in list)
@@ -232,81 +266,111 @@ class _IntakeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final s = intake.schedule;
-    final time = intake.minuteOfDay == null
-        ? ''
-        : '${formatMinute(intake.minuteOfDay!)} · ';
+    final done = intake.status != IntakeStatus.pending;
+    final minute = intake.minuteOfDay;
+    final actions = done
+        ? [
+            _statusBadge(intake.status),
+            if (intake.canReset)
+              IconButton(
+                tooltip: 'Отменить отметку',
+                icon: const Icon(Icons.undo),
+                onPressed: onReset,
+              ),
+          ]
+        : [
+            FilledButton.tonal(
+              onPressed: canMark ? onSkip : null,
+              child: const Text('Пропустить'),
+            ),
+            FilledButton(
+              onPressed: canMark ? onTake : null,
+              child: const Text('Принято'),
+            ),
+          ];
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: kMinTapSize),
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: intake.status != IntakeStatus.pending
-              ? AppColors.tint
-              : AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          border: highlighted
-              ? Border.all(color: AppColors.primary, width: 2)
-              : null,
-          boxShadow: intake.status != IntakeStatus.pending
-              ? null
-              : AppShadows.card,
-        ),
-        child: Row(
+      padding: const EdgeInsets.only(bottom: AppSpacing.ms),
+      child: AppCard(
+        variant: highlighted
+            ? AppCardVariant.highlighted
+            : done
+            ? AppCardVariant.muted
+            : AppCardVariant.normal,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(intake.medicineName, style: text.titleMedium),
-                  Text(
-                    '$time${formatQuantity(s.dose)} ${s.doseUnit}',
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (minute != null)
+                        Text(
+                          formatMinute(minute),
+                          style: text.titleSmall?.copyWith(
+                            color: AppColors.primaryDeep,
+                            fontFeatures: AppType.numeric.fontFeatures,
+                          ),
+                        ),
+                      Text(
+                        intake.medicineName,
+                        style: text.titleMedium?.copyWith(
+                          color: done ? AppColors.textSecondary : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<VoidCallback>(
+                  tooltip: 'Управление расписанием',
+                  onSelected: (action) => action(),
+                  itemBuilder: (_) => manageable
+                      ? [
+                          PopupMenuItem(
+                            value: onEdit,
+                            child: const Text('Изменить расписание'),
+                          ),
+                          PopupMenuItem(
+                            value: onEnd,
+                            child: const Text('Завершить расписание'),
+                          ),
+                        ]
+                      : const [
+                          PopupMenuItem(
+                            enabled: false,
+                            child: Text(
+                              'Расписание уже изменено или завершено',
+                            ),
+                          ),
+                        ],
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            // Wraps instead of overflowing: on a narrow screen or with large
+            // text the actions move under the dose.
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: AppSpacing.sm,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.sm),
+                  child: Text(
+                    '${formatQuantity(s.dose)} ${s.doseUnit}',
                     style: text.bodyMedium?.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
-                ],
-              ),
-            ),
-            if (intake.status == IntakeStatus.pending) ...[
-              IconButton(
-                tooltip: 'Пропустить',
-                icon: const Icon(Icons.skip_next),
-                onPressed: canMark ? onSkip : null,
-              ),
-              FilledButton(
-                onPressed: canMark ? onTake : null,
-                child: const Text('Принято'),
-              ),
-            ] else ...[
-              intakeStatusLabel(intake.status),
-              if (intake.canReset)
-                IconButton(
-                  tooltip: 'Отменить отметку',
-                  icon: const Icon(Icons.undo),
-                  onPressed: onReset,
                 ),
-            ],
-            PopupMenuButton<VoidCallback>(
-              tooltip: 'Управление расписанием',
-              onSelected: (action) => action(),
-              itemBuilder: (_) => manageable
-                  ? [
-                      PopupMenuItem(
-                        value: onEdit,
-                        child: const Text('Изменить расписание'),
-                      ),
-                      PopupMenuItem(
-                        value: onEnd,
-                        child: const Text('Завершить расписание'),
-                      ),
-                    ]
-                  : const [
-                      PopupMenuItem(
-                        enabled: false,
-                        child: Text('Расписание уже изменено или завершено'),
-                      ),
-                    ],
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: actions,
+                ),
+              ],
             ),
           ],
         ),
@@ -314,6 +378,22 @@ class _IntakeCard extends StatelessWidget {
     );
   }
 }
+
+Widget _statusBadge(IntakeStatus status) => switch (status) {
+  IntakeStatus.taken => const StatusBadge(
+    label: 'Принято',
+    icon: Icons.check_circle,
+    tone: StatusTone.success,
+  ),
+  IntakeStatus.skipped => const StatusBadge(
+    label: 'Пропущено',
+    icon: Icons.remove_circle_outline,
+  ),
+  IntakeStatus.pending => const StatusBadge(
+    label: 'Не отмечено',
+    icon: Icons.radio_button_unchecked,
+  ),
+};
 
 /// Asks, then ends [s] with effect from the next day it can; returns whether
 /// it was ended.
@@ -323,24 +403,14 @@ Future<bool> confirmEndSchedule(
   Schedule s,
 ) async {
   final messenger = ScaffoldMessenger.of(context);
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (c) => AlertDialog(
-      title: const Text('Завершить расписание?'),
-      content: const Text('Прошлые приёмы сохранятся, будущие исчезнут.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(c, false),
-          child: const Text('Отмена'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(c, true),
-          child: const Text('Завершить'),
-        ),
-      ],
-    ),
+  final ok = await showConfirmDialog(
+    context,
+    title: 'Завершить расписание?',
+    message: 'Прошлые приёмы сохранятся, будущие исчезнут.',
+    confirmLabel: 'Завершить',
+    danger: true,
   );
-  if (ok != true) return false;
+  if (!ok) return false;
   final from = await ref.read(scheduleRepositoryProvider).endSchedule(s.id);
   if (from.isAfter(dateOnly(DateTime.now()))) {
     messenger.showSnackBar(
@@ -380,38 +450,3 @@ Widget intakeStatusLabel(IntakeStatus status) => Row(
     }),
   ],
 );
-
-class _Empty extends StatelessWidget {
-  const _Empty();
-
-  @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      const SizedBox(height: AppSpacing.xl),
-      Container(
-        width: 96,
-        height: 96,
-        decoration: const BoxDecoration(
-          color: AppColors.tint,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.event_available,
-          size: 48,
-          color: AppColors.primary,
-        ),
-      ),
-      const SizedBox(height: AppSpacing.md),
-      Text(
-        'На этот день приёмов нет',
-        style: Theme.of(context).textTheme.titleLarge,
-        textAlign: TextAlign.center,
-      ),
-      const SizedBox(height: AppSpacing.sm),
-      const Text(
-        'Нажмите «+», чтобы добавить приём',
-        textAlign: TextAlign.center,
-      ),
-    ],
-  );
-}
