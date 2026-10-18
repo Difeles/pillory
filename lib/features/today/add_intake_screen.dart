@@ -399,7 +399,7 @@ class _PickerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(AppRadii.md),
+    borderRadius: BorderRadius.circular(AppRadii.sm),
     onTap: onTap,
     child: InputDecorator(
       decoration: InputDecoration(

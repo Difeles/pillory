@@ -363,7 +363,7 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
         ),
         const SizedBox(height: AppSpacing.md),
         InkWell(
-          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderRadius: BorderRadius.circular(AppRadii.sm),
           onTap: () async {
             final p = await showDatePicker(
               context: context,

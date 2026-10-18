@@ -69,6 +69,20 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Onest 2.001 (SIL OFL 1.1, see assets/fonts/onest/OFL.txt), bundled so
+  # nothing is fetched from the network.
+  fonts:
+    - family: Onest
+      fonts:
+        - asset: assets/fonts/onest/Onest-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/onest/Onest-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/onest/Onest-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/onest/Onest-Bold.ttf
+          weight: 700
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

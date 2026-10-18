@@ -59,7 +59,7 @@ class MedicineCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.lg),
+          borderRadius: BorderRadius.circular(AppRadii.md),
           boxShadow: AppShadows.card,
         ),
         child: Row(

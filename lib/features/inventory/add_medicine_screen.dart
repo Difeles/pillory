@@ -205,7 +205,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
               InkWell(
-                borderRadius: BorderRadius.circular(AppRadii.md),
+                borderRadius: BorderRadius.circular(AppRadii.sm),
                 onTap: _pickDate,
                 child: InputDecorator(
                   decoration: InputDecoration(

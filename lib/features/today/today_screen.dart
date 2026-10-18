@@ -111,7 +111,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     final intakes = ref.watch(dayIntakesProvider(_day));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Приём'),
+        title: const Text('Сегодня'),
         actions: [
           IconButton(
             tooltip: 'История',
@@ -242,9 +242,9 @@ class _IntakeCard extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: intake.status != IntakeStatus.pending
-              ? AppColors.primaryLight
+              ? AppColors.tint
               : AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.lg),
+          borderRadius: BorderRadius.circular(AppRadii.md),
           border: highlighted
               ? Border.all(color: AppColors.primary, width: 2)
               : null,
@@ -392,7 +392,7 @@ class _Empty extends StatelessWidget {
         width: 96,
         height: 96,
         decoration: const BoxDecoration(
-          color: AppColors.primaryLight,
+          color: AppColors.tint,
           shape: BoxShape.circle,
         ),
         child: const Icon(
