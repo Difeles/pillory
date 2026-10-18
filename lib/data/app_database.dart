@@ -23,7 +23,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pillory'));
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -80,6 +80,11 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         await m.createTable(intakeDeductions);
+      }
+      if (from < 6) {
+        // v6: an optional own low-stock threshold; existing medicines have
+        // none and keep the app-wide rule.
+        await m.addColumn(medicines, medicines.lowStockThreshold);
       }
       if (from < 5) {
         // medicines is never rebuilt above, so it lacks both columns here.

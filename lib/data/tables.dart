@@ -36,6 +36,10 @@ class Medicines extends Table {
   /// because older rows are filled in by the v5 migration.
   TextColumn get unit => text().nullable()();
 
+  /// Own low-stock threshold, in the medicine's unit. Null: use the app rule
+  /// (a share of the biggest package).
+  RealColumn get lowStockThreshold => real().nullable()();
+
   /// Set when the medicine is archived: hidden from the cabinet, nothing is
   /// deleted.
   DateTimeColumn get archivedAt => dateTime().nullable()();

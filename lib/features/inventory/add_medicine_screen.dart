@@ -24,6 +24,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   final _name = TextEditingController();
   final _strength = TextEditingController();
   final _quantity = TextEditingController(text: '1');
+  final _threshold = TextEditingController();
   MedicineForm? _form;
   String _unit = quantityUnits.first;
   DateTime? _expiresOn;
@@ -36,6 +37,9 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     if (e == null) return;
     _name.text = e.name;
     _strength.text = e.strength ?? '';
+    _threshold.text = e.lowStockThreshold == null
+        ? ''
+        : formatQuantity(e.lowStockThreshold!);
     _form = e.form;
   }
 
@@ -44,6 +48,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     _name.dispose();
     _strength.dispose();
     _quantity.dispose();
+    _threshold.dispose();
     super.dispose();
   }
 
@@ -76,6 +81,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                 name: _name.text,
                 form: _form,
                 strength: _strength.text,
+                lowStockThreshold: parseQuantity(_threshold.text),
               ),
             );
         navigator.pop();
@@ -88,6 +94,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               name: _name.text,
               form: _form,
               strength: _strength.text,
+              lowStockThreshold: parseQuantity(_threshold.text),
               initialQuantity: parseQuantity(_quantity.text)!,
               unit: _unit,
               expiresOn: _expiresOn,
@@ -139,6 +146,25 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                 labelText: 'Дозировка или концентрация',
                 hintText: 'Например, 500 мг',
               ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _threshold,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: 'Порог низкого остатка (необязательно)',
+                helperText: 'По умолчанию: 20% от самой большой упаковки',
+                suffixText: widget.editing?.unit ?? _unit,
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                final q = parseQuantity(v);
+                return (q == null || !q.isFinite || q < 0)
+                    ? 'Введите число 0 или больше'
+                    : null;
+              },
             ),
             if (widget.editing == null) ...[
               const SizedBox(height: AppSpacing.md),

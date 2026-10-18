@@ -57,6 +57,18 @@ class $MedicinesTable extends Medicines
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _lowStockThresholdMeta = const VerificationMeta(
+    'lowStockThreshold',
+  );
+  @override
+  late final GeneratedColumn<double> lowStockThreshold =
+      GeneratedColumn<double>(
+        'low_stock_threshold',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _archivedAtMeta = const VerificationMeta(
     'archivedAt',
   );
@@ -86,6 +98,7 @@ class $MedicinesTable extends Medicines
     form,
     strength,
     unit,
+    lowStockThreshold,
     archivedAt,
     createdAt,
   ];
@@ -124,6 +137,15 @@ class $MedicinesTable extends Medicines
       context.handle(
         _unitMeta,
         unit.isAcceptableOrUnknown(data['unit']!, _unitMeta),
+      );
+    }
+    if (data.containsKey('low_stock_threshold')) {
+      context.handle(
+        _lowStockThresholdMeta,
+        lowStockThreshold.isAcceptableOrUnknown(
+          data['low_stock_threshold']!,
+          _lowStockThresholdMeta,
+        ),
       );
     }
     if (data.containsKey('archived_at')) {
@@ -171,6 +193,10 @@ class $MedicinesTable extends Medicines
         DriftSqlType.string,
         data['${effectivePrefix}unit'],
       ),
+      lowStockThreshold: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}low_stock_threshold'],
+      ),
       archivedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}archived_at'],
@@ -203,6 +229,10 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
   /// because older rows are filled in by the v5 migration.
   final String? unit;
 
+  /// Own low-stock threshold, in the medicine's unit. Null: use the app rule
+  /// (a share of the biggest package).
+  final double? lowStockThreshold;
+
   /// Set when the medicine is archived: hidden from the cabinet, nothing is
   /// deleted.
   final DateTime? archivedAt;
@@ -213,6 +243,7 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     this.form,
     this.strength,
     this.unit,
+    this.lowStockThreshold,
     this.archivedAt,
     required this.createdAt,
   });
@@ -232,6 +263,9 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     if (!nullToAbsent || unit != null) {
       map['unit'] = Variable<String>(unit);
     }
+    if (!nullToAbsent || lowStockThreshold != null) {
+      map['low_stock_threshold'] = Variable<double>(lowStockThreshold);
+    }
     if (!nullToAbsent || archivedAt != null) {
       map['archived_at'] = Variable<DateTime>(archivedAt);
     }
@@ -248,6 +282,9 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
           ? const Value.absent()
           : Value(strength),
       unit: unit == null && nullToAbsent ? const Value.absent() : Value(unit),
+      lowStockThreshold: lowStockThreshold == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lowStockThreshold),
       archivedAt: archivedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(archivedAt),
@@ -268,6 +305,9 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
       ),
       strength: serializer.fromJson<String?>(json['strength']),
       unit: serializer.fromJson<String?>(json['unit']),
+      lowStockThreshold: serializer.fromJson<double?>(
+        json['lowStockThreshold'],
+      ),
       archivedAt: serializer.fromJson<DateTime?>(json['archivedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -283,6 +323,7 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
       ),
       'strength': serializer.toJson<String?>(strength),
       'unit': serializer.toJson<String?>(unit),
+      'lowStockThreshold': serializer.toJson<double?>(lowStockThreshold),
       'archivedAt': serializer.toJson<DateTime?>(archivedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -294,6 +335,7 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     Value<MedicineForm?> form = const Value.absent(),
     Value<String?> strength = const Value.absent(),
     Value<String?> unit = const Value.absent(),
+    Value<double?> lowStockThreshold = const Value.absent(),
     Value<DateTime?> archivedAt = const Value.absent(),
     DateTime? createdAt,
   }) => MedicineRow(
@@ -302,6 +344,9 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     form: form.present ? form.value : this.form,
     strength: strength.present ? strength.value : this.strength,
     unit: unit.present ? unit.value : this.unit,
+    lowStockThreshold: lowStockThreshold.present
+        ? lowStockThreshold.value
+        : this.lowStockThreshold,
     archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -312,6 +357,9 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
       form: data.form.present ? data.form.value : this.form,
       strength: data.strength.present ? data.strength.value : this.strength,
       unit: data.unit.present ? data.unit.value : this.unit,
+      lowStockThreshold: data.lowStockThreshold.present
+          ? data.lowStockThreshold.value
+          : this.lowStockThreshold,
       archivedAt: data.archivedAt.present
           ? data.archivedAt.value
           : this.archivedAt,
@@ -327,6 +375,7 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
           ..write('form: $form, ')
           ..write('strength: $strength, ')
           ..write('unit: $unit, ')
+          ..write('lowStockThreshold: $lowStockThreshold, ')
           ..write('archivedAt: $archivedAt, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -334,8 +383,16 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, form, strength, unit, archivedAt, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    form,
+    strength,
+    unit,
+    lowStockThreshold,
+    archivedAt,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -345,6 +402,7 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
           other.form == this.form &&
           other.strength == this.strength &&
           other.unit == this.unit &&
+          other.lowStockThreshold == this.lowStockThreshold &&
           other.archivedAt == this.archivedAt &&
           other.createdAt == this.createdAt);
 }
@@ -355,6 +413,7 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
   final Value<MedicineForm?> form;
   final Value<String?> strength;
   final Value<String?> unit;
+  final Value<double?> lowStockThreshold;
   final Value<DateTime?> archivedAt;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -364,6 +423,7 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     this.form = const Value.absent(),
     this.strength = const Value.absent(),
     this.unit = const Value.absent(),
+    this.lowStockThreshold = const Value.absent(),
     this.archivedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -374,6 +434,7 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     this.form = const Value.absent(),
     this.strength = const Value.absent(),
     this.unit = const Value.absent(),
+    this.lowStockThreshold = const Value.absent(),
     this.archivedAt = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
@@ -386,6 +447,7 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     Expression<String>? form,
     Expression<String>? strength,
     Expression<String>? unit,
+    Expression<double>? lowStockThreshold,
     Expression<DateTime>? archivedAt,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -396,6 +458,7 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
       if (form != null) 'form': form,
       if (strength != null) 'strength': strength,
       if (unit != null) 'unit': unit,
+      if (lowStockThreshold != null) 'low_stock_threshold': lowStockThreshold,
       if (archivedAt != null) 'archived_at': archivedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -408,6 +471,7 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     Value<MedicineForm?>? form,
     Value<String?>? strength,
     Value<String?>? unit,
+    Value<double?>? lowStockThreshold,
     Value<DateTime?>? archivedAt,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -418,6 +482,7 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
       form: form ?? this.form,
       strength: strength ?? this.strength,
       unit: unit ?? this.unit,
+      lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
       archivedAt: archivedAt ?? this.archivedAt,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -444,6 +509,9 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     if (unit.present) {
       map['unit'] = Variable<String>(unit.value);
     }
+    if (lowStockThreshold.present) {
+      map['low_stock_threshold'] = Variable<double>(lowStockThreshold.value);
+    }
     if (archivedAt.present) {
       map['archived_at'] = Variable<DateTime>(archivedAt.value);
     }
@@ -464,6 +532,7 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
           ..write('form: $form, ')
           ..write('strength: $strength, ')
           ..write('unit: $unit, ')
+          ..write('lowStockThreshold: $lowStockThreshold, ')
           ..write('archivedAt: $archivedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -3190,6 +3259,7 @@ typedef $$MedicinesTableCreateCompanionBuilder = MedicinesCompanion Function({
   Value<MedicineForm?> form,
   Value<String?> strength,
   Value<String?> unit,
+  Value<double?> lowStockThreshold,
   Value<DateTime?> archivedAt,
   required DateTime createdAt,
   Value<int> rowid,
@@ -3200,6 +3270,7 @@ typedef $$MedicinesTableUpdateCompanionBuilder = MedicinesCompanion Function({
   Value<MedicineForm?> form,
   Value<String?> strength,
   Value<String?> unit,
+  Value<double?> lowStockThreshold,
   Value<DateTime?> archivedAt,
   Value<DateTime> createdAt,
   Value<int> rowid,
@@ -3280,6 +3351,11 @@ class $$MedicinesTableFilterComposer
 
   ColumnFilters<String> get unit => $composableBuilder(
     column: $table.unit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lowStockThreshold => $composableBuilder(
+    column: $table.lowStockThreshold,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3378,6 +3454,11 @@ class $$MedicinesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get lowStockThreshold => $composableBuilder(
+    column: $table.lowStockThreshold,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get archivedAt => $composableBuilder(
     column: $table.archivedAt,
     builder: (column) => ColumnOrderings(column),
@@ -3412,6 +3493,11 @@ class $$MedicinesTableAnnotationComposer
 
   GeneratedColumn<String> get unit =>
       $composableBuilder(column: $table.unit, builder: (column) => column);
+
+  GeneratedColumn<double> get lowStockThreshold => $composableBuilder(
+    column: $table.lowStockThreshold,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get archivedAt => $composableBuilder(
     column: $table.archivedAt,
@@ -3508,6 +3594,7 @@ class $$MedicinesTableTableManager
                 Value<MedicineForm?> form = const Value.absent(),
                 Value<String?> strength = const Value.absent(),
                 Value<String?> unit = const Value.absent(),
+                Value<double?> lowStockThreshold = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3517,6 +3604,7 @@ class $$MedicinesTableTableManager
                 form: form,
                 strength: strength,
                 unit: unit,
+                lowStockThreshold: lowStockThreshold,
                 archivedAt: archivedAt,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -3528,6 +3616,7 @@ class $$MedicinesTableTableManager
                 Value<MedicineForm?> form = const Value.absent(),
                 Value<String?> strength = const Value.absent(),
                 Value<String?> unit = const Value.absent(),
+                Value<double?> lowStockThreshold = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
@@ -3537,6 +3626,7 @@ class $$MedicinesTableTableManager
                 form: form,
                 strength: strength,
                 unit: unit,
+                lowStockThreshold: lowStockThreshold,
                 archivedAt: archivedAt,
                 createdAt: createdAt,
                 rowid: rowid,

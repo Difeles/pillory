@@ -835,6 +835,9 @@ void main() {
           'ALTER TABLE medicines DROP COLUMN archived_at',
         );
         await old.customStatement('ALTER TABLE medicines DROP COLUMN unit');
+        await old.customStatement(
+          'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
+        );
         await old.customStatement('DROP TABLE intake_logs');
         await old.customStatement('DROP TABLE schedules');
         await old.customStatement('''CREATE TABLE schedules (
@@ -900,6 +903,9 @@ void main() {
       // deductions table).
       await v3.customStatement('ALTER TABLE medicines DROP COLUMN archived_at');
       await v3.customStatement('ALTER TABLE medicines DROP COLUMN unit');
+      await v3.customStatement(
+        'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
+      );
       for (final c in ['medicine_name', 'medicine_form', 'medicine_strength']) {
         await v3.customStatement('ALTER TABLE intake_logs DROP COLUMN $c');
       }
@@ -960,6 +966,9 @@ void main() {
           'ALTER TABLE medicines DROP COLUMN archived_at',
         );
         await v4.customStatement('ALTER TABLE medicines DROP COLUMN unit');
+        await v4.customStatement(
+          'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
+        );
         for (final c in [
           'medicine_name',
           'medicine_form',
@@ -1000,6 +1009,63 @@ void main() {
       },
     );
 
+    test(
+      'a v5 database upgrades: thresholds start empty, data stays',
+      () async {
+        final v5 = AppDatabase(NativeDatabase(file));
+        final inv = DriftInventoryRepository(v5);
+        final r = DriftScheduleRepository(v5, inv);
+        final mid = await inv.createMedicine(
+          const NewMedicine(
+            name: 'Старое',
+            initialQuantity: 5,
+            unit: 'шт.',
+            lowStockThreshold: 2,
+          ),
+        );
+        final other = await inv.createMedicine(
+          const NewMedicine(name: 'Архивное', initialQuantity: 1, unit: 'мл'),
+        );
+        await inv.archiveMedicine(other);
+        final sid = await r.createSchedule(daily(mid));
+        await r.markTaken(scheduleId: sid, day: day);
+        // Turn the file back into a v5 database.
+        await v5.customStatement(
+          'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
+        );
+        await v5.customStatement('PRAGMA user_version = 5');
+        await v5.close();
+
+        final v6 = AppDatabase(NativeDatabase(file));
+        addTearDown(v6.close);
+        final rows = await v6.select(v6.medicines).get();
+        expect(rows, hasLength(2));
+        expect(rows.every((m) => m.lowStockThreshold == null), isTrue);
+        expect(
+          rows.firstWhere((m) => m.id == other).archivedAt != null,
+          isTrue,
+        );
+        final inv2 = DriftInventoryRepository(v6);
+        expect((await inv2.watchStock().first).single.totalQuantity, 4);
+        expect(
+          (await DriftScheduleRepository(
+            v6,
+            inv2,
+          ).watchDay(day).first).single.taken,
+          isTrue,
+        );
+        // A threshold can be set on the migrated database.
+        await inv2.updateMedicine(
+          mid,
+          const MedicineEdit(name: 'Старое', lowStockThreshold: 3),
+        );
+        expect(
+          (await inv2.watchStock().first).single.medicine.lowStockThreshold,
+          3,
+        );
+      },
+    );
+
     test('a v1 database upgrades to v2 and keeps its data', () async {
       final v1 = AppDatabase(NativeDatabase(file));
       final inv = DriftInventoryRepository(v1);
@@ -1009,6 +1075,9 @@ void main() {
       // Turn the file back into a v1 database.
       await v1.customStatement('ALTER TABLE medicines DROP COLUMN archived_at');
       await v1.customStatement('ALTER TABLE medicines DROP COLUMN unit');
+      await v1.customStatement(
+        'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
+      );
       await v1.customStatement('DROP TABLE intake_logs');
       await v1.customStatement('DROP TABLE schedules');
       await v1.customStatement('PRAGMA user_version = 1');

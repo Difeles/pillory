@@ -2,22 +2,59 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design_system/tokens.dart';
+import '../../domain/models.dart';
+import '../../domain/stock_status.dart';
 import 'add_medicine_screen.dart';
 import 'inventory_providers.dart';
 import 'medicine_card.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
-  const InventoryScreen({super.key});
+  const InventoryScreen({super.key, this.active = true});
+
+  /// Changes when the tab is switched, so the statuses are worked out again.
+  final bool active;
 
   @override
   ConsumerState<InventoryScreen> createState() => _InventoryScreenState();
 }
 
-class _InventoryScreenState extends ConsumerState<InventoryScreen> {
+class _InventoryScreenState extends ConsumerState<InventoryScreen>
+    with WidgetsBindingObserver {
   bool _archive = false;
+  StockFilter _filter = StockFilter.all;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // A new day may have started while the app was away.
+    if (state == AppLifecycleState.resumed) setState(() {});
+  }
 
   void _add(BuildContext context) => Navigator.of(context)
       .push(MaterialPageRoute<void>(builder: (_) => const AddMedicineScreen()));
+
+  Widget _list(List<MedicineStock> items) => ListView.separated(
+    padding: const EdgeInsets.fromLTRB(
+      AppSpacing.md,
+      AppSpacing.sm,
+      AppSpacing.md,
+      96,
+    ),
+    itemCount: items.length,
+    separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+    itemBuilder: (_, i) => MedicineCard(stock: items[i], archived: _archive),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -45,23 +82,31 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
             const Center(child: Text('Не удалось загрузить аптечку')),
-        data: (items) => items.isEmpty
-            ? (_archive
-                  ? const Center(child: Text('Архив пуст'))
-                  : _EmptyState(onAdd: () => _add(context)))
-            : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                  AppSpacing.md,
-                  96,
-                ),
-                itemCount: items.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: AppSpacing.md),
-                itemBuilder: (_, i) =>
-                    MedicineCard(stock: items[i], archived: _archive),
+        data: (items) {
+          if (items.isEmpty) {
+            return _archive
+                ? const Center(child: Text('Архив пуст'))
+                : _EmptyState(onAdd: () => _add(context));
+          }
+          if (_archive) return _list(items);
+          final shown = [
+            for (final a in filterStock(items, _filter, DateTime.now()))
+              a.stock,
+          ];
+          return Column(
+            children: [
+              _FilterBar(
+                selected: _filter,
+                onSelected: (f) => setState(() => _filter = f),
               ),
+              Expanded(
+                child: shown.isEmpty
+                    ? const Center(child: Text('Нет лекарств с таким статусом'))
+                    : _list(shown),
+              ),
+            ],
+          );
+        },
       ),
       floatingActionButton: isEmpty || _archive
           ? null
@@ -72,6 +117,32 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             ),
     );
   }
+}
+
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.selected, required this.onSelected});
+
+  final StockFilter selected;
+  final ValueChanged<StockFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+    child: Row(
+      children: [
+        for (final f in StockFilter.values)
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.sm),
+            child: ChoiceChip(
+              label: Text(f.label),
+              selected: f == selected,
+              onSelected: (_) => onSelected(f),
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 class _EmptyState extends StatelessWidget {

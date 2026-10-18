@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
 import '../../domain/errors.dart';
-import '../../domain/inventory_rules.dart';
 import '../../domain/models.dart';
+import '../../domain/stock_status.dart';
 import 'format.dart';
 import 'medicine_screen.dart';
 
@@ -41,8 +41,10 @@ class MedicineCard extends ConsumerWidget {
       if (medicine.form != null) medicine.form!.label,
       if (medicine.strength != null) medicine.strength!,
     ].join(' · ');
-    final expiry = package.expiresOn;
-    final expired = isExpired(expiry, DateTime.now());
+    // Archived medicines are left out of the stock checks.
+    final today = DateTime.now();
+    final assessment = archived ? null : assess(stock, today);
+    final (status, statusColor) = _status(assessment, today);
 
     // +/- act on one package, so they are offered only when there is one.
     final quick = !archived && stock.packages.length == 1;
@@ -80,18 +82,12 @@ class MedicineCard extends ConsumerWidget {
                       ),
                     ),
                   const SizedBox(height: AppSpacing.sm),
-                  if (expiry != null)
+                  if (status != null)
                     Text(
-                      expired
-                          ? 'Срок годности истёк ${formatDate(expiry)}'
-                          : 'Годен до ${formatDate(expiry)}',
-                      style: text.bodySmall?.copyWith(
-                        color: expired
-                            ? AppColors.danger
-                            : AppColors.textSecondary,
-                      ),
+                      status,
+                      style: text.bodySmall?.copyWith(color: statusColor),
                     ),
-                  if (expired)
+                  if (assessment?.problem == StockProblem.expired)
                     Text(
                       'Проверьте инструкцию и местные правила утилизации',
                       style: text.bodySmall?.copyWith(
@@ -127,5 +123,38 @@ class MedicineCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// The single status line of a card: the most important problem, else the
+/// nearest expiry date.
+(String?, Color) _status(StockAssessment? a, DateTime today) {
+  if (a == null) return (null, AppColors.textSecondary);
+  switch (a.problem) {
+    case StockProblem.expired:
+      return (
+        'Просрочено с ${formatDate(a.earliestExpired!)}',
+        AppColors.danger,
+      );
+    case StockProblem.expiringSoon:
+      final days = daysUntil(a.nearestExpiring!, today);
+      final when = days == 0 ? 'сегодня' : 'через $days дн.';
+      return (
+        'Скоро истекает: до ${formatDate(a.nearestExpiring!)} ($when)',
+        AppColors.warning,
+      );
+    case StockProblem.out:
+      return ('Закончилось', AppColors.danger);
+    case StockProblem.low:
+      return (
+        'Мало: осталось ${formatQuantity(a.usable)} ${a.stock.unit}',
+        AppColors.warning,
+      );
+    case null:
+      final expiry = a.stock.nearestExpiry;
+      return (
+        expiry == null ? null : 'Годен до ${formatDate(expiry)}',
+        AppColors.textSecondary,
+      );
   }
 }

@@ -10,10 +10,14 @@ class Medicine {
     this.form,
     this.strength,
     this.archivedAt,
+    this.lowStockThreshold,
   });
 
   final String id;
   final String name;
+
+  /// Own low-stock threshold, or null to use the app-wide rule.
+  final double? lowStockThreshold;
 
   /// The unit every package of this medicine is counted in.
   final String unit;
@@ -127,8 +131,10 @@ class NewMedicine {
     this.form,
     this.strength,
     this.expiresOn,
+    this.lowStockThreshold,
   });
 
+  final double? lowStockThreshold;
   final String name;
   final MedicineForm? form;
   final String? strength;
@@ -140,7 +146,15 @@ class NewMedicine {
 /// New name, form and strength of an existing medicine. The unit and the
 /// packages are not editable here.
 class MedicineEdit {
-  const MedicineEdit({required this.name, this.form, this.strength});
+  const MedicineEdit({
+    required this.name,
+    this.form,
+    this.strength,
+    this.lowStockThreshold,
+  });
+
+  /// Null clears the medicine's own threshold.
+  final double? lowStockThreshold;
 
   final String name;
   final MedicineForm? form;

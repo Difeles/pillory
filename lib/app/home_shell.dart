@@ -31,7 +31,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       index: _index,
       children: [
         const TodayScreen(),
-        const InventoryScreen(),
+        InventoryScreen(active: _index == 1),
         const PlaceholderScreen(title: 'Профиль', icon: Icons.person_outline),
       ],
     ),

@@ -6,6 +6,7 @@ import '../../design_system/tokens.dart';
 import '../../domain/errors.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/models.dart';
+import '../../domain/stock_status.dart';
 import 'add_medicine_screen.dart';
 import 'format.dart';
 import 'inventory_providers.dart';
@@ -183,6 +184,10 @@ class _PackageTile extends ConsumerWidget {
         expired
             ? 'Срок годности истёк ${formatDate(expiry)}'
             : 'Годен до ${formatDate(expiry)}',
+      if (counted && package.quantity <= 0) 'Закончилась',
+      if (counted &&
+          packageStatus(package, DateTime.now()) == PackageStatus.expiringSoon)
+        'Скоро истекает',
       if (!counted)
         'Другая единица: не входит в остаток и не расходуется приёмами',
     ];

@@ -85,6 +85,7 @@ class DriftInventoryRepository implements InventoryRepository {
               form: Value(d.form),
               strength: Value(d.strength),
               unit: Value(d.unit),
+              lowStockThreshold: Value(d.lowStockThreshold),
               createdAt: now,
             ),
           );
@@ -146,6 +147,7 @@ class DriftInventoryRepository implements InventoryRepository {
       throw const InvalidMedicineException('Название обязательно');
     }
     final strength = edit.strength?.trim();
+    final threshold = validateThreshold(edit.lowStockThreshold);
     await _medicine(medicineId);
     await (_db.update(
       _db.medicines,
@@ -154,6 +156,7 @@ class DriftInventoryRepository implements InventoryRepository {
         name: Value(name),
         form: Value(edit.form),
         strength: Value(strength == null || strength.isEmpty ? null : strength),
+        lowStockThreshold: Value(threshold),
       ),
     );
   }
@@ -351,6 +354,7 @@ class DriftInventoryRepository implements InventoryRepository {
     strength: m.strength,
     unit: m.unit ?? '',
     archivedAt: m.archivedAt,
+    lowStockThreshold: m.lowStockThreshold,
     createdAt: m.createdAt,
   );
 

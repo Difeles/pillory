@@ -400,4 +400,52 @@ void main() {
       );
     });
   });
+
+  group('low-stock threshold', () {
+    test('is saved on create and can be changed and cleared', () async {
+      final id = await repo.createMedicine(
+        const NewMedicine(
+          name: 'Аспирин',
+          initialQuantity: 10,
+          unit: 'шт.',
+          lowStockThreshold: 3.5,
+        ),
+      );
+      expect((await only()).medicine.lowStockThreshold, 3.5);
+      await repo.updateMedicine(
+        id,
+        const MedicineEdit(name: 'Аспирин', lowStockThreshold: 0),
+      );
+      expect((await only()).medicine.lowStockThreshold, 0);
+      await repo.updateMedicine(id, const MedicineEdit(name: 'Аспирин'));
+      expect((await only()).medicine.lowStockThreshold, equals(null));
+    });
+
+    test(
+      'a negative or invalid threshold is refused and nothing changes',
+      () async {
+        await expectLater(
+          repo.createMedicine(
+            const NewMedicine(
+              name: 'X',
+              initialQuantity: 1,
+              unit: 'шт.',
+              lowStockThreshold: -1,
+            ),
+          ),
+          throwsA(isA<InvalidMedicineException>()),
+        );
+        expect(await repo.watchStock().first, isEmpty);
+        final id = await repo.createMedicine(aspirin);
+        await expectLater(
+          repo.updateMedicine(
+            id,
+            const MedicineEdit(name: 'Y', lowStockThreshold: double.nan),
+          ),
+          throwsA(isA<InvalidMedicineException>()),
+        );
+        expect((await only()).medicine.name, 'Аспирин');
+      },
+    );
+  });
 }

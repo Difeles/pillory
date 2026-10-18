@@ -38,7 +38,9 @@ NewMedicine validateNewMedicine(NewMedicine draft) {
     throw const InvalidMedicineException('Укажите единицу учёта');
   }
   final strength = draft.strength?.trim();
+  final threshold = validateThreshold(draft.lowStockThreshold);
   return NewMedicine(
+    lowStockThreshold: threshold,
     name: name,
     form: draft.form,
     strength: (strength == null || strength.isEmpty) ? null : strength,
@@ -46,4 +48,13 @@ NewMedicine validateNewMedicine(NewMedicine draft) {
     unit: unit,
     expiresOn: draft.expiresOn == null ? null : dateOnly(draft.expiresOn!),
   );
+}
+
+/// A low-stock threshold must be a number of 0 or more (or absent).
+double? validateThreshold(double? value) {
+  if (value == null) return null;
+  if (!value.isFinite || value < 0) {
+    throw const InvalidMedicineException('Порог не может быть отрицательным');
+  }
+  return normalizeQuantity(value);
 }

@@ -78,6 +78,7 @@ class FakeInventoryRepository implements InventoryRepository {
     String? name,
     MedicineForm? form,
     String? strength,
+    double? threshold,
     bool setFields = false,
     DateTime? archivedAt,
     bool setArchived = false,
@@ -87,6 +88,7 @@ class FakeInventoryRepository implements InventoryRepository {
     form: setFields ? form : m.form,
     strength: setFields ? strength : m.strength,
     unit: m.unit,
+    lowStockThreshold: setFields ? threshold : m.lowStockThreshold,
     archivedAt: setArchived ? archivedAt : m.archivedAt,
     createdAt: m.createdAt,
   );
@@ -104,6 +106,7 @@ class FakeInventoryRepository implements InventoryRepository {
         name: edit.name.trim(),
         form: edit.form,
         strength: strength == null || strength.isEmpty ? null : strength,
+        threshold: edit.lowStockThreshold,
         setFields: true,
       ),
     );
@@ -181,6 +184,7 @@ class FakeInventoryRepository implements InventoryRepository {
         form: d.form,
         strength: d.strength,
         unit: d.unit,
+        lowStockThreshold: d.lowStockThreshold,
         createdAt: DateTime.now(),
       ),
     );
