@@ -15,6 +15,9 @@ abstract final class AppColors {
   static const warning = Color(0xFF915C0E);
   static const danger = Color(0xFFB83A46);
   static const dangerTint = Color(0xFFFBE6E8);
+  // Each status colour keeps ≥4.5:1 on its own tint.
+  static const successTint = Color(0xFFE3F3EC);
+  static const warningTint = Color(0xFFFBF0DC);
 
   // Pastels fail text contrast on white: fills and decoration only.
   static const pink = Color(0xFFF3A3C5);
@@ -43,6 +46,12 @@ abstract final class AppRadii {
 
   /// Dialogs and large blocks.
   static const lg = 28.0;
+}
+
+abstract final class AppSizes {
+  static const illustration = 96.0;
+  static const illustrationIcon = 48.0;
+  static const badgeIcon = 16.0;
 }
 
 abstract final class AppShadows {
