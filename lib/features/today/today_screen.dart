@@ -427,7 +427,10 @@ class _IntakeEntry extends StatelessWidget {
             )
           : null,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        // The next intake gets more air around it than the plain rows.
+        padding: EdgeInsets.only(
+          bottom: carded ? AppSpacing.md : AppSpacing.sm,
+        ),
         child: !isNext && highlighted
             ? AppCard(variant: AppCardVariant.highlighted, child: content)
             : content,
@@ -477,98 +480,122 @@ class _IntakeEntry extends StatelessWidget {
           ],
   );
 
+  /// Dose first, then the medicine's form and strength: what to take, then
+  /// which one.
+  Widget _info(TextTheme text) {
+    final details = _details;
+    return Wrap(
+      spacing: AppSpacing.sm,
+      children: [
+        Text(
+          _dose,
+          style: text.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: _done ? AppColors.textSecondary : AppColors.textPrimary,
+          ),
+        ),
+        if (details != null)
+          Text(
+            details,
+            style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          ),
+      ],
+    );
+  }
+
   Widget _row(BuildContext context, String? time) {
     final text = Theme.of(context).textTheme;
-    final details = _details;
+    // Calm by default: the take button is tonal, skipping and undoing are
+    // plain icons. Bright primary is kept for the next intake.
     final actions = _done
         ? [
-            _statusBadge(intake.status),
             if (intake.canReset)
               IconButton(
                 tooltip: 'Отменить отметку',
+                color: AppColors.textSecondary,
                 icon: const Icon(Icons.undo),
                 onPressed: onReset,
               ),
           ]
         : [
-            IconButton.filledTonal(
+            IconButton(
               tooltip: 'Пропустить',
-              icon: const Icon(Icons.skip_next),
+              color: AppColors.textSecondary,
+              icon: const Icon(Icons.remove_circle_outline),
               onPressed: canMark ? onSkip : null,
             ),
-            IconButton.filled(
+            IconButton.filledTonal(
               tooltip: 'Принято',
               icon: const Icon(Icons.check),
               onPressed: canMark ? onTake : null,
             ),
           ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!wide && time != null)
-                    Text(time, style: _timeStyle(text.titleSmall)),
-                  Text(
-                    intake.medicineName,
-                    style: text.titleMedium?.copyWith(
-                      color: _done ? AppColors.textSecondary : null,
-                      decoration: intake.skipped
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
-                  ),
-                  if (details != null)
-                    Text(
-                      details,
-                      style: text.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            _menu(),
-          ],
+        if (!wide && time != null)
+          Text(time, style: _timeStyle(text.titleSmall)),
+        Text(
+          intake.medicineName,
+          style: text.titleMedium?.copyWith(
+            color: _done ? AppColors.textSecondary : null,
+            decoration: intake.skipped ? TextDecoration.lineThrough : null,
+          ),
         ),
-        // Wraps instead of overflowing: with large text the actions move
-        // under the dose.
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          runSpacing: AppSpacing.xs,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.sm),
-              child: Text(
-                _dose,
-                style: text.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: actions,
-            ),
-          ],
-        ),
+        _info(text),
+        if (_done) ...[
+          const SizedBox(height: AppSpacing.xs),
+          _statusBadge(intake.status),
+        ],
       ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        // Actions beside the text while it keeps a readable width; below it
+        // otherwise, so nothing overflows at large text.
+        final trailing = (actions.length + 1) * kMinTapSize;
+        final inline = constraints.maxWidth - trailing >= scaler.scale(120);
+        if (inline) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: body),
+              ...actions,
+              _menu(),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: body),
+                _menu(),
+              ],
+            ),
+            if (actions.isNotEmpty)
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: AppSpacing.xs,
+                children: actions,
+              ),
+          ],
+        );
+      },
     );
   }
 
   Widget _nextCard(BuildContext context, String? time) {
     final text = Theme.of(context).textTheme;
-    final details = _details;
     return AppCard(
-      variant: highlighted ? AppCardVariant.highlighted : AppCardVariant.normal,
+      // Flat with a hairline: it leads by its type and its one bright button,
+      // not by a shadow.
+      variant: highlighted
+          ? AppCardVariant.highlighted
+          : AppCardVariant.outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -594,14 +621,7 @@ class _IntakeEntry extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(intake.medicineName, style: text.titleLarge),
-                    if (details != null)
-                      Text(
-                        details,
-                        style: text.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    Text(_dose, style: text.bodyLarge),
+                    _info(text),
                   ],
                 ),
               ),
@@ -613,7 +633,10 @@ class _IntakeEntry extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              FilledButton.tonal(
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                ),
                 onPressed: canMark ? onSkip : null,
                 child: const Text('Пропустить'),
               ),

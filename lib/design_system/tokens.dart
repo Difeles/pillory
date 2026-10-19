@@ -60,7 +60,8 @@ abstract final class AppSizes {
   /// Day timeline: the rail column, its status dots and the time column
   /// (the last scales with the text).
   static const timelineRail = 24.0;
-  static const timelineDot = 14.0;
+  static const timelineDot = 12.0;
+  static const timelineLine = 1.0;
   static const timelineTime = 56.0;
 }
 

@@ -10,6 +10,9 @@ enum AppCardVariant {
 
   /// Pointed at (e.g. by a reminder): outlined in the primary colour.
   highlighted,
+
+  /// Stands out by a hairline and its contents rather than by elevation.
+  outlined,
 }
 
 /// The one card surface. Tappable when [onTap] is set, and then announced as
@@ -30,12 +33,18 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = variant == AppCardVariant.muted;
+    final flat =
+        variant == AppCardVariant.muted || variant == AppCardVariant.outlined;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppRadii.md),
-      side: variant == AppCardVariant.highlighted
-          ? const BorderSide(color: AppColors.primary, width: 2)
-          : BorderSide.none,
+      side: switch (variant) {
+        AppCardVariant.highlighted => const BorderSide(
+          color: AppColors.primary,
+          width: 2,
+        ),
+        AppCardVariant.outlined => const BorderSide(color: AppColors.divider),
+        _ => BorderSide.none,
+      },
     );
     return Semantics(
       container: true,
@@ -43,10 +52,12 @@ class AppCard extends StatelessWidget {
       child: DecoratedBox(
         decoration: ShapeDecoration(
           shape: shape,
-          shadows: muted ? null : AppShadows.card,
+          shadows: flat ? null : AppShadows.card,
         ),
         child: Material(
-          color: muted ? AppColors.tint : AppColors.surface,
+          color: variant == AppCardVariant.muted
+              ? AppColors.tint
+              : AppColors.surface,
           shape: shape,
           clipBehavior: Clip.antiAlias,
           child: InkWell(

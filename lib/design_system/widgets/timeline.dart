@@ -43,7 +43,7 @@ class TimelineEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     const rail = AppSizes.timelineRail;
     const dotSize = AppSizes.timelineDot;
-    final lineX = leadingWidth + rail / 2 - 1;
+    final lineX = leadingWidth + (rail - AppSizes.timelineLine) / 2;
     return Stack(
       children: [
         if (!first)
@@ -70,8 +70,10 @@ class _Line extends StatelessWidget {
   const _Line();
 
   @override
-  Widget build(BuildContext context) =>
-      const SizedBox(width: 2, child: ColoredBox(color: AppColors.divider));
+  Widget build(BuildContext context) => const SizedBox(
+    width: AppSizes.timelineLine,
+    child: ColoredBox(color: AppColors.divider),
+  );
 }
 
 class _Dot extends StatelessWidget {
@@ -82,7 +84,8 @@ class _Dot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const size = AppSizes.timelineDot;
-    // The status is also spelled out in the entry; the dot is decoration.
+    // Each state has its own shape, not only a colour; the entry also spells
+    // the status out, so the dot stays out of the semantics tree.
     return ExcludeSemantics(
       child: Container(
         width: size,
@@ -91,14 +94,14 @@ class _Dot extends StatelessWidget {
           TimelineDotState.pending => BoxDecoration(
             color: AppColors.background,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.inputBorder, width: 2),
+            border: Border.all(color: AppColors.inputBorder, width: 1.5),
           ),
           TimelineDotState.next => BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.primary,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.primary, width: 3),
+            border: Border.all(color: AppColors.surface, width: 2),
             boxShadow: const [
-              BoxShadow(color: AppColors.tint, spreadRadius: 5),
+              BoxShadow(color: AppColors.tint, spreadRadius: 3),
             ],
           ),
           TimelineDotState.done => const BoxDecoration(
@@ -108,18 +111,18 @@ class _Dot extends StatelessWidget {
           TimelineDotState.skipped => BoxDecoration(
             color: AppColors.background,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.textSecondary, width: 2),
+            border: Border.all(color: AppColors.textSecondary, width: 1.5),
           ),
         },
         child: switch (state) {
           TimelineDotState.done => const Icon(
             Icons.check,
-            size: size - 4,
+            size: size - 3,
             color: Colors.white,
           ),
           TimelineDotState.skipped => const Icon(
             Icons.remove,
-            size: size - 6,
+            size: size - 4,
             color: AppColors.textSecondary,
           ),
           _ => null,
