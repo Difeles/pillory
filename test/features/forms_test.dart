@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/design_system/widgets/floating_dock.dart';
 import 'package:pillory/app/app.dart';
 import 'package:pillory/app/providers.dart';
 import 'package:pillory/design_system/widgets/date_field.dart';
@@ -8,6 +9,7 @@ import 'package:pillory/domain/inventory_rules.dart';
 import 'package:pillory/domain/models.dart';
 import 'package:pillory/domain/schedule.dart';
 
+import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
 
 void main() {
@@ -24,6 +26,7 @@ void main() {
       ProviderScope(
         overrides: [
           inventoryRepositoryProvider.overrideWithValue(inventory),
+          extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
           scheduleRepositoryProvider.overrideWithValue(schedules),
         ],
         child: const PilloryApp(),
@@ -35,6 +38,8 @@ void main() {
   Future<void> tap(WidgetTester tester, Finder finder) async {
     await tester.ensureVisible(finder);
     await tester.pumpAndSettle();
+    if (finder.evaluate().isNotEmpty) await tester.ensureVisible(finder.first);
+    await tester.pumpAndSettle();
     await tester.tap(finder);
     await tester.pumpAndSettle();
   }
@@ -42,7 +47,7 @@ void main() {
   Future<void> openCabinet(WidgetTester tester) => tap(
     tester,
     find.descendant(
-      of: find.byType(NavigationBar),
+      of: find.byType(FloatingDock),
       matching: find.text('Аптечка'),
     ),
   );
@@ -79,7 +84,7 @@ void main() {
         ),
         '20',
       );
-      await tap(tester, find.text('Сохранить'));
+      await tap(tester, find.text('Добавить в аптечку'));
 
       final stock = (await inventory.watchStock().first).single;
       expect(stock.medicine.name, 'Сироп');
@@ -97,7 +102,7 @@ void main() {
         find.widgetWithText(TextFormField, 'Начальное количество'),
         '-1',
       );
-      await tap(tester, find.text('Сохранить'));
+      await tap(tester, find.text('Добавить в аптечку'));
 
       expect(find.text('Введите название'), findsOneWidget);
       expect(find.text('Введите число 0 или больше'), findsOneWidget);

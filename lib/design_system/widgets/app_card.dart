@@ -11,6 +11,9 @@ enum AppCardVariant {
   /// Pointed at (e.g. by a reminder): outlined in the primary colour.
   highlighted,
 
+  /// Completed: mint fill.
+  done,
+
   /// Stands out by a hairline and its contents rather than by elevation.
   outlined,
 }
@@ -34,8 +37,10 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final flat =
-        variant == AppCardVariant.muted || variant == AppCardVariant.outlined;
-    final shape = RoundedRectangleBorder(
+        variant == AppCardVariant.muted ||
+        variant == AppCardVariant.outlined ||
+        variant == AppCardVariant.done;
+    final shape = RoundedSuperellipseBorder(
       borderRadius: BorderRadius.circular(AppRadii.md),
       side: switch (variant) {
         AppCardVariant.highlighted => const BorderSide(
@@ -55,9 +60,11 @@ class AppCard extends StatelessWidget {
           shadows: flat ? null : AppShadows.card,
         ),
         child: Material(
-          color: variant == AppCardVariant.muted
-              ? AppColors.tint
-              : AppColors.surface,
+          color: switch (variant) {
+            AppCardVariant.muted => AppColors.surfaceLow,
+            AppCardVariant.done => AppColors.successTint,
+            _ => AppColors.surface,
+          },
           shape: shape,
           clipBehavior: Clip.antiAlias,
           child: InkWell(

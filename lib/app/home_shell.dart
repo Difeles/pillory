@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../design_system/widgets/floating_dock.dart';
 import '../features/inventory/inventory_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/shopping/shopping_screen.dart';
 import '../features/today/today_providers.dart';
 import '../features/today/today_screen.dart';
 
@@ -22,36 +24,31 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ref.listen(openIntakeProvider, (_, request) {
       if (request != null) setState(() => _index = 0);
     });
-    return _scaffold();
+    return Scaffold(
+      // IndexedStack keeps each tab's state (scroll position) when switching.
+      body: IndexedStack(
+        index: _index,
+        children: [
+          const TodayScreen(),
+          InventoryScreen(active: _index == 1),
+          const ShoppingScreen(),
+          const ProfileScreen(),
+        ],
+      ),
+      bottomNavigationBar: FloatingDock(
+        index: _index,
+        onSelected: (i) => setState(() => _index = i),
+        items: const [
+          DockItem(Icons.schedule_outlined, Icons.schedule, 'Приём'),
+          DockItem(
+            Icons.medical_services_outlined,
+            Icons.medical_services,
+            'Аптечка',
+          ),
+          DockItem(Icons.shopping_bag_outlined, Icons.shopping_bag, 'Покупки'),
+          DockItem(Icons.face_outlined, Icons.face, 'Профиль'),
+        ],
+      ),
+    );
   }
-
-  Widget _scaffold() => Scaffold(
-    // IndexedStack keeps each tab's state (scroll position) when switching.
-    body: IndexedStack(
-      index: _index,
-      children: [
-        const TodayScreen(),
-        InventoryScreen(active: _index == 1),
-        const ProfileScreen(),
-      ],
-    ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: _index,
-      onDestinationSelected: (i) => setState(() => _index = i),
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.today_outlined),
-          label: 'Сегодня',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.medication_outlined),
-          label: 'Аптечка',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.person_outline),
-          label: 'Профиль',
-        ),
-      ],
-    ),
-  );
 }

@@ -2,28 +2,32 @@ import 'package:flutter/material.dart';
 
 /// Pillory design tokens. Components take values from here, not literals.
 abstract final class AppColors {
-  static const primary = Color(0xFF7446D0);
-  static const primaryDeep = Color(0xFF5B33B0);
-  static const tint = Color(0xFFEFE8FC);
-  static const background = Color(0xFFF7F5FB);
+  static const primary = Color(0xFF5848C5);
+  static const primaryDeep = Color(0xFF422FAF);
+  static const tint = Color(0xFFE4DFFF);
+  static const background = Color(0xFFFAF8FF);
   static const surface = Color(0xFFFFFFFF);
-  static const textPrimary = Color(0xFF211D29);
-  static const textSecondary = Color(0xFF625C6E);
-  static const inputBorder = Color(0xFF8A8499);
-  static const divider = Color(0xFFE6E1EE);
-  static const success = Color(0xFF23775C);
-  static const warning = Color(0xFF915C0E);
-  static const danger = Color(0xFFB83A46);
-  static const dangerTint = Color(0xFFFBE6E8);
+  static const textPrimary = Color(0xFF1A1B20);
+  static const textSecondary = Color(0xFF474553);
+  static const inputBorder = Color(0xFF787585);
+  static const divider = Color(0xFFE8E7EE);
+  static const success = Color(0xFF006953);
+  static const warning = Color(0xFF894F38);
+  static const danger = Color(0xFFBA1A1A);
+  static const dangerTint = Color(0xFFFFDAD6);
   // Each status colour keeps ≥4.5:1 on its own tint.
-  static const successTint = Color(0xFFE3F3EC);
-  static const warningTint = Color(0xFFFBF0DC);
+  static const successTint = Color(0xFFD9F6EC);
+  static const warningTint = Color(0xFFFFDBCE);
 
   // Pastels fail text contrast on white: fills and decoration only.
   static const pink = Color(0xFFF3A3C5);
   static const blue = Color(0xFF91AEE8);
   static const mint = Color(0xFF70D2C7);
   static const orange = Color(0xFFFFAD62);
+  static const surfaceLow = Color(0xFFF4F3FA);
+  static const surfaceMid = Color(0xFFEEEDF4);
+  static const peach = Color(0xFFFEB295);
+  static const mintFill = Color(0xFF9AF4D6);
 }
 
 /// A 4-point scale.
@@ -39,13 +43,13 @@ abstract final class AppSpacing {
 
 abstract final class AppRadii {
   /// Fields, chips, menus, snack bars.
-  static const sm = 12.0;
+  static const sm = 16.0;
 
   /// Cards.
-  static const md = 20.0;
+  static const md = 24.0;
 
   /// Dialogs and large blocks.
-  static const lg = 28.0;
+  static const lg = 32.0;
 }
 
 abstract final class AppSizes {
@@ -67,10 +71,10 @@ abstract final class AppSizes {
 
 abstract final class AppShadows {
   static const card = [
-    BoxShadow(color: Color(0x147446D0), blurRadius: 16, offset: Offset(0, 4)),
+    BoxShadow(color: Color(0x1F5848C5), blurRadius: 16, offset: Offset(0, 4)),
   ];
   static const raised = [
-    BoxShadow(color: Color(0x1F7446D0), blurRadius: 24, offset: Offset(0, 8)),
+    BoxShadow(color: Color(0x405848C5), blurRadius: 24, offset: Offset(0, 8)),
   ];
 }
 

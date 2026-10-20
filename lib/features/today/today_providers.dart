@@ -4,6 +4,7 @@ import '../../app/providers.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/reminders.dart';
 import '../../domain/schedule.dart';
+import '../../domain/streak.dart';
 
 /// Intakes for one calendar day (date-only key), live from the database.
 final dayIntakesProvider = StreamProvider.family<List<DayIntake>, DateTime>(
@@ -11,7 +12,7 @@ final dayIntakesProvider = StreamProvider.family<List<DayIntake>, DateTime>(
 );
 
 /// Intakes of the last [historyDays] days up to today, grouped by day.
-const historyDays = 30;
+const historyDays = historyLookbackDays;
 
 final historyProvider = StreamProvider<Map<DateTime, List<DayIntake>>>((ref) {
   final today = dateOnly(DateTime.now());
@@ -35,3 +36,9 @@ final openIntakeProvider =
     NotifierProvider<OpenIntakeNotifier, OpenIntakeRequest?>(
       OpenIntakeNotifier.new,
     );
+
+/// The current streak of fully taken days.
+final streakProvider = Provider<int>((ref) {
+  final history = ref.watch(historyProvider).value;
+  return history == null ? 0 : currentStreak(history, dateOnly(DateTime.now()));
+});

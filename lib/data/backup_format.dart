@@ -111,6 +111,8 @@ String encodeBackup(BackupData d) {
             'strength': m.strength,
             'unit': m.unit,
             'lowStockThreshold': m.lowStockThreshold,
+            'category': m.category?.name,
+            'storage': m.storage?.name,
             'archivedAt': m.archivedAt == null ? null : _ts(m.archivedAt!),
             'createdAt': _ts(m.createdAt),
           },
@@ -151,6 +153,7 @@ String encodeBackup(BackupData d) {
             'times': _items(s.times).map(int.parse).toList(),
             'dose': s.dose,
             'doseUnit': s.doseUnit,
+            'mealRelation': s.mealRelation?.name,
             'createdAt': _ts(s.createdAt),
           },
       ],
@@ -259,6 +262,8 @@ BackupData parseBackup(Uint8List bytes) {
         // Older files: filled below, as the v5 migration does.
         unit: r.strOrNull('unit'),
         lowStockThreshold: r.numOrNull('lowStockThreshold'),
+        category: r.enumOrNull('category', MedicineCategory.values),
+        storage: r.enumOrNull('storage', StorageSpot.values),
         archivedAt: r.tsOrNull('archivedAt'),
         createdAt: r.ts('createdAt'),
       ),
@@ -299,6 +304,7 @@ BackupData parseBackup(Uint8List bytes) {
         times: r.list('times', _isMinute),
         dose: r.num_('dose', min: 0, exclusive: true),
         doseUnit: r.str('doseUnit', nonEmpty: true),
+        mealRelation: r.enumOrNull('mealRelation', MealRelation.values),
         createdAt: r.ts('createdAt'),
       ),
   ];

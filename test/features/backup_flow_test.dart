@@ -15,6 +15,9 @@ import 'package:pillory/domain/models.dart';
 import 'package:pillory/features/profile/backup_files.dart';
 import 'package:pillory/features/profile/profile_screen.dart';
 
+import '../support/fake_extras_repository.dart';
+import '../support/fake_inventory_repository.dart';
+
 class _Files implements BackupFiles {
   Uint8List? picked;
   final saved = <Uint8List>[];
@@ -33,6 +36,7 @@ class _Files implements BackupFiles {
 void main() {
   late AppDatabase db;
   late _Files files;
+  final inventory = FakeInventoryRepository();
 
   setUp(() {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -54,6 +58,13 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
+          // The screen's other data comes from fakes: a real database stream
+          // does not complete under the widget tester's clock.
+          extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
+          inventoryRepositoryProvider.overrideWithValue(inventory),
+          scheduleRepositoryProvider.overrideWithValue(
+            FakeScheduleRepository(inventory),
+          ),
           backupFilesProvider.overrideWithValue(files),
         ],
         child: const MaterialApp(home: ProfileScreen()),
@@ -75,6 +86,13 @@ void main() {
   testWidgets('saving hands the file to the system dialog', (tester) async {
     await medicine(db, 'Аспирин');
     await open(tester);
+    await tester.scrollUntilVisible(
+      find.text('Сохранить резервную копию'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Сохранить резервную копию'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Сохранить резервную копию'));
     await tester.pumpAndSettle();
 
@@ -87,6 +105,13 @@ void main() {
     await medicine(db, 'Старое');
     files.picked = await tester.runAsync(() => fileWith('Новое'));
     await open(tester);
+    await tester.scrollUntilVisible(
+      find.text('Восстановить из копии'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Восстановить из копии'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Восстановить из копии'));
     await tester.pumpAndSettle();
 
@@ -100,6 +125,13 @@ void main() {
     await medicine(db, 'Старое');
     files.picked = await tester.runAsync(() => fileWith('Новое'));
     await open(tester);
+    await tester.scrollUntilVisible(
+      find.text('Восстановить из копии'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Восстановить из копии'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Восстановить из копии'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Заменить'));
@@ -117,6 +149,13 @@ void main() {
     await medicine(db, 'Старое');
     files.picked = await tester.runAsync(() => fileWith('Новое'));
     await open(tester);
+    await tester.scrollUntilVisible(
+      find.text('Восстановить из копии'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Восстановить из копии'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Восстановить из копии'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Сначала сохранить текущие'));
@@ -131,6 +170,13 @@ void main() {
     await medicine(db, 'Старое');
     files.picked = Uint8List.fromList(utf8.encode('{"nope": true}'));
     await open(tester);
+    await tester.scrollUntilVisible(
+      find.text('Восстановить из копии'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Восстановить из копии'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Восстановить из копии'));
     await tester.pumpAndSettle();
 
@@ -142,10 +188,28 @@ void main() {
   testWidgets('an empty device restores without the warning', (tester) async {
     files.picked = await tester.runAsync(() => fileWith('Новое'));
     await open(tester);
+    await tester.scrollUntilVisible(
+      find.text('Восстановить из копии'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Восстановить из копии'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Восстановить из копии'));
     await tester.pumpAndSettle();
 
     expect(find.text('Заменить данные?'), findsNothing);
     expect(await tester.runAsync(names), ['Новое']);
+  });
+
+  testWidgets('the name can be set without errors', (tester) async {
+    await open(tester);
+    await tester.tap(find.byTooltip('Изменить имя'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Аня');
+    await tester.tap(find.text('Сохранить'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Аня'), findsOneWidget);
   });
 }

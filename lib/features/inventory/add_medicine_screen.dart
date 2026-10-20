@@ -5,11 +5,13 @@ import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
 import '../../design_system/widgets/date_field.dart';
 import '../../design_system/widgets/form_save_bar.dart';
+import '../../design_system/widgets/pill_widgets.dart';
 import '../../design_system/widgets/section_header.dart';
 import '../../domain/errors.dart';
 import '../../domain/medicine_form.dart';
 import '../../domain/models.dart';
 import 'format.dart';
+import 'medicine_card.dart';
 
 /// Creates a medicine, or edits the name, form and strength of [editing].
 /// Packages and quantities are managed on the medicine's own screen.
@@ -29,6 +31,8 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   final _quantity = TextEditingController(text: '1');
   final _threshold = TextEditingController();
   MedicineForm? _form;
+  MedicineCategory? _category;
+  StorageSpot? _storage;
   String _unit = quantityUnits.first;
   DateTime? _expiresOn;
   bool _saving = false;
@@ -44,6 +48,8 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
         ? ''
         : formatQuantity(e.lowStockThreshold!);
     _form = e.form;
+    _category = e.category;
+    _storage = e.storage;
   }
 
   @override
@@ -72,6 +78,8 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                 form: _form,
                 strength: _strength.text,
                 lowStockThreshold: parseQuantity(_threshold.text),
+                category: _category,
+                storage: _storage,
               ),
             );
         navigator.pop();
@@ -85,6 +93,8 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               form: _form,
               strength: _strength.text,
               lowStockThreshold: parseQuantity(_threshold.text),
+              category: _category,
+              storage: _storage,
               initialQuantity: parseQuantity(_quantity.text)!,
               unit: _unit,
               expiresOn: _expiresOn,
@@ -104,33 +114,68 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     final creating = widget.editing == null;
     return Scaffold(
       appBar: AppBar(title: Text(creating ? 'Новое лекарство' : 'Лекарство')),
-      bottomNavigationBar: FormSaveBar(saving: _saving, onSave: _save),
+      bottomNavigationBar: FormSaveBar(
+        saving: _saving,
+        onSave: _save,
+        label: creating ? 'Добавить в аптечку' : 'Сохранить',
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: formPadding,
           children: [
+            if (creating) ...[const _ScannerCard(), gap],
             const SectionHeader(title: 'Основное'),
             TextFormField(
               controller: _name,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(labelText: 'Название *'),
+              decoration: const InputDecoration(
+                labelText: 'Название *',
+                hintText: 'Например, Ибупрофен Форте',
+                prefixIcon: Icon(Icons.medication_outlined),
+              ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Введите название' : null,
             ),
-            gap,
-            DropdownButtonFormField<MedicineForm?>(
-              initialValue: _form,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Лекарственная форма',
-              ),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Не указана')),
+            const SectionHeader(title: 'Категория действия'),
+            // Tiles grow with the text, so no fixed aspect ratio.
+            LayoutBuilder(
+              builder: (context, box) {
+                final w = (box.maxWidth - 2 * AppSpacing.sm) / 3;
+                return Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    for (final c in MedicineCategory.values)
+                      SizedBox(
+                        width: w,
+                        child: ChoiceTile(
+                          icon: _categoryIcon(c),
+                          label: c.label,
+                          selected: _category == c,
+                          onTap: () => setState(
+                            () => _category = _category == c ? null : c,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+            const SectionHeader(title: 'Форма выпуска'),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
                 for (final f in MedicineForm.values)
-                  DropdownMenuItem(value: f, child: Text(f.label)),
+                  ChoiceChip(
+                    avatar: Icon(medicineFormIcon(f), size: 18),
+                    label: Text(f.label),
+                    selected: _form == f,
+                    onSelected: (_) =>
+                        setState(() => _form = _form == f ? null : f),
+                  ),
               ],
-              onChanged: (v) => setState(() => _form = v),
             ),
             gap,
             TextFormField(
@@ -139,6 +184,21 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                 labelText: 'Дозировка или концентрация',
                 hintText: 'Например, 500 мг',
               ),
+            ),
+            const SectionHeader(title: 'Где хранить?'),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final st in StorageSpot.values)
+                  ChoiceChip(
+                    avatar: Icon(_storageIcon(st), size: 18),
+                    label: Text(st.label),
+                    selected: _storage == st,
+                    onSelected: (_) =>
+                        setState(() => _storage = _storage == st ? null : st),
+                  ),
+              ],
             ),
             const SectionHeader(title: 'Запас'),
             if (creating) ...[
@@ -202,4 +262,49 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
       ),
     );
   }
+}
+
+IconData _categoryIcon(MedicineCategory c) => switch (c) {
+  MedicineCategory.painkiller => Icons.bolt,
+  MedicineCategory.antipyretic => Icons.thermostat,
+  MedicineCategory.digestive => Icons.lunch_dining_outlined,
+  MedicineCategory.allergy => Icons.local_florist_outlined,
+  MedicineCategory.vitamins => Icons.eco_outlined,
+  MedicineCategory.cold => Icons.ac_unit,
+  MedicineCategory.other => Icons.more_horiz,
+};
+
+IconData _storageIcon(StorageSpot s) => switch (s) {
+  StorageSpot.home => Icons.home_outlined,
+  StorageSpot.fridge => Icons.kitchen_outlined,
+  StorageSpot.bag => Icons.backpack_outlined,
+};
+
+/// Barcode scanning is not built yet.
+class _ScannerCard extends StatelessWidget {
+  const _ScannerCard();
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.tint,
+    shape: RoundedSuperellipseBorder(
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+    ),
+    child: ListTile(
+      contentPadding: const EdgeInsets.all(AppSpacing.md),
+      shape: RoundedSuperellipseBorder(
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+      ),
+      title: const Text('Сканировать пачку', style: AppType.cardTitle),
+      subtitle: const Text('Название и срок годности по штрихкоду — скоро'),
+      trailing: const CircleAvatar(
+        radius: 24,
+        backgroundColor: AppColors.primary,
+        child: Icon(Icons.qr_code_scanner, color: Colors.white),
+      ),
+      onTap: () => ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Сканер — скоро'))),
+    ),
+  );
 }

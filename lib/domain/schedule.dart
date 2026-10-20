@@ -19,9 +19,13 @@ class NewSchedule {
     this.dates = const [],
     this.endDate,
     this.times = const [],
+    this.mealRelation,
   });
 
   final String medicineId;
+
+  /// Null: any time relative to meals.
+  final MealRelation? mealRelation;
   final ScheduleKind kind;
   final double dose;
   final String doseUnit;
@@ -51,6 +55,7 @@ class Schedule extends NewSchedule {
     super.dates,
     super.endDate,
     super.times,
+    super.mealRelation,
   });
 
   final String id;
@@ -94,6 +99,7 @@ NewSchedule validateNewSchedule(NewSchedule d) {
     startDate: start,
     endDate: end,
     times: ({...d.times}.toList()..sort()),
+    mealRelation: d.mealRelation,
   );
 }
 
@@ -180,8 +186,10 @@ class ScheduleEdit {
     this.dates = const [],
     this.startDate,
     this.endDate,
+    this.mealRelation,
   });
 
+  final MealRelation? mealRelation;
   final ScheduleKind kind;
   final double dose;
   final List<int> times;
@@ -248,6 +256,7 @@ ScheduleEditPlan planScheduleEdit(
           : (byDates ? earliest : edit.startDate) ?? old.startDate,
       endDate: byDates ? null : edit.endDate,
       times: edit.times,
+      mealRelation: edit.mealRelation,
     ),
   );
 
@@ -260,6 +269,7 @@ ScheduleEditPlan planScheduleEdit(
   final unchanged =
       draft.kind == old.kind &&
       draft.dose == old.dose &&
+      draft.mealRelation == old.mealRelation &&
       same(draft.times, old.times) &&
       same(draft.weekdays, old.weekdays) &&
       same(draft.dates, oldDates) &&

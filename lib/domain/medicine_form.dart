@@ -20,3 +20,37 @@ enum MedicineForm {
 /// Units offered in the add form. The column is free text, so this list can
 /// grow without a migration.
 const quantityUnits = <String>['шт.', 'мл', 'г', 'доз'];
+
+/// What a medicine is for. Stored by enum name.
+enum MedicineCategory {
+  painkiller('Обезболивающие'),
+  antipyretic('Жаропонижающие'),
+  digestive('ЖКТ'),
+  allergy('Аллергия'),
+  vitamins('Витамины'),
+  cold('Простуда'),
+  other('Другое');
+
+  const MedicineCategory(this.label);
+  final String label;
+}
+
+/// Where a medicine is kept. Stored by enum name.
+enum StorageSpot {
+  home('Домашняя аптечка'),
+  fridge('Холодильник'),
+  bag('С собой');
+
+  const StorageSpot(this.label);
+  final String label;
+}
+
+/// How an intake relates to a meal; null on a schedule means "any time".
+enum MealRelation {
+  before('До еды'),
+  during('Во время'),
+  after('После еды');
+
+  const MealRelation(this.label);
+  final String label;
+}

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/design_system/widgets/floating_dock.dart';
 import 'package:pillory/app/app.dart';
 import 'package:pillory/app/providers.dart';
 import 'package:pillory/domain/medicine_form.dart';
 import 'package:pillory/domain/models.dart';
 
+import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
 
 void main() {
@@ -29,6 +31,7 @@ void main() {
       ProviderScope(
         overrides: [
           inventoryRepositoryProvider.overrideWithValue(inventory),
+          extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
           scheduleRepositoryProvider.overrideWithValue(
             FakeScheduleRepository(inventory),
           ),
@@ -39,7 +42,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(
       find.descendant(
-        of: find.byType(NavigationBar),
+        of: find.byType(FloatingDock),
         matching: find.text('Аптечка'),
       ),
     );

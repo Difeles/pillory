@@ -98,6 +98,10 @@ class MedicineCard extends ConsumerWidget {
               ),
             ],
           ),
+          if (!archived && assessment != null) ...[
+            const SizedBox(height: AppSpacing.ms),
+            _StockBar(stock: stock, problem: assessment.problem),
+          ],
           const SizedBox(height: AppSpacing.ms),
           // Wraps instead of overflowing: with large text the stepper moves
           // under the label.
@@ -128,6 +132,38 @@ class MedicineCard extends ConsumerWidget {
   }
 }
 
+/// Remaining share of the counted packages' initial quantity.
+class _StockBar extends StatelessWidget {
+  const _StockBar({required this.stock, required this.problem});
+
+  final MedicineStock stock;
+  final StockProblem? problem;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = stock.counted.fold<double>(
+      0,
+      (sum, p) => sum + p.initialQuantity,
+    );
+    final share = initial <= 0
+        ? 0.0
+        : (stock.totalQuantity / initial).clamp(0.0, 1.0);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(99),
+      child: LinearProgressIndicator(
+        value: share,
+        minHeight: 8,
+        backgroundColor: AppColors.surfaceMid,
+        color: switch (problem) {
+          null => AppColors.primary,
+          StockProblem.low || StockProblem.expiringSoon => AppColors.warning,
+          _ => AppColors.danger,
+        },
+      ),
+    );
+  }
+}
+
 /// The form's icon on its pastel square; shared by the card and the
 /// medicine screen.
 class MedicineAvatar extends StatelessWidget {
@@ -153,6 +189,9 @@ class MedicineAvatar extends StatelessWidget {
     );
   }
 }
+
+/// The icon of a form.
+IconData medicineFormIcon(MedicineForm? form) => _formLook(form).$1;
 
 /// Icon and pastel fill for a form; pastels are only ever backgrounds.
 (IconData, Color) _formLook(MedicineForm? form) => switch (form) {

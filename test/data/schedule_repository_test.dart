@@ -838,6 +838,7 @@ void main() {
         await old.customStatement(
           'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
         );
+        await _dropV7(old);
         await old.customStatement('DROP TABLE intake_logs');
         await old.customStatement('DROP TABLE schedules');
         await old.customStatement('''CREATE TABLE schedules (
@@ -906,6 +907,7 @@ void main() {
       await v3.customStatement(
         'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
       );
+      await _dropV7(v3);
       for (final c in ['medicine_name', 'medicine_form', 'medicine_strength']) {
         await v3.customStatement('ALTER TABLE intake_logs DROP COLUMN $c');
       }
@@ -969,6 +971,7 @@ void main() {
         await v4.customStatement(
           'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
         );
+        await _dropV7(v4);
         for (final c in [
           'medicine_name',
           'medicine_form',
@@ -1033,6 +1036,7 @@ void main() {
         await v5.customStatement(
           'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
         );
+        await _dropV7(v5);
         await v5.customStatement('PRAGMA user_version = 5');
         await v5.close();
 
@@ -1078,6 +1082,7 @@ void main() {
       await v1.customStatement(
         'ALTER TABLE medicines DROP COLUMN low_stock_threshold',
       );
+      await _dropV7(v1);
       await v1.customStatement('DROP TABLE intake_logs');
       await v1.customStatement('DROP TABLE schedules');
       await v1.customStatement('PRAGMA user_version = 1');
@@ -1105,4 +1110,14 @@ extension on NewSchedule {
     startDate: start,
     times: times,
   );
+}
+
+/// Takes what v7 added out of a fresh database, to look like a v6 one.
+Future<void> _dropV7(AppDatabase db) async {
+  for (final c in ['category', 'storage']) {
+    await db.customStatement('ALTER TABLE medicines DROP COLUMN $c');
+  }
+  await db.customStatement('ALTER TABLE schedules DROP COLUMN meal_relation');
+  await db.customStatement('DROP TABLE shopping_items');
+  await db.customStatement('DROP TABLE app_settings');
 }

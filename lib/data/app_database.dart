@@ -16,6 +16,8 @@ part 'app_database.g.dart';
     Schedules,
     IntakeLogs,
     IntakeDeductions,
+    ShoppingItems,
+    AppSettings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -23,7 +25,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pillory'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -60,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
         await m.alterTable(
           TableMigration(
             schedules,
-            newColumns: [schedules.times],
+            newColumns: [schedules.times, schedules.mealRelation],
             columnTransformer: {
               schedules.times: const CustomExpression(
                 "coalesce(CAST(minute_of_day AS TEXT), '')",
@@ -85,6 +87,16 @@ class AppDatabase extends _$AppDatabase {
         // v6: an optional own low-stock threshold; existing medicines have
         // none and keep the app-wide rule.
         await m.addColumn(medicines, medicines.lowStockThreshold);
+      }
+      if (from < 7) {
+        // v7: category, storage and meal relation (all optional), the
+        // shopping list and the settings.
+        await m.addColumn(medicines, medicines.category);
+        await m.addColumn(medicines, medicines.storage);
+        // Older schedules tables were created or rebuilt above, with it.
+        if (from >= 3) await m.addColumn(schedules, schedules.mealRelation);
+        await m.createTable(shoppingItems);
+        await m.createTable(appSettings);
       }
       if (from < 5) {
         // medicines is never rebuilt above, so it lacks both columns here.

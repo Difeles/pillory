@@ -4,10 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
 import '../../design_system/widgets/date_field.dart';
+import '../../design_system/widgets/app_card.dart';
 import '../../design_system/widgets/form_save_bar.dart';
+import '../../design_system/widgets/mascot_pill.dart';
+import '../../design_system/widgets/pill_widgets.dart';
 import '../../design_system/widgets/section_header.dart';
 import '../../domain/errors.dart';
 import '../../domain/inventory_rules.dart';
+import '../../domain/medicine_form.dart';
 import '../../domain/models.dart';
 import '../../domain/schedule.dart';
 import '../inventory/add_medicine_screen.dart';
@@ -38,6 +42,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
   final _times = <int>{};
   DateTime _start = dateOnly(DateTime.now());
   DateTime? _end;
+  MealRelation? _meal;
   bool _saving = false;
 
   Schedule? get _editing => widget.editing;
@@ -54,6 +59,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
     _dose.text = formatQuantity(e.dose);
     _medicineId = e.medicineId;
     _kind = e.kind;
+    _meal = e.mealRelation;
     _weekdays.addAll(e.weekdays);
     _dates.addAll([
       for (final d in e.dates)
@@ -108,6 +114,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
           : _start,
       endDate: _kind == ScheduleKind.dates ? null : _end,
       times: _times.toList(),
+      mealRelation: _meal,
     );
     setState(() => _saving = true);
     try {
@@ -138,6 +145,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 dates: _dates,
                 startDate: _start,
                 endDate: _end,
+                mealRelation: _meal,
               ),
             );
       }
@@ -172,6 +180,43 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
     }
   }
 
+  /// A summary of what is being set up, in the app's friendly voice.
+  Widget _preview(List<MedicineStock> stock) {
+    final name = stock
+        .where((s) => s.medicine.id == _medicineId)
+        .map((s) => s.medicine.name)
+        .firstOrNull;
+    final perDay = _times.isEmpty ? 1 : _times.length;
+    final end = _end;
+    final days = _kind == ScheduleKind.dates
+        ? _dates.length
+        : end == null
+        ? null
+        : end.difference(_start).inDays.abs() + 1;
+    final parts = [
+      '$perDay ${perDay == 1 ? 'раз' : 'раза'} в день',
+      if (_meal != null) _meal!.label.toLowerCase(),
+      if (days != null) '$days дн.',
+    ];
+    return AppCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('ПРЕДПРОСМОТР КУРСА', style: AppType.caption),
+                Text(name ?? 'Выберите лекарство', style: AppType.title),
+                Text(parts.join(' • '), style: AppType.caption),
+              ],
+            ),
+          ),
+          const MascotPill(size: 48),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final stock = ref.watch(medicineStockProvider).value ?? const [];
@@ -184,6 +229,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
       bottomNavigationBar: FormSaveBar(
         saving: _saving,
         onSave: () => _save(stock),
+        label: 'Сохранить приём',
       ),
       body: Form(
         key: _formKey,
@@ -197,26 +243,43 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 child: Text('В аптечке пока нет лекарств. Создайте первое.'),
               )
             else
-              DropdownButtonFormField<String>(
-                // Re-created when the selection is set from outside.
-                key: ValueKey(_medicineId),
-                isExpanded: true,
-                initialValue: stock.any((s) => s.medicine.id == _medicineId)
-                    ? _medicineId
-                    : null,
-                decoration: const InputDecoration(labelText: 'Лекарство *'),
-                items: [
-                  for (final s in stock)
-                    DropdownMenuItem(
-                      value: s.medicine.id,
-                      child: Text(s.medicine.name),
+              FormField<String>(
+                initialValue: _medicineId,
+                validator: (_) =>
+                    _medicineId == null ? 'Выберите лекарство' : null,
+                builder: (f) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: chipGap,
+                      runSpacing: chipGap,
+                      children: [
+                        for (final s in stock)
+                          ChoiceChip(
+                            label: Text(s.medicine.name),
+                            selected: s.medicine.id == _medicineId,
+                            // Changing the medicine would move its history to
+                            // another one.
+                            onSelected: _editing == null
+                                ? (_) => setState(
+                                    () => _medicineId = s.medicine.id,
+                                  )
+                                : null,
+                          ),
+                      ],
                     ),
-                ],
-                validator: (v) => v == null ? 'Выберите лекарство' : null,
-                // Changing the medicine would move its history to another one.
-                onChanged: _editing == null
-                    ? (v) => setState(() => _medicineId = v)
-                    : null,
+                    if (f.hasError)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xs),
+                        child: Text(
+                          f.errorText!,
+                          style: AppType.caption.copyWith(
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             if (_editing == null)
               Align(
@@ -250,24 +313,14 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
               },
             ),
             const SectionHeader(title: 'Повторение'),
-            SegmentedButton<ScheduleKind>(
-              segments: const [
-                ButtonSegment(
-                  value: ScheduleKind.daily,
-                  label: Text('Каждый день'),
-                ),
-                ButtonSegment(
-                  value: ScheduleKind.weekdays,
-                  label: Text('По дням'),
-                ),
-                ButtonSegment(
-                  value: ScheduleKind.dates,
-                  label: Text('По датам'),
-                ),
-              ],
-              showSelectedIcon: false,
-              selected: {_kind},
-              onSelectionChanged: (v) => setState(() => _kind = v.first),
+            SegmentedPills<ScheduleKind>(
+              options: const {
+                ScheduleKind.daily: 'Каждый день',
+                ScheduleKind.weekdays: 'По дням',
+                ScheduleKind.dates: 'По датам',
+              },
+              selected: _kind,
+              onChanged: (v) => setState(() => _kind = v),
             ),
             if (_kind == ScheduleKind.weekdays) ...[
               const SectionHeader(title: 'Дни недели'),
@@ -344,6 +397,15 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 ),
               ],
             ),
+            const SectionHeader(title: 'Связь с приёмом пищи'),
+            SegmentedPills<MealRelation?>(
+              options: {
+                for (final m in MealRelation.values) m: m.label,
+                null: 'Не важно',
+              },
+              selected: _meal,
+              onChanged: (v) => setState(() => _meal = v),
+            ),
             if (_kind != ScheduleKind.dates) ...[
               const SectionHeader(title: 'Период'),
               DateField(
@@ -368,7 +430,28 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 onChanged: (d) =>
                     setState(() => _end = d == null ? null : dateOnly(d)),
               ),
+              if (!_started) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: chipGap,
+                  children: [
+                    for (final n in const [7, 14, 30])
+                      ActionChip(
+                        label: Text('$n дн.'),
+                        onPressed: () => setState(
+                          () => _end = DateTime(
+                            _start.year,
+                            _start.month,
+                            _start.day + n - 1,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ],
+            gap,
+            _preview(stock),
             if (_editing != null) ...[
               const SizedBox(height: AppSpacing.xl),
               OutlinedButton(

@@ -165,6 +165,7 @@ class DriftScheduleRepository implements ScheduleRepository {
             startDate: d.startDate,
             endDate: Value(d.endDate),
             times: Value(d.times.join(',')),
+            mealRelation: Value(d.mealRelation),
             dose: d.dose,
             doseUnit: d.doseUnit,
             createdAt: _now(),
@@ -205,6 +206,7 @@ class DriftScheduleRepository implements ScheduleRepository {
               endDate: Value(draft.endDate),
               times: Value(draft.times.join(',')),
               dose: Value(draft.dose),
+              mealRelation: Value(draft.mealRelation),
             ),
           );
         case ScheduleSplit(:final draft, :final closeOn):

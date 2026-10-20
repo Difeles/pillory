@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/app_database.dart';
 import '../data/drift_backup_repository.dart';
+import '../data/drift_extras_repository.dart';
 import '../data/drift_inventory_repository.dart';
 import '../data/drift_schedule_repository.dart';
+import '../domain/extras.dart';
 import '../domain/inventory_repository.dart';
 import '../domain/reminder_scheduler.dart';
 import '../domain/schedule.dart';
@@ -43,3 +45,16 @@ final reminderSyncProvider = Provider<ReminderSync>((ref) {
   ref.onDispose(sync.dispose);
   return sync;
 });
+
+final extrasRepositoryProvider = Provider<ExtrasRepository>(
+  (ref) => DriftExtrasRepository(ref.watch(appDatabaseProvider)),
+);
+
+final shoppingProvider = StreamProvider<List<ShoppingItem>>(
+  (ref) => ref.watch(extrasRepositoryProvider).watchShopping(),
+);
+
+/// Settings; the defaults until the first read.
+final prefsProvider = StreamProvider<AppPrefs>(
+  (ref) => ref.watch(extrasRepositoryProvider).watchPrefs(),
+);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/design_system/widgets/form_save_bar.dart';
+import 'package:pillory/design_system/widgets/floating_dock.dart';
 import 'package:pillory/app/app.dart';
 import 'package:pillory/app/providers.dart';
 import 'package:pillory/design_system/theme.dart';
@@ -13,11 +15,23 @@ import 'package:pillory/features/profile/profile_screen.dart';
 import 'package:pillory/features/today/add_intake_screen.dart';
 import 'package:pillory/features/today/today_screen.dart';
 
+import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
 
 /// Each main screen at the narrowest supported width with doubled system
 /// text: any RenderFlex overflow fails the test. Screens are pumped alone
 /// because the shell keeps every tab laid out at once.
+/// Scrolls [f] into the first scrollable and fully into view.
+Future<void> reveal(WidgetTester tester, Finder f) async {
+  await tester.scrollUntilVisible(
+    f,
+    100,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(f);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   late FakeInventoryRepository inventory;
   late FakeScheduleRepository schedules;
@@ -54,6 +68,7 @@ void main() {
       ProviderScope(
         overrides: [
           inventoryRepositoryProvider.overrideWithValue(inventory),
+          extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
           scheduleRepositoryProvider.overrideWithValue(schedules),
         ],
         child: app,
@@ -69,6 +84,7 @@ void main() {
 
   testWidgets('Today fits', (tester) async {
     await pumpSmall(tester, screen(() => const TodayScreen()));
+    await reveal(tester, find.text('Ибупрофен форте'));
     expect(find.text('Ибупрофен форте'), findsOneWidget);
   });
 
@@ -76,14 +92,12 @@ void main() {
     tester,
   ) async {
     await pumpSmall(tester, screen(() => const TodayScreen()));
-    final take = find.byTooltip('Принято');
-    await tester.ensureVisible(take);
-    await tester.pumpAndSettle();
+    final take = find.widgetWithText(FilledButton, 'Принять');
+    await reveal(tester, take);
     await tester.tap(take);
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Принято'), findsNothing);
-    expect(find.text('Принято'), findsOneWidget); // the status badge
+    expect(find.widgetWithText(FilledButton, 'Принять'), findsNothing);
     for (final tooltip in ['Отменить отметку', 'Управление расписанием']) {
       final action = find.byTooltip(tooltip);
       await tester.ensureVisible(action);
@@ -94,7 +108,7 @@ void main() {
     // Undo works from the narrow layout too.
     await tester.tap(find.byTooltip('Отменить отметку'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Принято'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Принять'), findsOneWidget);
   });
 
   testWidgets('Today timeline fits: next card, taken and skipped rows', (
@@ -115,24 +129,21 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('СЛЕДУЮЩИЙ · 23:59'), findsOneWidget); // narrow: no column
 
-    Future<void> tapFirst(String tooltip) async {
-      final f = find.byTooltip(tooltip).first;
-      await tester.ensureVisible(f);
+    Future<void> tapFirst(Finder f) async {
+      await tester.ensureVisible(f.first);
       await tester.pumpAndSettle();
-      await tester.tap(f);
+      await tester.tap(f.first);
       await tester.pumpAndSettle();
     }
 
-    await tapFirst('Пропустить');
-    await tapFirst('Принято');
+    await tapFirst(find.text('Пропустить'));
+    await tapFirst(find.widgetWithText(FilledButton, 'Принять'));
     expect(find.text('Пропущено'), findsOneWidget);
-    expect(find.text('Принято'), findsWidgets);
     for (final f in [
       find.byTooltip('Отменить отметку').first,
       find.byTooltip('Управление расписанием').first,
-      find.widgetWithText(FilledButton, 'Принято'),
+      find.widgetWithText(FilledButton, 'Принять').first,
     ]) {
       await tester.ensureVisible(f);
       await tester.pumpAndSettle();
@@ -142,27 +153,27 @@ void main() {
 
   testWidgets('Cabinet fits', (tester) async {
     await pumpSmall(tester, screen(() => const InventoryScreen()));
+    await reveal(tester, find.text('Ибупрофен форте'));
     expect(find.text('Ибупрофен форте'), findsOneWidget);
   });
 
   testWidgets('Whole app with navigation fits', (tester) async {
     await pumpSmall(tester, const PilloryApp());
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(FloatingDock), findsOneWidget);
   });
 
   testWidgets('Cabinet: an empty filter offers to show all', (tester) async {
     await pumpSmall(tester, screen(() => const InventoryScreen()));
     final expired = find.widgetWithText(ChoiceChip, 'Просрочено');
-    await tester.ensureVisible(expired);
+    await reveal(tester, expired);
     await tester.tap(expired);
     await tester.pumpAndSettle();
-    expect(find.text('Нет лекарств с таким статусом'), findsOneWidget);
-
     // Below the fold at ×2; the empty state scrolls to it.
-    await tester.ensureVisible(find.text('Показать все'));
-    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Показать все'));
+    expect(find.text('Нет лекарств с таким статусом'), findsOneWidget);
     await tester.tap(find.text('Показать все'));
     await tester.pumpAndSettle();
+    await reveal(tester, find.text('Ибупрофен форте'));
     expect(find.text('Ибупрофен форте'), findsOneWidget);
   });
 
@@ -177,6 +188,7 @@ void main() {
       expiresOn: null,
     );
     await tester.pumpAndSettle();
+    await reveal(tester, find.text('12 шт.'));
     expect(find.text('12 шт.'), findsOneWidget);
     expect(find.byTooltip('Уменьшить остаток'), findsNothing);
   });
@@ -186,6 +198,7 @@ void main() {
     await inventory.archiveMedicine(medicineId);
     await tester.tap(find.byTooltip('Архив'));
     await tester.pumpAndSettle();
+    await reveal(tester, find.text('Ибупрофен форте'));
     expect(find.text('Ибупрофен форте'), findsOneWidget);
     expect(find.byTooltip('Уменьшить остаток'), findsNothing);
   });
@@ -195,6 +208,7 @@ void main() {
       tester,
       screen(() => MedicineScreen(medicineId: medicineId)),
     );
+    await reveal(tester, find.text('Упаковки'));
     expect(find.text('Упаковки'), findsOneWidget);
   });
 
@@ -219,7 +233,7 @@ void main() {
     await inventory.archiveMedicine(medicineId);
     await tester.pumpAndSettle();
     expect(find.text('В архиве'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('50 мл'), 100);
+    await reveal(tester, find.text('50 мл'));
     expect(find.byTooltip('Упаковка').hitTestable(), findsWidgets);
   });
 
@@ -227,7 +241,10 @@ void main() {
   Future<void> keyboardUp(WidgetTester tester) async {
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
     await tester.pumpAndSettle();
-    final save = find.widgetWithText(FilledButton, 'Сохранить');
+    final save = find.descendant(
+      of: find.byType(FormSaveBar),
+      matching: find.byType(FilledButton),
+    );
     expect(save.hitTestable(), findsOneWidget);
     expect(tester.getRect(save).bottom, lessThanOrEqualTo(640 - 300));
   }
@@ -237,11 +254,7 @@ void main() {
   ) async {
     await pumpSmall(tester, screen(() => const AddMedicineScreen()));
     await keyboardUp(tester);
-    await tester.scrollUntilVisible(
-      find.text('Порог низкого остатка (необязательно)'),
-      100,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await reveal(tester, find.text('Порог низкого остатка (необязательно)'));
   });
 
   testWidgets('Medicine edit form fits', (tester) async {
@@ -277,15 +290,12 @@ void main() {
       );
       expect(find.text(section), findsOneWidget, reason: kind);
     }
-    await tester.scrollUntilVisible(
-      find.text('Окончание (необязательно)'),
-      100,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await reveal(tester, find.text('Окончание (необязательно)'));
   });
 
   testWidgets('Schedule edit form fits', (tester) async {
     await pumpSmall(tester, screen(() => const TodayScreen()));
+    await reveal(tester, find.byTooltip('Управление расписанием'));
     await tester.tap(find.byTooltip('Управление расписанием'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Изменить расписание'));
@@ -304,7 +314,7 @@ void main() {
       tester,
       screen(() => MedicineScreen(medicineId: medicineId)),
     );
-    await tester.scrollUntilVisible(find.text('Добавить упаковку'), 100);
+    await reveal(tester, find.text('Добавить упаковку'));
     await tester.tap(find.text('Добавить упаковку'));
     await tester.pumpAndSettle();
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
@@ -326,7 +336,7 @@ void main() {
   testWidgets('Profile fits', (tester) async {
     await pumpSmall(tester, screen(() => const ProfileScreen()));
     // Below the fold at ×2: it must still be reachable by scrolling.
-    await tester.scrollUntilVisible(find.text('Восстановить из копии'), 100);
+    await reveal(tester, find.text('Восстановить из копии'));
     expect(find.text('Восстановить из копии'), findsOneWidget);
   });
 }

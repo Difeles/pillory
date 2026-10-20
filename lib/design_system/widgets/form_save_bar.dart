@@ -14,7 +14,14 @@ const formPadding = EdgeInsets.fromLTRB(
 /// so snack bars float above it instead of covering it, and lifts itself
 /// over the keyboard, which that slot does not do on its own.
 class FormSaveBar extends StatelessWidget {
-  const FormSaveBar({super.key, required this.onSave, this.saving = false});
+  const FormSaveBar({
+    super.key,
+    required this.onSave,
+    this.saving = false,
+    this.label = 'Сохранить',
+  });
+
+  final String label;
 
   final VoidCallback onSave;
 
@@ -25,10 +32,7 @@ class FormSaveBar extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
     child: DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(top: BorderSide(color: AppColors.divider)),
-      ),
+      decoration: const BoxDecoration(color: AppColors.background),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -38,9 +42,11 @@ class FormSaveBar extends StatelessWidget {
           ),
           child: SizedBox(
             width: double.infinity,
-            child: FilledButton(
+            height: 56,
+            child: FilledButton.icon(
               onPressed: saving ? null : onSave,
-              child: const Text('Сохранить'),
+              icon: const Icon(Icons.check_circle_outline),
+              label: Text(label),
             ),
           ),
         ),

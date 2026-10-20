@@ -50,7 +50,7 @@ void main() {
       tester,
       const AppCard(variant: AppCardVariant.muted, child: Text('A')),
     );
-    expect(_cardColor(tester), AppColors.tint);
+    expect(_cardColor(tester), AppColors.surfaceLow);
 
     await _pump(
       tester,
@@ -65,7 +65,7 @@ void main() {
                   ),
                 )
                 .shape!
-            as RoundedRectangleBorder;
+            as RoundedSuperellipseBorder;
     expect(shape.side.color, AppColors.primary);
   });
 

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
@@ -7,11 +10,18 @@ import '../../design_system/widgets/app_card.dart';
 import '../../design_system/widgets/confirm_dialog.dart';
 import '../../design_system/widgets/states.dart';
 import '../../design_system/widgets/status_badge.dart';
-import '../../design_system/widgets/timeline.dart';
+import '../../design_system/widgets/app_top_bar.dart';
+import '../../design_system/widgets/confetti.dart';
+import '../../design_system/widgets/mascot_pill.dart';
+import '../../design_system/widgets/progress_ring.dart';
+import '../../design_system/widgets/streak_banner.dart';
+import '../../design_system/widgets/week_strip.dart';
 import '../../domain/errors.dart';
+import '../../domain/extras.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/reminders.dart';
 import '../../domain/schedule.dart';
+import '../../domain/streak.dart';
 import '../inventory/format.dart';
 import '../inventory/medicine_card.dart';
 import 'add_intake_screen.dart';
@@ -35,30 +45,27 @@ const _months = [
 
 String formatDay(DateTime d) => '${d.day} ${_months[d.month - 1]}';
 
-const _weekdays = [
-  'Понедельник',
-  'Вторник',
-  'Среда',
-  'Четверг',
-  'Пятница',
-  'Суббота',
-  'Воскресенье',
-];
+const _monthsNominative = [
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
+]; // prettier-ignore
 
-/// "Сегодня · суббота" next to today, else just the weekday.
-String _dayCaption(DateTime day, DateTime today) {
-  final weekday = _weekdays[day.weekday - 1];
-  // Calendar days, not hours: a DST day is 23 or 25 hours long.
-  DateTime shifted(int d) => DateTime(today.year, today.month, today.day + d);
-  final relative = day == today
-      ? 'Сегодня'
-      : day == shifted(-1)
-      ? 'Вчера'
-      : day == shifted(1)
-      ? 'Завтра'
-      : null;
-  return relative == null ? weekday : '$relative · ${weekday.toLowerCase()}';
-}
+const _tips = [
+  'Не забудь выпить стакан воды: таблетки лучше усваиваются.',
+  'Поставь аптечку на видное место: так проще не пропускать приём.',
+  'Каждая отметка — маленькая победа. Серия растёт!',
+  'Проверь сроки годности раз в месяц: я подскажу, что скоро истечёт.',
+];
 
 String formatMinute(int m) =>
     '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
@@ -111,10 +118,20 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     });
   }
 
-  void _shift(int days) => setState(() {
-    _day = DateTime(_day.year, _day.month, _day.day + days);
+  void _select(DateTime day) => setState(() {
+    _day = dateOnly(day);
     _highlight = null;
   });
+
+  Future<void> _pickDay() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _day,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) _select(picked);
+  }
 
   Future<void> _take(DayIntake i) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -130,7 +147,11 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
       messenger.showSnackBar(
         const SnackBar(content: Text('В аптечке не хватает лекарства')),
       );
+      return;
     }
+    final prefs = ref.read(prefsProvider).value ?? const AppPrefs();
+    if (prefs.haptics) unawaited(HapticFeedback.mediumImpact());
+    if (prefs.confetti && mounted) showConfetti(context);
   }
 
   Future<void> _skip(DayIntake i) => ref
@@ -160,73 +181,76 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
         });
       }
     });
-    final text = Theme.of(context).textTheme;
     final today = dateOnly(DateTime.now());
     final intakes = ref.watch(dayIntakesProvider(_day));
+    final history = ref.watch(historyProvider).value;
+    final streak = ref.watch(streakProvider);
     return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-            96,
-          ),
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _dayCaption(_day, today).toUpperCase(),
-                    style: _overline(text, AppColors.textSecondary),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Предыдущий день',
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed: () => _shift(-1),
-                ),
-                IconButton(
-                  tooltip: 'Следующий день',
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed: () => _shift(1),
-                ),
-                IconButton(
-                  tooltip: 'История',
-                  icon: const Icon(Icons.history),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const HistoryScreen(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Semantics(
-              header: true,
-              child: Text(formatDay(_day), style: text.displaySmall),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            intakes.when(
-              loading: () => const LoadingState(),
-              error: (e, _) => ErrorState(
-                message: 'Не удалось загрузить приёмы',
-                onRetry: () => ref.invalidate(dayIntakesProvider(_day)),
-              ),
-              data: (list) {
-                if (_scrollPending) _scrollToHighlight();
-                if (list.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.event_available,
-                    title: 'На этот день приёмов нет',
-                    message: 'Нажмите «+», чтобы добавить приём',
-                  );
-                }
-                return _timeline(list, today);
-              },
-            ),
-          ],
+      appBar: AppTopBar(title: 'Приём'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          96,
         ),
+        children: [
+          if (streak > 0) ...[
+            StreakBanner(days: streak),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    '${_monthsNominative[_day.month - 1]}, ${_day.year}',
+                    style: AppType.title,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'История',
+                icon: const Icon(Icons.history),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const HistoryScreen(),
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Весь месяц',
+                icon: const Icon(Icons.calendar_month_outlined),
+                onPressed: _pickDay,
+              ),
+            ],
+          ),
+          WeekStrip(
+            selected: _day,
+            done: (d) => dayComplete(history?[d]),
+            onSelected: _select,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          intakes.when(
+            loading: () => const LoadingState(),
+            error: (e, _) => ErrorState(
+              message: 'Не удалось загрузить приёмы',
+              onRetry: () => ref.invalidate(dayIntakesProvider(_day)),
+            ),
+            data: (list) {
+              if (_scrollPending) _scrollToHighlight();
+              if (list.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.event_available,
+                  title: 'На этот день приёмов нет',
+                  message: 'Нажмите «+», чтобы добавить приём',
+                );
+              }
+              return _dayBody(list, today);
+            },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         // Tabs are kept alive side by side; two default hero tags would clash.
@@ -240,136 +264,220 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     );
   }
 
-  Widget _timeline(List<DayIntake> list, DateTime today) {
-    final now = DateTime.now();
-    final nowMinute = now.hour * 60 + now.minute;
-    // Only today has a "next", and a time already past is not next.
-    final next = _day == today
-        ? list
-              .where(
-                (i) =>
-                    i.status == IntakeStatus.pending &&
-                    i.minuteOfDay != null &&
-                    i.minuteOfDay! >= nowMinute,
-              )
-              .firstOrNull
-        : null;
-    final timed = [
-      for (final i in list)
-        if (i.minuteOfDay != null) i,
-    ];
-    final untimed = [
-      for (final i in list)
-        if (i.minuteOfDay == null) i,
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final scaler = MediaQuery.textScalerOf(context);
-        final timeWidth = scaler.scale(AppSizes.timelineTime);
-        // The time gets its own column only while the content keeps a
-        // readable width; otherwise it moves above the name.
-        final wide =
-            constraints.maxWidth - timeWidth - AppSizes.timelineRail >=
-            scaler.scale(220);
-        Widget group(List<DayIntake> intakes) => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final (k, i) in intakes.indexed)
-              _entry(
-                i,
-                today: today,
-                isNext: identical(i, next),
-                wide: wide,
-                timeWidth: timeWidth,
-                first: k == 0,
-                last: k == intakes.length - 1,
-              ),
+  Widget _dayBody(List<DayIntake> list, DateTime today) {
+    final done = list.where((i) => i.taken).length;
+    final groups = <_Period, List<DayIntake>>{};
+    for (final i in list) {
+      groups.putIfAbsent(_Period.of(i.minuteOfDay), () => []).add(i);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _PlanCard(done: done, total: list.length),
+        for (final p in _Period.values)
+          if (groups[p] case final items?) ...[
+            _PeriodHeader(period: p, intakes: items),
+            for (final i in items) _card(i, today),
           ],
-        );
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (timed.isNotEmpty) group(timed),
-            if (untimed.isNotEmpty) ...[
-              if (timed.isNotEmpty) const SizedBox(height: AppSpacing.sm),
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.ms),
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    'В ТЕЧЕНИЕ ДНЯ',
-                    style: _overline(
-                      Theme.of(context).textTheme,
-                      AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-              group(untimed),
-            ],
-          ],
-        );
-      },
+        const SizedBox(height: AppSpacing.md),
+        _TipCard(
+          tip: _tips[_day.difference(DateTime(2020)).inDays % _tips.length],
+        ),
+      ],
     );
   }
 
-  Widget _entry(
-    DayIntake i, {
-    required DateTime today,
-    required bool isNext,
-    required bool wide,
-    required double timeWidth,
-    required bool first,
-    required bool last,
-  }) {
+  Widget _card(DayIntake i, DateTime today) {
     final highlighted =
         _highlight?.scheduleId == i.schedule.id &&
         _highlight?.minuteOfDay == i.minuteOfDay;
-    return _IntakeEntry(
+    return Padding(
       key: highlighted ? _highlightKey : null,
-      intake: i,
-      isNext: isNext,
-      highlighted: highlighted,
-      wide: wide,
-      timeWidth: timeWidth,
-      first: first,
-      last: last,
-      // Marking a future dose as taken makes no sense.
-      canMark: !_day.isAfter(today),
-      // Only the live version of a schedule can be changed; earlier ones
-      // are history.
-      manageable: isCurrent(i.schedule, today),
-      onEdit: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => AddIntakeScreen(editing: i.schedule),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: _IntakeCard(
+        intake: i,
+        highlighted: highlighted,
+        // Marking a future dose as taken makes no sense.
+        canMark: !_day.isAfter(today),
+        // Only the live version of a schedule can be changed; earlier ones
+        // are history.
+        manageable: isCurrent(i.schedule, today),
+        onEdit: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => AddIntakeScreen(editing: i.schedule),
+          ),
         ),
+        onEnd: () => confirmEndSchedule(context, ref, i.schedule),
+        onTake: () => _take(i),
+        onSkip: () => _skip(i),
+        onReset: () => _reset(i),
       ),
-      onEnd: () => confirmEndSchedule(context, ref, i.schedule),
-      onTake: () => _take(i),
-      onSkip: () => _skip(i),
-      onReset: () => _reset(i),
     );
   }
 }
 
-TextStyle? _overline(TextTheme text, Color color) => text.labelMedium?.copyWith(
-  color: color,
-  fontWeight: FontWeight.w600,
-  letterSpacing: 1,
-);
+enum _Period {
+  morning('Утро', Icons.wb_sunny_outlined),
+  day('День', Icons.restaurant_outlined),
+  evening('Вечер', Icons.nightlight_outlined),
+  anytime('В течение дня', Icons.schedule);
 
-/// One intake on the day's timeline: the next one as a card with full
-/// actions, any other as a compact row.
-class _IntakeEntry extends StatelessWidget {
-  const _IntakeEntry({
-    super.key,
+  const _Period(this.label, this.icon);
+  final String label;
+  final IconData icon;
+
+  static _Period of(int? minute) => switch (minute) {
+    null => anytime,
+    < 12 * 60 => morning,
+    < 18 * 60 => day,
+    _ => evening,
+  };
+}
+
+class _PeriodHeader extends StatelessWidget {
+  const _PeriodHeader({required this.period, required this.intakes});
+
+  final _Period period;
+  final List<DayIntake> intakes;
+
+  @override
+  Widget build(BuildContext context) {
+    final all = intakes.every((i) => i.status != IntakeStatus.pending);
+    final first = intakes.first.minuteOfDay;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.sm,
+      ),
+      child: Builder(
+        builder: (context) {
+          final title = Semantics(
+            header: true,
+            child: Text(
+              first == null
+                  ? period.label
+                  : '${period.label}  ${formatMinute(first)}',
+              style: AppType.cardTitle,
+            ),
+          );
+          final badge = StatusBadge(
+            label: all ? 'Выполнено' : 'Ожидает',
+            icon: all ? Icons.check_circle : Icons.schedule,
+            tone: all ? StatusTone.success : StatusTone.accent,
+          );
+          final large = MediaQuery.textScalerOf(context).scale(1) > 1.5;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(period.icon, size: 20, color: AppColors.warning),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                // Beside the title while it fits, under it at large text.
+                child: large
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [title, badge],
+                      )
+                    : title,
+              ),
+              if (!large) badge,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({required this.done, required this.total});
+
+  final int done;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final left = total - done;
+    return AppCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ПЛАН ДНЯ',
+                  style: AppType.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                  ),
+                ),
+                Text('$done из $total принято', style: AppType.title),
+                Text(
+                  left == 0
+                      ? 'Всё принято — отличный день!'
+                      : 'Осталось принять: $left',
+                  style: AppType.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          ProgressRing(
+            value: done / total,
+            child: Text(
+              '${(done * 100 / total).round()}%',
+              style: AppType.label,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TipCard extends StatelessWidget {
+  const _TipCard({required this.tip});
+
+  final String tip;
+
+  @override
+  Widget build(BuildContext context) => AppCard(
+    child: Row(
+      children: [
+        const CircleAvatar(
+          radius: 28,
+          backgroundColor: AppColors.tint,
+          child: MascotPill(size: 36),
+        ),
+        const SizedBox(width: AppSpacing.ms),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Пилюлькин шепчет:', style: AppType.label),
+              Text(tip, style: AppType.caption),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// One intake: a card tinted by its state, with the actions it still allows.
+class _IntakeCard extends StatelessWidget {
+  const _IntakeCard({
     required this.intake,
-    required this.isNext,
     required this.highlighted,
-    required this.wide,
-    required this.timeWidth,
-    required this.first,
-    required this.last,
     required this.canMark,
     required this.manageable,
     required this.onEdit,
@@ -380,14 +488,7 @@ class _IntakeEntry extends StatelessWidget {
   });
 
   final DayIntake intake;
-  final bool isNext;
   final bool highlighted;
-
-  /// Whether the time has a column of its own beside the rail.
-  final bool wide;
-  final double timeWidth;
-  final bool first;
-  final bool last;
   final bool canMark;
   final bool manageable;
   final VoidCallback onEdit;
@@ -396,67 +497,11 @@ class _IntakeEntry extends StatelessWidget {
   final VoidCallback onSkip;
   final VoidCallback onReset;
 
-  bool get _done => intake.status != IntakeStatus.pending;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scaler = MediaQuery.textScalerOf(context);
-    final minute = intake.minuteOfDay;
-    final time = minute == null ? null : formatMinute(minute);
-    final carded = isNext || highlighted;
-    // The first line sits this far down: the card's padding, if any.
-    final top = carded ? AppSpacing.md : 0.0;
-    final content = isNext ? _nextCard(context, time) : _row(context, time);
-    return TimelineEntry(
-      dot: switch (intake.status) {
-        IntakeStatus.taken => TimelineDotState.done,
-        IntakeStatus.skipped => TimelineDotState.skipped,
-        IntakeStatus.pending =>
-          isNext ? TimelineDotState.next : TimelineDotState.pending,
-      },
-      first: first,
-      last: last,
-      // Centred on the first line of text, which grows with the text scale.
-      dotTop: top + scaler.scale(AppSpacing.ms),
-      leadingWidth: wide ? timeWidth : 0,
-      leading: wide && time != null
-          ? Padding(
-              padding: EdgeInsets.only(top: top),
-              child: Text(time, style: _timeStyle(text.titleMedium)),
-            )
-          : null,
-      child: Padding(
-        // The next intake gets more air around it than the plain rows.
-        padding: EdgeInsets.only(
-          bottom: carded ? AppSpacing.md : AppSpacing.sm,
-        ),
-        child: !isNext && highlighted
-            ? AppCard(variant: AppCardVariant.highlighted, child: content)
-            : content,
-      ),
-    );
-  }
-
-  TextStyle? _timeStyle(TextStyle? base) => base?.copyWith(
-    fontFeatures: AppType.numeric.fontFeatures,
-    color: isNext
-        ? AppColors.primaryDeep
-        : _done
-        ? AppColors.textSecondary
-        : AppColors.textPrimary,
-  );
-
-  String? get _details {
-    final parts = [
-      if (intake.medicineForm != null) intake.medicineForm!.label,
-      if (intake.medicineStrength != null) intake.medicineStrength!,
-    ];
-    return parts.isEmpty ? null : parts.join(' · ');
-  }
-
-  String get _dose =>
-      '${formatQuantity(intake.schedule.dose)} ${intake.schedule.doseUnit}';
+  String get _subtitle => [
+    '${formatQuantity(intake.schedule.dose)} ${intake.schedule.doseUnit}',
+    if (intake.medicineForm != null) intake.medicineForm!.label,
+    if (intake.medicineStrength != null) intake.medicineStrength!,
+  ].join(' · ');
 
   Widget _menu() => PopupMenuButton<VoidCallback>(
     tooltip: 'Управление расписанием',
@@ -480,137 +525,21 @@ class _IntakeEntry extends StatelessWidget {
           ],
   );
 
-  /// Dose first, then the medicine's form and strength: what to take, then
-  /// which one.
-  Widget _info(TextTheme text) {
-    final details = _details;
-    return Wrap(
-      spacing: AppSpacing.sm,
-      children: [
-        Text(
-          _dose,
-          style: text.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: _done ? AppColors.textSecondary : AppColors.textPrimary,
-          ),
-        ),
-        if (details != null)
-          Text(
-            details,
-            style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-          ),
-      ],
-    );
-  }
-
-  Widget _row(BuildContext context, String? time) {
-    final text = Theme.of(context).textTheme;
-    // Calm by default: the take button is tonal, skipping and undoing are
-    // plain icons. Bright primary is kept for the next intake.
-    final actions = _done
-        ? [
-            if (intake.canReset)
-              IconButton(
-                tooltip: 'Отменить отметку',
-                color: AppColors.textSecondary,
-                icon: const Icon(Icons.undo),
-                onPressed: onReset,
-              ),
-          ]
-        : [
-            IconButton(
-              tooltip: 'Пропустить',
-              color: AppColors.textSecondary,
-              icon: const Icon(Icons.remove_circle_outline),
-              onPressed: canMark ? onSkip : null,
-            ),
-            IconButton.filledTonal(
-              tooltip: 'Принято',
-              icon: const Icon(Icons.check),
-              onPressed: canMark ? onTake : null,
-            ),
-          ];
-    final body = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!wide && time != null)
-          Text(time, style: _timeStyle(text.titleSmall)),
-        Text(
-          intake.medicineName,
-          style: text.titleMedium?.copyWith(
-            color: _done ? AppColors.textSecondary : null,
-            decoration: intake.skipped ? TextDecoration.lineThrough : null,
-          ),
-        ),
-        _info(text),
-        if (_done) ...[
-          const SizedBox(height: AppSpacing.xs),
-          _statusBadge(intake.status),
-        ],
-      ],
-    );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final scaler = MediaQuery.textScalerOf(context);
-        // Actions beside the text while it keeps a readable width; below it
-        // otherwise, so nothing overflows at large text.
-        final trailing = (actions.length + 1) * kMinTapSize;
-        final inline = constraints.maxWidth - trailing >= scaler.scale(120);
-        if (inline) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: body),
-              ...actions,
-              _menu(),
-            ],
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: body),
-                _menu(),
-              ],
-            ),
-            if (actions.isNotEmpty)
-              Wrap(
-                alignment: WrapAlignment.end,
-                spacing: AppSpacing.xs,
-                children: actions,
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _nextCard(BuildContext context, String? time) {
-    final text = Theme.of(context).textTheme;
+  @override
+  Widget build(BuildContext context) {
+    final taken = intake.taken;
+    final pending = intake.status == IntakeStatus.pending;
     return AppCard(
-      // Flat with a hairline: it leads by its type and its one bright button,
-      // not by a shadow.
       variant: highlighted
           ? AppCardVariant.highlighted
-          : AppCardVariant.outlined,
+          : taken
+          ? AppCardVariant.done
+          : pending
+          ? AppCardVariant.normal
+          : AppCardVariant.muted,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  // Narrow: the time has no column, so it leads the card.
-                  wide || time == null ? 'СЛЕДУЮЩИЙ' : 'СЛЕДУЮЩИЙ · $time',
-                  style: _overline(text, AppColors.primaryDeep),
-                ),
-              ),
-              _menu(),
-            ],
-          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -620,32 +549,70 @@ class _IntakeEntry extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(intake.medicineName, style: text.titleLarge),
-                    _info(text),
+                    Text(
+                      intake.medicineName,
+                      style: AppType.cardTitle.copyWith(
+                        decoration: intake.skipped
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                    Text(
+                      _subtitle,
+                      style: AppType.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (intake.skipped) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      _statusBadge(intake.status),
+                    ],
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.ms),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
+              if (taken)
+                IconButton.filled(
+                  tooltip: intake.canReset ? 'Отменить отметку' : 'Принято',
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.success,
+                    disabledForegroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.check),
+                  onPressed: intake.canReset ? onReset : null,
+                )
+              else if (intake.skipped && intake.canReset)
+                IconButton(
+                  tooltip: 'Отменить отметку',
+                  icon: const Icon(Icons.undo),
+                  onPressed: onReset,
                 ),
-                onPressed: canMark ? onSkip : null,
-                child: const Text('Пропустить'),
-              ),
-              FilledButton(
-                onPressed: canMark ? onTake : null,
-                child: const Text('Принято'),
-              ),
+              _menu(),
             ],
           ),
+          if (pending) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                  ),
+                  onPressed: canMark ? onSkip : null,
+                  child: const Text('Пропустить'),
+                ),
+                FilledButton.icon(
+                  onPressed: canMark ? onTake : null,
+                  icon: const Icon(Icons.check),
+                  label: const Text('Принять'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

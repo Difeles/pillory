@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/design_system/widgets/week_strip.dart';
+import 'package:pillory/design_system/widgets/floating_dock.dart';
 import 'package:pillory/app/app.dart';
 import 'package:pillory/app/providers.dart';
 import 'package:pillory/design_system/widgets/app_card.dart';
@@ -8,8 +10,8 @@ import 'package:pillory/domain/models.dart';
 import 'package:pillory/domain/reminders.dart';
 import 'package:pillory/domain/schedule.dart';
 import 'package:pillory/features/today/today_providers.dart';
-import 'package:pillory/features/today/today_screen.dart';
 
+import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
 
 void main() {
@@ -26,6 +28,7 @@ void main() {
       ProviderScope(
         overrides: [
           inventoryRepositoryProvider.overrideWithValue(inventory),
+          extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
           scheduleRepositoryProvider.overrideWithValue(schedules),
         ],
         child: const PilloryApp(),
@@ -37,7 +40,7 @@ void main() {
   Future<void> tab(WidgetTester tester, String label) async {
     await tester.tap(
       find.descendant(
-        of: find.byType(NavigationBar),
+        of: find.byType(FloatingDock),
         matching: find.text(label),
       ),
     );
@@ -45,7 +48,12 @@ void main() {
   }
 
   Future<void> save(WidgetTester tester) async {
-    await tester.tap(find.text('Сохранить'));
+    final label = [
+      'Сохранить приём',
+      'Добавить в аптечку',
+      'Сохранить',
+    ].firstWhere((l) => find.text(l).evaluate().isNotEmpty);
+    await tester.tap(find.text(label));
     await tester.pumpAndSettle();
   }
 
@@ -82,7 +90,7 @@ void main() {
     // Back on the schedule form: the new medicine is selected and the dose
     // typed before leaving is intact.
     expect(find.text('Новый приём'), findsOneWidget);
-    expect(find.text('Аспирин'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Аспирин'), findsOneWidget);
     expect(
       tester
           .widget<TextFormField>(
@@ -98,10 +106,10 @@ void main() {
     expect(find.text('Аспирин'), findsOneWidget);
     expect(find.text('2 шт.'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Принято'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Принять'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Принято'), findsNothing);
-    expect(find.text('Принято'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Принять'), findsNothing);
+    expect(find.byTooltip('Отменить отметку'), findsOneWidget);
 
     // The new medicine is in the cabinet with the deducted stock.
     await tab(tester, 'Аптечка');
@@ -118,9 +126,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Добавить приём'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Лекарство *'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Нурофен').last);
+    await tester.tap(find.text('Нурофен'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('По дням'));
@@ -136,7 +142,7 @@ void main() {
     await save(tester);
 
     expect(find.text('Нурофен'), findsOneWidget);
-    expect(find.byTooltip('Принято'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Принять'), findsOneWidget);
   });
 
   testWidgets('cancelling new medicine keeps the typed schedule', (
@@ -150,9 +156,7 @@ void main() {
     await tester.tap(find.byTooltip('Добавить приём'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Лекарство *'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Нурофен').last);
+    await tester.tap(find.text('Нурофен'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Дозировка за один приём'),
@@ -168,7 +172,7 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
-    expect(find.text('Нурофен'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Нурофен'), findsOneWidget);
     expect(
       tester
           .widget<TextFormField>(
@@ -200,23 +204,23 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Пропустить'));
+    await tester.tap(find.text('Пропустить'));
     await tester.pumpAndSettle();
     expect(find.text('Пропущено'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Отменить отметку'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Принято'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Принять'));
     await tester.pumpAndSettle();
-    expect(find.text('Принято'), findsOneWidget);
+    expect(find.byTooltip('Отменить отметку'), findsOneWidget);
     expect((await inventory.watchStock().first).single.totalQuantity, 4);
 
     await tester.tap(find.byTooltip('Отменить отметку'));
     await tester.pumpAndSettle();
     expect((await inventory.watchStock().first).single.totalQuantity, 5);
-    expect(find.byTooltip('Пропустить'), findsOneWidget);
+    expect(find.text('Пропустить'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Пропустить'));
+    await tester.tap(find.text('Пропустить'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('История'));
     await tester.pumpAndSettle();
@@ -245,14 +249,13 @@ void main() {
 
     final now = DateTime.now();
     final day = DateTime(now.year, now.month, now.day + 2);
-    ProviderScope.containerOf(tester.element(find.byType(NavigationBar)))
+    ProviderScope.containerOf(tester.element(find.byType(FloatingDock)))
         .read(openIntakeProvider.notifier)
         .open(
           OpenIntakeRequest(scheduleId: sid, day: day, minuteOfDay: 8 * 60),
         );
     await tester.pumpAndSettle();
 
-    expect(find.text(formatDay(day)), findsOneWidget);
     expect(find.textContaining('08:00'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
@@ -281,6 +284,22 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// Selects yesterday on the week strip, swiping to last week on a Monday.
+    Future<void> yesterday(WidgetTester tester) async {
+      final now = DateTime.now();
+      final y = DateTime(now.year, now.month, now.day - 1);
+      Finder cell() => find.descendant(
+        of: find.byType(WeekStrip),
+        matching: find.text('${y.day}'),
+      );
+      if (now.weekday == DateTime.monday) {
+        await tester.fling(find.byType(WeekStrip), const Offset(300, 0), 1000);
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(cell());
+      await tester.pumpAndSettle();
+    }
+
     Future<void> menu(WidgetTester tester, String item) async {
       await tester.tap(find.byTooltip('Управление расписанием'));
       await tester.pumpAndSettle();
@@ -303,8 +322,7 @@ void main() {
       await save(tester);
       expect(find.text('3 шт.'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Предыдущий день'));
-      await tester.pumpAndSettle();
+      await yesterday(tester);
       expect(find.text('1 шт.'), findsOneWidget);
       // The earlier version offers no way to edit, only a reason.
       await tester.tap(find.byTooltip('Управление расписанием'));
@@ -331,8 +349,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('На этот день приёмов нет'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Предыдущий день'));
-      await tester.pumpAndSettle();
+      await yesterday(tester);
       expect(find.text('1 шт.'), findsOneWidget);
     });
 
@@ -340,10 +357,8 @@ void main() {
       await setUpStarted(tester);
       await menu(tester, 'Изменить расписание');
       expect(find.text('Новое лекарство'), findsNothing);
-      final dropdown = tester.widget<DropdownButtonFormField<String>>(
-        find.byType(DropdownButtonFormField<String>),
-      );
-      expect(dropdown.onChanged, isNull);
+      final chip = tester.widget<ChoiceChip>(find.byType(ChoiceChip));
+      expect(chip.onSelected, isNull);
     });
   });
 }

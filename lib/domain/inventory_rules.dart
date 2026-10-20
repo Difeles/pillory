@@ -41,6 +41,8 @@ NewMedicine validateNewMedicine(NewMedicine draft) {
   final threshold = validateThreshold(draft.lowStockThreshold);
   return NewMedicine(
     lowStockThreshold: threshold,
+    category: draft.category,
+    storage: draft.storage,
     name: name,
     form: draft.form,
     strength: (strength == null || strength.isEmpty) ? null : strength,

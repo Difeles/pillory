@@ -101,9 +101,9 @@ ThemeData buildAppTheme() {
       helperMaxLines: 3,
       errorMaxLines: 3,
       filled: true,
-      fillColor: AppColors.surface,
-      border: field(AppColors.inputBorder),
-      enabledBorder: field(AppColors.inputBorder),
+      fillColor: AppColors.surfaceLow,
+      border: field(AppColors.divider),
+      enabledBorder: field(AppColors.divider),
       disabledBorder: field(AppColors.divider),
       focusedBorder: field(AppColors.primary, 2),
       errorBorder: field(AppColors.danger),
@@ -139,7 +139,7 @@ ThemeData buildAppTheme() {
       ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.surfaceLow,
       selectedColor: AppColors.tint,
       checkmarkColor: AppColors.primaryDeep,
       labelStyle: label.copyWith(color: AppColors.textPrimary),
@@ -155,6 +155,7 @@ ThemeData buildAppTheme() {
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
+        shape: pill,
         minimumSize: tapSize,
         textStyle: label,
         foregroundColor: AppColors.textPrimary,
@@ -166,7 +167,7 @@ ThemeData buildAppTheme() {
     dialogTheme: DialogThemeData(
       backgroundColor: AppColors.surface,
       surfaceTintColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
+      shape: const RoundedSuperellipseBorder(
         borderRadius: BorderRadius.all(Radius.circular(AppRadii.lg)),
       ),
       titleTextStyle: textTheme.titleLarge,

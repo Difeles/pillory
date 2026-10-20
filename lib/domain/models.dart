@@ -11,6 +11,8 @@ class Medicine {
     this.strength,
     this.archivedAt,
     this.lowStockThreshold,
+    this.category,
+    this.storage,
   });
 
   final String id;
@@ -28,6 +30,8 @@ class Medicine {
 
   /// Dosage or concentration as the user wrote it, e.g. "500 мг".
   final String? strength;
+  final MedicineCategory? category;
+  final StorageSpot? storage;
   final DateTime createdAt;
 }
 
@@ -132,9 +136,13 @@ class NewMedicine {
     this.strength,
     this.expiresOn,
     this.lowStockThreshold,
+    this.category,
+    this.storage,
   });
 
   final double? lowStockThreshold;
+  final MedicineCategory? category;
+  final StorageSpot? storage;
   final String name;
   final MedicineForm? form;
   final String? strength;
@@ -151,7 +159,12 @@ class MedicineEdit {
     this.form,
     this.strength,
     this.lowStockThreshold,
+    this.category,
+    this.storage,
   });
+
+  final MedicineCategory? category;
+  final StorageSpot? storage;
 
   /// Null clears the medicine's own threshold.
   final double? lowStockThreshold;

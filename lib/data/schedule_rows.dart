@@ -22,6 +22,7 @@ Schedule scheduleFromRow(ScheduleRow r) => Schedule(
     for (final x in r.dates.split(','))
       if (x.isNotEmpty) _dates.fromSql(x),
   ],
+  mealRelation: r.mealRelation,
   startDate: r.startDate,
   endDate: r.endDate,
   times: [

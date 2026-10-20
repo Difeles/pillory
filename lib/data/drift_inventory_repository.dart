@@ -86,6 +86,8 @@ class DriftInventoryRepository implements InventoryRepository {
               strength: Value(d.strength),
               unit: Value(d.unit),
               lowStockThreshold: Value(d.lowStockThreshold),
+              category: Value(d.category),
+              storage: Value(d.storage),
               createdAt: now,
             ),
           );
@@ -157,6 +159,8 @@ class DriftInventoryRepository implements InventoryRepository {
         form: Value(edit.form),
         strength: Value(strength == null || strength.isEmpty ? null : strength),
         lowStockThreshold: Value(threshold),
+        category: Value(edit.category),
+        storage: Value(edit.storage),
       ),
     );
   }
@@ -355,6 +359,8 @@ class DriftInventoryRepository implements InventoryRepository {
     unit: m.unit ?? '',
     archivedAt: m.archivedAt,
     lowStockThreshold: m.lowStockThreshold,
+    category: m.category,
+    storage: m.storage,
     createdAt: m.createdAt,
   );
 

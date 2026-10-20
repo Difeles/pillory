@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/design_system/widgets/floating_dock.dart';
 import 'package:pillory/app/app.dart';
 import 'package:pillory/app/providers.dart';
 
+import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
 
 void main() {
@@ -13,6 +15,7 @@ void main() {
       ProviderScope(
         overrides: [
           inventoryRepositoryProvider.overrideWithValue(inventory),
+          extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
           scheduleRepositoryProvider.overrideWithValue(
             FakeScheduleRepository(inventory),
           ),
@@ -24,7 +27,7 @@ void main() {
     // The app opens on "Приём"; this flow lives in the cabinet tab.
     await tester.tap(
       find.descendant(
-        of: find.byType(NavigationBar),
+        of: find.byType(FloatingDock),
         matching: find.text('Аптечка'),
       ),
     );
@@ -49,7 +52,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // The name is required.
-    await tester.tap(find.text('Сохранить'));
+    await tester.tap(find.text('Добавить в аптечку'));
     await tester.pumpAndSettle();
     expect(find.text('Введите название'), findsOneWidget);
 
@@ -57,15 +60,25 @@ void main() {
       find.widgetWithText(TextFormField, 'Название *'),
       'Аспирин',
     );
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'Дозировка или концентрация'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Дозировка или концентрация'),
       '500 мг',
+    );
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'Начальное количество'),
+      100,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Начальное количество'),
       '1',
     );
-    await tester.tap(find.text('Сохранить'));
+    await tester.tap(find.text('Добавить в аптечку'));
     await tester.pumpAndSettle();
 
     // Back on the list, the saved medicine is there.
@@ -74,11 +87,17 @@ void main() {
     expect(find.text('500 мг'), findsOneWidget);
     expect(find.text('1 шт.'), findsOneWidget);
 
+    await tester.ensureVisible(find.byTooltip('Увеличить остаток'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Увеличить остаток'));
     await tester.pumpAndSettle();
     expect(find.text('2 шт.'), findsOneWidget);
 
+    await tester.ensureVisible(find.byTooltip('Уменьшить остаток'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Уменьшить остаток'));
+    await tester.ensureVisible(find.byTooltip('Уменьшить остаток'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Уменьшить остаток'));
     await tester.pumpAndSettle();
     expect(find.text('0 шт.'), findsOneWidget);

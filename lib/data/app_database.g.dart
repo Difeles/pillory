@@ -69,6 +69,24 @@ class $MedicinesTable extends Medicines
         type: DriftSqlType.double,
         requiredDuringInsert: false,
       );
+  @override
+  late final GeneratedColumnWithTypeConverter<MedicineCategory?, String>
+  category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<MedicineCategory?>($MedicinesTable.$convertercategoryn);
+  @override
+  late final GeneratedColumnWithTypeConverter<StorageSpot?, String> storage =
+      GeneratedColumn<String>(
+        'storage',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      ).withConverter<StorageSpot?>($MedicinesTable.$converterstoragen);
   static const VerificationMeta _archivedAtMeta = const VerificationMeta(
     'archivedAt',
   );
@@ -99,6 +117,8 @@ class $MedicinesTable extends Medicines
     strength,
     unit,
     lowStockThreshold,
+    category,
+    storage,
     archivedAt,
     createdAt,
   ];
@@ -197,6 +217,18 @@ class $MedicinesTable extends Medicines
         DriftSqlType.double,
         data['${effectivePrefix}low_stock_threshold'],
       ),
+      category: $MedicinesTable.$convertercategoryn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}category'],
+        ),
+      ),
+      storage: $MedicinesTable.$converterstoragen.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}storage'],
+        ),
+      ),
       archivedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}archived_at'],
@@ -217,6 +249,16 @@ class $MedicinesTable extends Medicines
       const EnumNameConverter<MedicineForm>(MedicineForm.values);
   static JsonTypeConverter2<MedicineForm?, String?, String?> $converterformn =
       JsonTypeConverter2.asNullable($converterform);
+  static JsonTypeConverter2<MedicineCategory, String, String>
+  $convertercategory = const EnumNameConverter<MedicineCategory>(
+    MedicineCategory.values,
+  );
+  static JsonTypeConverter2<MedicineCategory?, String?, String?>
+  $convertercategoryn = JsonTypeConverter2.asNullable($convertercategory);
+  static JsonTypeConverter2<StorageSpot, String, String> $converterstorage =
+      const EnumNameConverter<StorageSpot>(StorageSpot.values);
+  static JsonTypeConverter2<StorageSpot?, String?, String?> $converterstoragen =
+      JsonTypeConverter2.asNullable($converterstorage);
 }
 
 class MedicineRow extends DataClass implements Insertable<MedicineRow> {
@@ -232,6 +274,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
   /// Own low-stock threshold, in the medicine's unit. Null: use the app rule
   /// (a share of the biggest package).
   final double? lowStockThreshold;
+  final MedicineCategory? category;
+  final StorageSpot? storage;
 
   /// Set when the medicine is archived: hidden from the cabinet, nothing is
   /// deleted.
@@ -244,6 +288,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     this.strength,
     this.unit,
     this.lowStockThreshold,
+    this.category,
+    this.storage,
     this.archivedAt,
     required this.createdAt,
   });
@@ -266,6 +312,16 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     if (!nullToAbsent || lowStockThreshold != null) {
       map['low_stock_threshold'] = Variable<double>(lowStockThreshold);
     }
+    if (!nullToAbsent || category != null) {
+      map['category'] = Variable<String>(
+        $MedicinesTable.$convertercategoryn.toSql(category),
+      );
+    }
+    if (!nullToAbsent || storage != null) {
+      map['storage'] = Variable<String>(
+        $MedicinesTable.$converterstoragen.toSql(storage),
+      );
+    }
     if (!nullToAbsent || archivedAt != null) {
       map['archived_at'] = Variable<DateTime>(archivedAt);
     }
@@ -285,6 +341,12 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
       lowStockThreshold: lowStockThreshold == null && nullToAbsent
           ? const Value.absent()
           : Value(lowStockThreshold),
+      category: category == null && nullToAbsent
+          ? const Value.absent()
+          : Value(category),
+      storage: storage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(storage),
       archivedAt: archivedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(archivedAt),
@@ -308,6 +370,12 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
       lowStockThreshold: serializer.fromJson<double?>(
         json['lowStockThreshold'],
       ),
+      category: $MedicinesTable.$convertercategoryn.fromJson(
+        serializer.fromJson<String?>(json['category']),
+      ),
+      storage: $MedicinesTable.$converterstoragen.fromJson(
+        serializer.fromJson<String?>(json['storage']),
+      ),
       archivedAt: serializer.fromJson<DateTime?>(json['archivedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -324,6 +392,12 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
       'strength': serializer.toJson<String?>(strength),
       'unit': serializer.toJson<String?>(unit),
       'lowStockThreshold': serializer.toJson<double?>(lowStockThreshold),
+      'category': serializer.toJson<String?>(
+        $MedicinesTable.$convertercategoryn.toJson(category),
+      ),
+      'storage': serializer.toJson<String?>(
+        $MedicinesTable.$converterstoragen.toJson(storage),
+      ),
       'archivedAt': serializer.toJson<DateTime?>(archivedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -336,6 +410,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     Value<String?> strength = const Value.absent(),
     Value<String?> unit = const Value.absent(),
     Value<double?> lowStockThreshold = const Value.absent(),
+    Value<MedicineCategory?> category = const Value.absent(),
+    Value<StorageSpot?> storage = const Value.absent(),
     Value<DateTime?> archivedAt = const Value.absent(),
     DateTime? createdAt,
   }) => MedicineRow(
@@ -347,6 +423,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     lowStockThreshold: lowStockThreshold.present
         ? lowStockThreshold.value
         : this.lowStockThreshold,
+    category: category.present ? category.value : this.category,
+    storage: storage.present ? storage.value : this.storage,
     archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -360,6 +438,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
       lowStockThreshold: data.lowStockThreshold.present
           ? data.lowStockThreshold.value
           : this.lowStockThreshold,
+      category: data.category.present ? data.category.value : this.category,
+      storage: data.storage.present ? data.storage.value : this.storage,
       archivedAt: data.archivedAt.present
           ? data.archivedAt.value
           : this.archivedAt,
@@ -376,6 +456,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
           ..write('strength: $strength, ')
           ..write('unit: $unit, ')
           ..write('lowStockThreshold: $lowStockThreshold, ')
+          ..write('category: $category, ')
+          ..write('storage: $storage, ')
           ..write('archivedAt: $archivedAt, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -390,6 +472,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
     strength,
     unit,
     lowStockThreshold,
+    category,
+    storage,
     archivedAt,
     createdAt,
   );
@@ -403,6 +487,8 @@ class MedicineRow extends DataClass implements Insertable<MedicineRow> {
           other.strength == this.strength &&
           other.unit == this.unit &&
           other.lowStockThreshold == this.lowStockThreshold &&
+          other.category == this.category &&
+          other.storage == this.storage &&
           other.archivedAt == this.archivedAt &&
           other.createdAt == this.createdAt);
 }
@@ -414,6 +500,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
   final Value<String?> strength;
   final Value<String?> unit;
   final Value<double?> lowStockThreshold;
+  final Value<MedicineCategory?> category;
+  final Value<StorageSpot?> storage;
   final Value<DateTime?> archivedAt;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -424,6 +512,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     this.strength = const Value.absent(),
     this.unit = const Value.absent(),
     this.lowStockThreshold = const Value.absent(),
+    this.category = const Value.absent(),
+    this.storage = const Value.absent(),
     this.archivedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -435,6 +525,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     this.strength = const Value.absent(),
     this.unit = const Value.absent(),
     this.lowStockThreshold = const Value.absent(),
+    this.category = const Value.absent(),
+    this.storage = const Value.absent(),
     this.archivedAt = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
@@ -448,6 +540,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     Expression<String>? strength,
     Expression<String>? unit,
     Expression<double>? lowStockThreshold,
+    Expression<String>? category,
+    Expression<String>? storage,
     Expression<DateTime>? archivedAt,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -459,6 +553,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
       if (strength != null) 'strength': strength,
       if (unit != null) 'unit': unit,
       if (lowStockThreshold != null) 'low_stock_threshold': lowStockThreshold,
+      if (category != null) 'category': category,
+      if (storage != null) 'storage': storage,
       if (archivedAt != null) 'archived_at': archivedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -472,6 +568,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     Value<String?>? strength,
     Value<String?>? unit,
     Value<double?>? lowStockThreshold,
+    Value<MedicineCategory?>? category,
+    Value<StorageSpot?>? storage,
     Value<DateTime?>? archivedAt,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -483,6 +581,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
       strength: strength ?? this.strength,
       unit: unit ?? this.unit,
       lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
+      category: category ?? this.category,
+      storage: storage ?? this.storage,
       archivedAt: archivedAt ?? this.archivedAt,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -512,6 +612,16 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
     if (lowStockThreshold.present) {
       map['low_stock_threshold'] = Variable<double>(lowStockThreshold.value);
     }
+    if (category.present) {
+      map['category'] = Variable<String>(
+        $MedicinesTable.$convertercategoryn.toSql(category.value),
+      );
+    }
+    if (storage.present) {
+      map['storage'] = Variable<String>(
+        $MedicinesTable.$converterstoragen.toSql(storage.value),
+      );
+    }
     if (archivedAt.present) {
       map['archived_at'] = Variable<DateTime>(archivedAt.value);
     }
@@ -533,6 +643,8 @@ class MedicinesCompanion extends UpdateCompanion<MedicineRow> {
           ..write('strength: $strength, ')
           ..write('unit: $unit, ')
           ..write('lowStockThreshold: $lowStockThreshold, ')
+          ..write('category: $category, ')
+          ..write('storage: $storage, ')
           ..write('archivedAt: $archivedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -1542,6 +1654,15 @@ class $SchedulesTable extends Schedules
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  @override
+  late final GeneratedColumnWithTypeConverter<MealRelation?, String>
+  mealRelation = GeneratedColumn<String>(
+    'meal_relation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<MealRelation?>($SchedulesTable.$convertermealRelationn);
   static const VerificationMeta _doseMeta = const VerificationMeta('dose');
   @override
   late final GeneratedColumn<double> dose = GeneratedColumn<double>(
@@ -1585,6 +1706,7 @@ class $SchedulesTable extends Schedules
     startDate,
     endDate,
     times,
+    mealRelation,
     dose,
     doseUnit,
     createdAt,
@@ -1703,6 +1825,12 @@ class $SchedulesTable extends Schedules
         DriftSqlType.string,
         data['${effectivePrefix}times'],
       )!,
+      mealRelation: $SchedulesTable.$convertermealRelationn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}meal_relation'],
+        ),
+      ),
       dose: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}dose'],
@@ -1731,6 +1859,14 @@ class $SchedulesTable extends Schedules
       const DateOnlyConverter();
   static TypeConverter<DateTime?, String?> $converterendDaten =
       NullAwareTypeConverter.wrap($converterendDate);
+  static JsonTypeConverter2<MealRelation, String, String>
+  $convertermealRelation = const EnumNameConverter<MealRelation>(
+    MealRelation.values,
+  );
+  static JsonTypeConverter2<MealRelation?, String?, String?>
+  $convertermealRelationn = JsonTypeConverter2.asNullable(
+    $convertermealRelation,
+  );
 }
 
 class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
@@ -1750,6 +1886,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
 
   /// Comma-separated minutes from midnight; empty means one untimed intake.
   final String times;
+  final MealRelation? mealRelation;
 
   /// Per intake; independent of any package quantity.
   final double dose;
@@ -1764,6 +1901,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     required this.startDate,
     this.endDate,
     required this.times,
+    this.mealRelation,
     required this.dose,
     required this.doseUnit,
     required this.createdAt,
@@ -1791,6 +1929,11 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       );
     }
     map['times'] = Variable<String>(times);
+    if (!nullToAbsent || mealRelation != null) {
+      map['meal_relation'] = Variable<String>(
+        $SchedulesTable.$convertermealRelationn.toSql(mealRelation),
+      );
+    }
     map['dose'] = Variable<double>(dose);
     map['dose_unit'] = Variable<String>(doseUnit);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -1809,6 +1952,9 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
           ? const Value.absent()
           : Value(endDate),
       times: Value(times),
+      mealRelation: mealRelation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mealRelation),
       dose: Value(dose),
       doseUnit: Value(doseUnit),
       createdAt: Value(createdAt),
@@ -1831,6 +1977,9 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       endDate: serializer.fromJson<DateTime?>(json['endDate']),
       times: serializer.fromJson<String>(json['times']),
+      mealRelation: $SchedulesTable.$convertermealRelationn.fromJson(
+        serializer.fromJson<String?>(json['mealRelation']),
+      ),
       dose: serializer.fromJson<double>(json['dose']),
       doseUnit: serializer.fromJson<String>(json['doseUnit']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1850,6 +1999,9 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       'startDate': serializer.toJson<DateTime>(startDate),
       'endDate': serializer.toJson<DateTime?>(endDate),
       'times': serializer.toJson<String>(times),
+      'mealRelation': serializer.toJson<String?>(
+        $SchedulesTable.$convertermealRelationn.toJson(mealRelation),
+      ),
       'dose': serializer.toJson<double>(dose),
       'doseUnit': serializer.toJson<String>(doseUnit),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1865,6 +2017,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     DateTime? startDate,
     Value<DateTime?> endDate = const Value.absent(),
     String? times,
+    Value<MealRelation?> mealRelation = const Value.absent(),
     double? dose,
     String? doseUnit,
     DateTime? createdAt,
@@ -1877,6 +2030,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     startDate: startDate ?? this.startDate,
     endDate: endDate.present ? endDate.value : this.endDate,
     times: times ?? this.times,
+    mealRelation: mealRelation.present ? mealRelation.value : this.mealRelation,
     dose: dose ?? this.dose,
     doseUnit: doseUnit ?? this.doseUnit,
     createdAt: createdAt ?? this.createdAt,
@@ -1893,6 +2047,9 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
       times: data.times.present ? data.times.value : this.times,
+      mealRelation: data.mealRelation.present
+          ? data.mealRelation.value
+          : this.mealRelation,
       dose: data.dose.present ? data.dose.value : this.dose,
       doseUnit: data.doseUnit.present ? data.doseUnit.value : this.doseUnit,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -1910,6 +2067,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
           ..write('times: $times, ')
+          ..write('mealRelation: $mealRelation, ')
           ..write('dose: $dose, ')
           ..write('doseUnit: $doseUnit, ')
           ..write('createdAt: $createdAt')
@@ -1927,6 +2085,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     startDate,
     endDate,
     times,
+    mealRelation,
     dose,
     doseUnit,
     createdAt,
@@ -1943,6 +2102,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
           other.times == this.times &&
+          other.mealRelation == this.mealRelation &&
           other.dose == this.dose &&
           other.doseUnit == this.doseUnit &&
           other.createdAt == this.createdAt);
@@ -1957,6 +2117,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
   final Value<DateTime> startDate;
   final Value<DateTime?> endDate;
   final Value<String> times;
+  final Value<MealRelation?> mealRelation;
   final Value<double> dose;
   final Value<String> doseUnit;
   final Value<DateTime> createdAt;
@@ -1970,6 +2131,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
     this.times = const Value.absent(),
+    this.mealRelation = const Value.absent(),
     this.dose = const Value.absent(),
     this.doseUnit = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1984,6 +2146,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
     required DateTime startDate,
     this.endDate = const Value.absent(),
     this.times = const Value.absent(),
+    this.mealRelation = const Value.absent(),
     required double dose,
     required String doseUnit,
     required DateTime createdAt,
@@ -2004,6 +2167,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
     Expression<String>? startDate,
     Expression<String>? endDate,
     Expression<String>? times,
+    Expression<String>? mealRelation,
     Expression<double>? dose,
     Expression<String>? doseUnit,
     Expression<DateTime>? createdAt,
@@ -2018,6 +2182,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
       if (times != null) 'times': times,
+      if (mealRelation != null) 'meal_relation': mealRelation,
       if (dose != null) 'dose': dose,
       if (doseUnit != null) 'dose_unit': doseUnit,
       if (createdAt != null) 'created_at': createdAt,
@@ -2034,6 +2199,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
     Value<DateTime>? startDate,
     Value<DateTime?>? endDate,
     Value<String>? times,
+    Value<MealRelation?>? mealRelation,
     Value<double>? dose,
     Value<String>? doseUnit,
     Value<DateTime>? createdAt,
@@ -2048,6 +2214,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       times: times ?? this.times,
+      mealRelation: mealRelation ?? this.mealRelation,
       dose: dose ?? this.dose,
       doseUnit: doseUnit ?? this.doseUnit,
       createdAt: createdAt ?? this.createdAt,
@@ -2088,6 +2255,11 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
     if (times.present) {
       map['times'] = Variable<String>(times.value);
     }
+    if (mealRelation.present) {
+      map['meal_relation'] = Variable<String>(
+        $SchedulesTable.$convertermealRelationn.toSql(mealRelation.value),
+      );
+    }
     if (dose.present) {
       map['dose'] = Variable<double>(dose.value);
     }
@@ -2114,6 +2286,7 @@ class SchedulesCompanion extends UpdateCompanion<ScheduleRow> {
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
           ..write('times: $times, ')
+          ..write('mealRelation: $mealRelation, ')
           ..write('dose: $dose, ')
           ..write('doseUnit: $doseUnit, ')
           ..write('createdAt: $createdAt, ')
@@ -3160,6 +3333,579 @@ class IntakeDeductionsCompanion extends UpdateCompanion<IntakeDeductionRow> {
   }
 }
 
+class $ShoppingItemsTable extends ShoppingItems
+    with TableInfo<$ShoppingItemsTable, ShoppingItemRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShoppingItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _medicineIdMeta = const VerificationMeta(
+    'medicineId',
+  );
+  @override
+  late final GeneratedColumn<String> medicineId = GeneratedColumn<String>(
+    'medicine_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _checkedMeta = const VerificationMeta(
+    'checked',
+  );
+  @override
+  late final GeneratedColumn<bool> checked = GeneratedColumn<bool>(
+    'checked',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("checked" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    medicineId,
+    checked,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shopping_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ShoppingItemRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('medicine_id')) {
+      context.handle(
+        _medicineIdMeta,
+        medicineId.isAcceptableOrUnknown(data['medicine_id']!, _medicineIdMeta),
+      );
+    }
+    if (data.containsKey('checked')) {
+      context.handle(
+        _checkedMeta,
+        checked.isAcceptableOrUnknown(data['checked']!, _checkedMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ShoppingItemRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ShoppingItemRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      medicineId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}medicine_id'],
+      ),
+      checked: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}checked'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ShoppingItemsTable createAlias(String alias) {
+    return $ShoppingItemsTable(attachedDatabase, alias);
+  }
+}
+
+class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
+  final String id;
+  final String name;
+  final String? medicineId;
+  final bool checked;
+  final DateTime createdAt;
+  const ShoppingItemRow({
+    required this.id,
+    required this.name,
+    this.medicineId,
+    required this.checked,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || medicineId != null) {
+      map['medicine_id'] = Variable<String>(medicineId);
+    }
+    map['checked'] = Variable<bool>(checked);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ShoppingItemsCompanion toCompanion(bool nullToAbsent) {
+    return ShoppingItemsCompanion(
+      id: Value(id),
+      name: Value(name),
+      medicineId: medicineId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(medicineId),
+      checked: Value(checked),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ShoppingItemRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ShoppingItemRow(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      medicineId: serializer.fromJson<String?>(json['medicineId']),
+      checked: serializer.fromJson<bool>(json['checked']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'medicineId': serializer.toJson<String?>(medicineId),
+      'checked': serializer.toJson<bool>(checked),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ShoppingItemRow copyWith({
+    String? id,
+    String? name,
+    Value<String?> medicineId = const Value.absent(),
+    bool? checked,
+    DateTime? createdAt,
+  }) => ShoppingItemRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    medicineId: medicineId.present ? medicineId.value : this.medicineId,
+    checked: checked ?? this.checked,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ShoppingItemRow copyWithCompanion(ShoppingItemsCompanion data) {
+    return ShoppingItemRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      medicineId: data.medicineId.present
+          ? data.medicineId.value
+          : this.medicineId,
+      checked: data.checked.present ? data.checked.value : this.checked,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShoppingItemRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('medicineId: $medicineId, ')
+          ..write('checked: $checked, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, medicineId, checked, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ShoppingItemRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.medicineId == this.medicineId &&
+          other.checked == this.checked &&
+          other.createdAt == this.createdAt);
+}
+
+class ShoppingItemsCompanion extends UpdateCompanion<ShoppingItemRow> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String?> medicineId;
+  final Value<bool> checked;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ShoppingItemsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.medicineId = const Value.absent(),
+    this.checked = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ShoppingItemsCompanion.insert({
+    required String id,
+    required String name,
+    this.medicineId = const Value.absent(),
+    this.checked = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       createdAt = Value(createdAt);
+  static Insertable<ShoppingItemRow> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? medicineId,
+    Expression<bool>? checked,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (medicineId != null) 'medicine_id': medicineId,
+      if (checked != null) 'checked': checked,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ShoppingItemsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String?>? medicineId,
+    Value<bool>? checked,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ShoppingItemsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      medicineId: medicineId ?? this.medicineId,
+      checked: checked ?? this.checked,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (medicineId.present) {
+      map['medicine_id'] = Variable<String>(medicineId.value);
+    }
+    if (checked.present) {
+      map['checked'] = Variable<bool>(checked.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShoppingItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('medicineId: $medicineId, ')
+          ..write('checked: $checked, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AppSettingsTable extends AppSettings
+    with TableInfo<$AppSettingsTable, AppSettingRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AppSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [key, value];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'app_settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AppSettingRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  AppSettingRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AppSettingRow(
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
+      )!,
+    );
+  }
+
+  @override
+  $AppSettingsTable createAlias(String alias) {
+    return $AppSettingsTable(attachedDatabase, alias);
+  }
+}
+
+class AppSettingRow extends DataClass implements Insertable<AppSettingRow> {
+  final String key;
+  final String value;
+  const AppSettingRow({required this.key, required this.value});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
+    return map;
+  }
+
+  AppSettingsCompanion toCompanion(bool nullToAbsent) {
+    return AppSettingsCompanion(key: Value(key), value: Value(value));
+  }
+
+  factory AppSettingRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AppSettingRow(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
+    };
+  }
+
+  AppSettingRow copyWith({String? key, String? value}) =>
+      AppSettingRow(key: key ?? this.key, value: value ?? this.value);
+  AppSettingRow copyWithCompanion(AppSettingsCompanion data) {
+    return AppSettingRow(
+      key: data.key.present ? data.key.value : this.key,
+      value: data.value.present ? data.value.value : this.value,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSettingRow(')
+          ..write('key: $key, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AppSettingRow &&
+          other.key == this.key &&
+          other.value == this.value);
+}
+
+class AppSettingsCompanion extends UpdateCompanion<AppSettingRow> {
+  final Value<String> key;
+  final Value<String> value;
+  final Value<int> rowid;
+  const AppSettingsCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AppSettingsCompanion.insert({
+    required String key,
+    required String value,
+    this.rowid = const Value.absent(),
+  }) : key = Value(key),
+       value = Value(value);
+  static Insertable<AppSettingRow> custom({
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AppSettingsCompanion copyWith({
+    Value<String>? key,
+    Value<String>? value,
+    Value<int>? rowid,
+  }) {
+    return AppSettingsCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSettingsCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3174,6 +3920,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $IntakeDeductionsTable intakeDeductions = $IntakeDeductionsTable(
     this,
   );
+  late final $ShoppingItemsTable shoppingItems = $ShoppingItemsTable(this);
+  late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final Index idxPackagesMedicine = Index(
     'idx_packages_medicine',
     'CREATE INDEX idx_packages_medicine ON medicine_packages (medicine_id)',
@@ -3201,6 +3949,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     schedules,
     intakeLogs,
     intakeDeductions,
+    shoppingItems,
+    appSettings,
     idxPackagesMedicine,
     idxTransactionsPackage,
     idxSchedulesMedicine,
@@ -3260,6 +4010,8 @@ typedef $$MedicinesTableCreateCompanionBuilder = MedicinesCompanion Function({
   Value<String?> strength,
   Value<String?> unit,
   Value<double?> lowStockThreshold,
+  Value<MedicineCategory?> category,
+  Value<StorageSpot?> storage,
   Value<DateTime?> archivedAt,
   required DateTime createdAt,
   Value<int> rowid,
@@ -3271,6 +4023,8 @@ typedef $$MedicinesTableUpdateCompanionBuilder = MedicinesCompanion Function({
   Value<String?> strength,
   Value<String?> unit,
   Value<double?> lowStockThreshold,
+  Value<MedicineCategory?> category,
+  Value<StorageSpot?> storage,
   Value<DateTime?> archivedAt,
   Value<DateTime> createdAt,
   Value<int> rowid,
@@ -3357,6 +4111,18 @@ class $$MedicinesTableFilterComposer
   ColumnFilters<double> get lowStockThreshold => $composableBuilder(
     column: $table.lowStockThreshold,
     builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<MedicineCategory?, MedicineCategory, String>
+  get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<StorageSpot?, StorageSpot, String>
+  get storage => $composableBuilder(
+    column: $table.storage,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   ColumnFilters<DateTime> get archivedAt => $composableBuilder(
@@ -3459,6 +4225,16 @@ class $$MedicinesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storage => $composableBuilder(
+    column: $table.storage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get archivedAt => $composableBuilder(
     column: $table.archivedAt,
     builder: (column) => ColumnOrderings(column),
@@ -3498,6 +4274,12 @@ class $$MedicinesTableAnnotationComposer
     column: $table.lowStockThreshold,
     builder: (column) => column,
   );
+
+  GeneratedColumnWithTypeConverter<MedicineCategory?, String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<StorageSpot?, String> get storage =>
+      $composableBuilder(column: $table.storage, builder: (column) => column);
 
   GeneratedColumn<DateTime> get archivedAt => $composableBuilder(
     column: $table.archivedAt,
@@ -3595,6 +4377,8 @@ class $$MedicinesTableTableManager
                 Value<String?> strength = const Value.absent(),
                 Value<String?> unit = const Value.absent(),
                 Value<double?> lowStockThreshold = const Value.absent(),
+                Value<MedicineCategory?> category = const Value.absent(),
+                Value<StorageSpot?> storage = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3605,6 +4389,8 @@ class $$MedicinesTableTableManager
                 strength: strength,
                 unit: unit,
                 lowStockThreshold: lowStockThreshold,
+                category: category,
+                storage: storage,
                 archivedAt: archivedAt,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -3617,6 +4403,8 @@ class $$MedicinesTableTableManager
                 Value<String?> strength = const Value.absent(),
                 Value<String?> unit = const Value.absent(),
                 Value<double?> lowStockThreshold = const Value.absent(),
+                Value<MedicineCategory?> category = const Value.absent(),
+                Value<StorageSpot?> storage = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
@@ -3627,6 +4415,8 @@ class $$MedicinesTableTableManager
                 strength: strength,
                 unit: unit,
                 lowStockThreshold: lowStockThreshold,
+                category: category,
+                storage: storage,
                 archivedAt: archivedAt,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -4659,6 +5449,7 @@ typedef $$SchedulesTableCreateCompanionBuilder = SchedulesCompanion Function({
   required DateTime startDate,
   Value<DateTime?> endDate,
   Value<String> times,
+  Value<MealRelation?> mealRelation,
   required double dose,
   required String doseUnit,
   required DateTime createdAt,
@@ -4673,6 +5464,7 @@ typedef $$SchedulesTableUpdateCompanionBuilder = SchedulesCompanion Function({
   Value<DateTime> startDate,
   Value<DateTime?> endDate,
   Value<String> times,
+  Value<MealRelation?> mealRelation,
   Value<double> dose,
   Value<String> doseUnit,
   Value<DateTime> createdAt,
@@ -4764,6 +5556,12 @@ class $$SchedulesTableFilterComposer
   ColumnFilters<String> get times => $composableBuilder(
     column: $table.times,
     builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<MealRelation?, MealRelation, String>
+  get mealRelation => $composableBuilder(
+    column: $table.mealRelation,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   ColumnFilters<double> get dose => $composableBuilder(
@@ -4874,6 +5672,11 @@ class $$SchedulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get mealRelation => $composableBuilder(
+    column: $table.mealRelation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get dose => $composableBuilder(
     column: $table.dose,
     builder: (column) => ColumnOrderings(column),
@@ -4942,6 +5745,12 @@ class $$SchedulesTableAnnotationComposer
 
   GeneratedColumn<String> get times =>
       $composableBuilder(column: $table.times, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<MealRelation?, String> get mealRelation =>
+      $composableBuilder(
+        column: $table.mealRelation,
+        builder: (column) => column,
+      );
 
   GeneratedColumn<double> get dose =>
       $composableBuilder(column: $table.dose, builder: (column) => column);
@@ -5037,6 +5846,7 @@ class $$SchedulesTableTableManager
                 Value<DateTime> startDate = const Value.absent(),
                 Value<DateTime?> endDate = const Value.absent(),
                 Value<String> times = const Value.absent(),
+                Value<MealRelation?> mealRelation = const Value.absent(),
                 Value<double> dose = const Value.absent(),
                 Value<String> doseUnit = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -5050,6 +5860,7 @@ class $$SchedulesTableTableManager
                 startDate: startDate,
                 endDate: endDate,
                 times: times,
+                mealRelation: mealRelation,
                 dose: dose,
                 doseUnit: doseUnit,
                 createdAt: createdAt,
@@ -5065,6 +5876,7 @@ class $$SchedulesTableTableManager
                 required DateTime startDate,
                 Value<DateTime?> endDate = const Value.absent(),
                 Value<String> times = const Value.absent(),
+                Value<MealRelation?> mealRelation = const Value.absent(),
                 required double dose,
                 required String doseUnit,
                 required DateTime createdAt,
@@ -5078,6 +5890,7 @@ class $$SchedulesTableTableManager
                 startDate: startDate,
                 endDate: endDate,
                 times: times,
+                mealRelation: mealRelation,
                 dose: dose,
                 doseUnit: doseUnit,
                 createdAt: createdAt,
@@ -6101,6 +6914,364 @@ typedef $$IntakeDeductionsTableProcessedTableManager =
       IntakeDeductionRow,
       PrefetchHooks Function({bool intakeLogId, bool packageId})
     >;
+typedef $$ShoppingItemsTableCreateCompanionBuilder =
+    ShoppingItemsCompanion Function({
+      required String id,
+      required String name,
+      Value<String?> medicineId,
+      Value<bool> checked,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ShoppingItemsTableUpdateCompanionBuilder =
+    ShoppingItemsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String?> medicineId,
+      Value<bool> checked,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ShoppingItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $ShoppingItemsTable> {
+  $$ShoppingItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get medicineId => $composableBuilder(
+    column: $table.medicineId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get checked => $composableBuilder(
+    column: $table.checked,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ShoppingItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ShoppingItemsTable> {
+  $$ShoppingItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get medicineId => $composableBuilder(
+    column: $table.medicineId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get checked => $composableBuilder(
+    column: $table.checked,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ShoppingItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ShoppingItemsTable> {
+  $$ShoppingItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get medicineId => $composableBuilder(
+    column: $table.medicineId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get checked =>
+      $composableBuilder(column: $table.checked, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ShoppingItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ShoppingItemsTable,
+          ShoppingItemRow,
+          $$ShoppingItemsTableFilterComposer,
+          $$ShoppingItemsTableOrderingComposer,
+          $$ShoppingItemsTableAnnotationComposer,
+          $$ShoppingItemsTableCreateCompanionBuilder,
+          $$ShoppingItemsTableUpdateCompanionBuilder,
+          (
+            ShoppingItemRow,
+            BaseReferences<_$AppDatabase, $ShoppingItemsTable, ShoppingItemRow>,
+          ),
+          ShoppingItemRow,
+          PrefetchHooks Function()
+        > {
+  $$ShoppingItemsTableTableManager(_$AppDatabase db, $ShoppingItemsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ShoppingItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ShoppingItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ShoppingItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> medicineId = const Value.absent(),
+                Value<bool> checked = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ShoppingItemsCompanion(
+                id: id,
+                name: name,
+                medicineId: medicineId,
+                checked: checked,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<String?> medicineId = const Value.absent(),
+                Value<bool> checked = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ShoppingItemsCompanion.insert(
+                id: id,
+                name: name,
+                medicineId: medicineId,
+                checked: checked,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ShoppingItemsTable, ShoppingItemRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $ShoppingItemsTable,
+                    ShoppingItemRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ShoppingItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ShoppingItemsTable,
+      ShoppingItemRow,
+      $$ShoppingItemsTableFilterComposer,
+      $$ShoppingItemsTableOrderingComposer,
+      $$ShoppingItemsTableAnnotationComposer,
+      $$ShoppingItemsTableCreateCompanionBuilder,
+      $$ShoppingItemsTableUpdateCompanionBuilder,
+      (
+        ShoppingItemRow,
+        BaseReferences<_$AppDatabase, $ShoppingItemsTable, ShoppingItemRow>,
+      ),
+      ShoppingItemRow,
+      PrefetchHooks Function()
+    >;
+typedef $$AppSettingsTableCreateCompanionBuilder =
+    AppSettingsCompanion Function({
+      required String key,
+      required String value,
+      Value<int> rowid,
+    });
+typedef $$AppSettingsTableUpdateCompanionBuilder =
+    AppSettingsCompanion Function({
+      Value<String> key,
+      Value<String> value,
+      Value<int> rowid,
+    });
+
+class $$AppSettingsTableFilterComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AppSettingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AppSettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+}
+
+class $$AppSettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AppSettingsTable,
+          AppSettingRow,
+          $$AppSettingsTableFilterComposer,
+          $$AppSettingsTableOrderingComposer,
+          $$AppSettingsTableAnnotationComposer,
+          $$AppSettingsTableCreateCompanionBuilder,
+          $$AppSettingsTableUpdateCompanionBuilder,
+          (
+            AppSettingRow,
+            BaseReferences<_$AppDatabase, $AppSettingsTable, AppSettingRow>,
+          ),
+          AppSettingRow,
+          PrefetchHooks Function()
+        > {
+  $$AppSettingsTableTableManager(_$AppDatabase db, $AppSettingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AppSettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppSettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppSettingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> key = const Value.absent(),
+            Value<String> value = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) => AppSettingsCompanion(key: key, value: value, rowid: rowid),
+          createCompanionCallback:
+              ({
+                required String key,
+                required String value,
+                Value<int> rowid = const Value.absent(),
+              }) => AppSettingsCompanion.insert(
+                key: key,
+                value: value,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AppSettingsTable, AppSettingRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $AppSettingsTable,
+                    AppSettingRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AppSettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AppSettingsTable,
+      AppSettingRow,
+      $$AppSettingsTableFilterComposer,
+      $$AppSettingsTableOrderingComposer,
+      $$AppSettingsTableAnnotationComposer,
+      $$AppSettingsTableCreateCompanionBuilder,
+      $$AppSettingsTableUpdateCompanionBuilder,
+      (
+        AppSettingRow,
+        BaseReferences<_$AppDatabase, $AppSettingsTable, AppSettingRow>,
+      ),
+      AppSettingRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6117,4 +7288,8 @@ class $AppDatabaseManager {
       $$IntakeLogsTableTableManager(_db, _db.intakeLogs);
   $$IntakeDeductionsTableTableManager get intakeDeductions =>
       $$IntakeDeductionsTableTableManager(_db, _db.intakeDeductions);
+  $$ShoppingItemsTableTableManager get shoppingItems =>
+      $$ShoppingItemsTableTableManager(_db, _db.shoppingItems);
+  $$AppSettingsTableTableManager get appSettings =>
+      $$AppSettingsTableTableManager(_db, _db.appSettings);
 }

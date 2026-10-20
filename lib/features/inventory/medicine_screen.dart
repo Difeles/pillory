@@ -122,6 +122,27 @@ class MedicineScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (medicine.category != null || medicine.storage != null) ...[
+                  const SizedBox(height: AppSpacing.ms),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      if (medicine.category != null)
+                        StatusBadge(
+                          label: medicine.category!.label,
+                          icon: Icons.label_outline,
+                          tone: StatusTone.warning,
+                        ),
+                      if (medicine.storage != null)
+                        StatusBadge(
+                          label: medicine.storage!.label,
+                          icon: Icons.place_outlined,
+                          tone: StatusTone.accent,
+                        ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 // One announcement for the caption and the number.
                 MergeSemantics(
@@ -145,6 +166,10 @@ class MedicineScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (!archived && stock.primaryPackage.initialQuantity <= 30) ...[
+            const SectionHeader(title: 'Остаток в упаковке'),
+            AppCard(child: _PillGrid(package: stock.primaryPackage)),
+          ],
           const SectionHeader(title: 'Упаковки'),
           for (final p in stock.packages)
             Padding(
@@ -155,12 +180,27 @@ class MedicineScreen extends ConsumerWidget {
                 unit: stock.unit,
               ),
             ),
-          if (!archived)
+          if (!archived) ...[
             FilledButton.tonalIcon(
               onPressed: () => _addPackage(context, ref, stock),
               icon: const Icon(Icons.add),
               label: const Text('Добавить упаковку'),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                await ref
+                    .read(extrasRepositoryProvider)
+                    .addShopping(medicine.name, medicineId: medicine.id);
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Добавлено в список покупок')),
+                );
+              },
+              icon: const Icon(Icons.shopping_bag_outlined),
+              label: const Text('В список покупок'),
+            ),
+          ],
         ],
       ),
     );
@@ -549,4 +589,39 @@ class _CorrectDialogState extends State<_CorrectDialog> {
       ),
     ],
   );
+}
+
+/// One icon per unit of the package: full ones left, used ones greyed.
+class _PillGrid extends StatelessWidget {
+  const _PillGrid({required this.package});
+
+  final MedicinePackage package;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = package.initialQuantity.ceil();
+    final left = package.quantity.ceil().clamp(0, total);
+    return Semantics(
+      label: 'Осталось $left из $total',
+      excludeSemantics: true,
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: [
+          for (var i = 0; i < total; i++)
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: i < left
+                  ? AppColors.peach
+                  : AppColors.surfaceMid,
+              child: Icon(
+                i < left ? Icons.medication : Icons.check,
+                size: 18,
+                color: i < left ? AppColors.primary : AppColors.textSecondary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

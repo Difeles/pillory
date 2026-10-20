@@ -40,6 +40,9 @@ class Medicines extends Table {
   /// (a share of the biggest package).
   RealColumn get lowStockThreshold => real().nullable()();
 
+  TextColumn get category => textEnum<MedicineCategory>().nullable()();
+  TextColumn get storage => textEnum<StorageSpot>().nullable()();
+
   /// Set when the medicine is archived: hidden from the cabinet, nothing is
   /// deleted.
   DateTimeColumn get archivedAt => dateTime().nullable()();
@@ -106,6 +109,8 @@ class Schedules extends Table {
   /// Comma-separated minutes from midnight; empty means one untimed intake.
   TextColumn get times => text().withDefault(const Constant(''))();
 
+  TextColumn get mealRelation => textEnum<MealRelation>().nullable()();
+
   /// Per intake; independent of any package quantity.
   RealColumn get dose => real().check(dose.isBiggerThanValue(0))();
   TextColumn get doseUnit => text().withLength(min: 1)();
@@ -171,4 +176,28 @@ class IntakeDeductions extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+/// A manually added shopping-list entry. [medicineId] is plain text, not a
+/// reference: the entry outlives a deleted or restored medicine.
+@DataClassName('ShoppingItemRow')
+class ShoppingItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().withLength(min: 1)();
+  TextColumn get medicineId => text().nullable()();
+  BoolColumn get checked => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Key-value app settings (profile name, switches).
+@DataClassName('AppSettingRow')
+class AppSettings extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {key};
 }

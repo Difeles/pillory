@@ -10,14 +10,8 @@ import 'package:pillory/domain/schedule.dart';
 import 'package:pillory/features/today/today_providers.dart';
 import 'package:pillory/features/today/today_screen.dart';
 
+import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
-
-/// The "next" intake depends on the clock, so times are picked around now;
-/// a test that cannot place a time on the right side of now is skipped.
-int get _nowMinute {
-  final now = DateTime.now();
-  return now.hour * 60 + now.minute;
-}
 
 void main() {
   late FakeInventoryRepository inventory;
@@ -30,6 +24,7 @@ void main() {
     container = ProviderContainer(
       overrides: [
         inventoryRepositoryProvider.overrideWithValue(inventory),
+        extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
         scheduleRepositoryProvider.overrideWithValue(schedules),
       ],
     );
@@ -76,75 +71,42 @@ void main() {
     (w) => w is AppCard && w.variant == AppCardVariant.highlighted,
   );
 
-  group('next intake', () {
-    testWidgets('is the first unmarked one still to come today', (
-      tester,
-    ) async {
-      if (_nowMinute == 0 || _nowMinute >= 1439) return;
-      await schedule('Аспирин', times: const [0, 1439]);
+  group('day plan', () {
+    testWidgets('counts the taken intakes', (tester) async {
+      await schedule('Аспирин', times: const [8 * 60, 20 * 60]);
       await pump(tester);
+      expect(find.text('0 из 2 принято'), findsOneWidget);
 
-      expect(find.text('СЛЕДУЮЩИЙ'), findsOneWidget);
-      // 23:59 has the card with full buttons; 00:00 has passed, so it is a
-      // plain row even though it is unmarked.
-      final card = find.ancestor(
-        of: find.text('СЛЕДУЮЩИЙ'),
-        matching: find.byType(AppCard),
-      );
-      expect(
-        find.descendant(of: card, matching: find.text('Принято')),
-        findsOneWidget,
-      );
-      expect(find.byTooltip('Принято'), findsOneWidget);
-      expect(find.text('00:00'), findsOneWidget);
-      expect(find.text('23:59'), findsOneWidget);
-    });
-
-    testWidgets('a passed time is never shown as next', (tester) async {
-      if (_nowMinute == 0) return;
-      await schedule('Аспирин', times: const [0]);
-      await pump(tester);
-      expect(find.text('СЛЕДУЮЩИЙ'), findsNothing);
-      expect(find.byTooltip('Принято'), findsOneWidget);
-    });
-
-    testWidgets('marking it leaves no card behind', (tester) async {
-      if (_nowMinute >= 1439) return;
-      await schedule('Аспирин', times: const [1439]);
-      await pump(tester);
-      await tester.tap(find.widgetWithText(FilledButton, 'Принято'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Принять').first);
       await tester.pumpAndSettle();
-      expect(find.text('СЛЕДУЮЩИЙ'), findsNothing);
-      expect(find.text('Принято'), findsOneWidget); // the status badge
+      expect(find.text('1 из 2 принято'), findsOneWidget);
+      expect(find.text('50%'), findsOneWidget);
+      // A taken intake is tinted and offers undo instead of the buttons.
       expect(find.byTooltip('Отменить отметку'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Принять'), findsOneWidget);
     });
 
-    testWidgets('only today has one', (tester) async {
-      if (_nowMinute >= 1439) return;
-      await schedule('Аспирин', times: const [1439]);
+    testWidgets('groups intakes by part of the day', (tester) async {
+      await schedule('Аспирин', times: const [8 * 60, 13 * 60, 20 * 60]);
+      await schedule('Витамин D');
       await pump(tester);
-      await tester.tap(find.byTooltip('Следующий день'));
-      await tester.pumpAndSettle();
-      expect(find.text('СЛЕДУЮЩИЙ'), findsNothing);
-      await tester.tap(find.byTooltip('Предыдущий день'));
-      await tester.tap(find.byTooltip('Предыдущий день'));
-      await tester.pumpAndSettle();
-      expect(find.text('СЛЕДУЮЩИЙ'), findsNothing);
+      for (final h in ['Утро  08:00', 'День  13:00', 'Вечер  20:00']) {
+        expect(find.text(h), findsOneWidget, reason: h);
+      }
+      expect(find.text('В течение дня'), findsOneWidget);
     });
   });
 
   testWidgets('times of one medicine are marked independently', (tester) async {
-    if (_nowMinute < 2) return;
     await schedule('Аспирин', times: const [0, 1]);
     await pump(tester);
 
-    await tester.tap(find.byTooltip('Пропустить').first);
+    await tester.tap(find.text('Пропустить').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Принято'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Принять'));
     await tester.pumpAndSettle();
 
     expect(find.text('Пропущено'), findsOneWidget);
-    expect(find.text('Принято'), findsOneWidget);
     expect(find.byTooltip('Отменить отметку'), findsNWidgets(2));
     // Skipped reads differently from taken, not only by its badge.
     final names = tester.widgetList<Text>(find.text('Аспирин')).toList();
@@ -160,14 +122,14 @@ void main() {
     await schedule('Витамин D');
     await schedule('Аспирин', times: const [0]);
     await pump(tester);
-    expect(find.text('В ТЕЧЕНИЕ ДНЯ'), findsOneWidget);
+    expect(find.text('В течение дня'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('Аспирин')).dy,
-      lessThan(tester.getTopLeft(find.text('В ТЕЧЕНИЕ ДНЯ')).dy),
+      lessThan(tester.getTopLeft(find.text('В течение дня')).dy),
     );
     expect(
       tester.getTopLeft(find.text('Витамин D')).dy,
-      greaterThan(tester.getTopLeft(find.text('В ТЕЧЕНИЕ ДНЯ')).dy),
+      greaterThan(tester.getTopLeft(find.text('В течение дня')).dy),
     );
   });
 
