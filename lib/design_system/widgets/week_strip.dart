@@ -46,6 +46,7 @@ class WeekStrip extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: _cell(
+                  context,
                   DateTime(monday.year, monday.month, monday.day + i),
                   i,
                 ),
@@ -56,7 +57,7 @@ class WeekStrip extends StatelessWidget {
     );
   }
 
-  Widget _cell(DateTime day, int i) {
+  Widget _cell(BuildContext context, DateTime day, int i) {
     final active = day == selected;
     return Semantics(
       button: true,
@@ -66,15 +67,17 @@ class WeekStrip extends StatelessWidget {
         child: GestureDetector(
           onTap: () => onSelected(day),
           child: AnimatedContainer(
-            duration: AppMotion.base,
+            duration: motionOf(context, AppMotion.base),
             curve: AppMotion.smooth,
             decoration: ShapeDecoration(
               shape: const StadiumBorder(),
-              color: active ? AppColors.primary : AppColors.surfaceLow,
+              color: active
+                  ? context.colors.primary
+                  : context.colors.surfaceLow,
               shadows: active
-                  ? const [
+                  ? [
                       BoxShadow(
-                        color: Color(0x665848C5),
+                        color: context.colors.primary.withValues(alpha: .4),
                         blurRadius: 8,
                         offset: Offset(0, 3),
                       ),
@@ -87,17 +90,19 @@ class WeekStrip extends StatelessWidget {
                 children: [
                   Text(
                     _short[i],
-                    style: AppType.caption.copyWith(
-                      color: active ? AppColors.tint : AppColors.textSecondary,
-                      fontWeight: FontWeight.w700,
+                    style: AppType.captionStrong.copyWith(
+                      color: active
+                          ? context.colors.onPrimary.withValues(alpha: .85)
+                          : context.colors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${day.day}',
-                    style: AppType.label.copyWith(
-                      fontSize: 16,
-                      color: active ? Colors.white : AppColors.textPrimary,
+                    style: AppType.cardTitle.copyWith(
+                      color: active
+                          ? context.colors.onPrimary
+                          : context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -107,7 +112,9 @@ class WeekStrip extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: done(day)
-                          ? (active ? Colors.white : AppColors.success)
+                          ? (active
+                                ? context.colors.onPrimary
+                                : context.colors.success)
                           : Colors.transparent,
                     ),
                   ),

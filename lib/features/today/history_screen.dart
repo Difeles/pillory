@@ -14,7 +14,6 @@ class HistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final text = Theme.of(context).textTheme;
     final history = ref.watch(historyProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('История')),
@@ -32,8 +31,8 @@ class HistoryScreen extends ConsumerWidget {
                 for (final d in days) ...[
                   Text(
                     formatDay(d),
-                    style: text.titleMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                    style: AppType.cardTitle.copyWith(
+                      color: context.colors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),

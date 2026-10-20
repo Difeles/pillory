@@ -44,24 +44,24 @@ class AppCard extends StatelessWidget {
     final shape = RoundedSuperellipseBorder(
       borderRadius: BorderRadius.circular(AppRadii.md),
       side: switch (variant) {
-        AppCardVariant.highlighted => const BorderSide(
-          color: AppColors.primary,
+        AppCardVariant.highlighted => BorderSide(
+          color: context.colors.primary,
           width: 2,
         ),
-        AppCardVariant.outlined => const BorderSide(color: AppColors.divider),
+        AppCardVariant.outlined => BorderSide(color: context.colors.divider),
         _ => BorderSide.none,
       },
     );
     final card = DecoratedBox(
       decoration: ShapeDecoration(
         shape: shape,
-        shadows: flat ? null : AppShadows.card,
+        shadows: flat ? null : context.colors.cardShadow,
       ),
       child: Material(
         color: switch (variant) {
-          AppCardVariant.muted => AppColors.surfaceLow,
-          AppCardVariant.done => AppColors.successTint,
-          _ => AppColors.surface,
+          AppCardVariant.muted => context.colors.surfaceLow,
+          AppCardVariant.done => context.colors.successTint,
+          _ => context.colors.surface,
         },
         shape: shape,
         clipBehavior: Clip.antiAlias,

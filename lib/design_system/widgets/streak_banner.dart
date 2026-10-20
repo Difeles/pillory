@@ -9,6 +9,9 @@ String _days(int n) {
   return '$n дней';
 }
 
+const _flame = Color(0xFFF0845C);
+const _onPeach = Color(0xFF79422C);
+
 /// The warm banner celebrating a run of fully taken days.
 class StreakBanner extends StatelessWidget {
   const StreakBanner({super.key, required this.days});
@@ -23,21 +26,26 @@ class StreakBanner extends StatelessWidget {
         shape: RoundedSuperellipseBorder(
           borderRadius: BorderRadius.circular(AppRadii.lg),
         ),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFDBCE), AppColors.tint, Color(0xFFBFF3E1)],
+        gradient: LinearGradient(
+          colors: [
+            context.colors.warningTint,
+            context.colors.tint,
+            context.colors.successTint,
+          ],
         ),
-        shadows: AppShadows.card,
+        shadows: context.colors.cardShadow,
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 24,
-              backgroundColor: Colors.white70,
+              backgroundColor: context.colors.surface.withValues(alpha: .7),
               child: Icon(
                 Icons.local_fire_department,
-                color: AppColors.warning,
+                // A soft peach flame.
+                color: _flame,
                 size: 28,
               ),
             ),
@@ -52,9 +60,9 @@ class StreakBanner extends StatelessWidget {
                     children: [
                       Text('Огненный страйк!', style: AppType.label),
                       DecoratedBox(
-                        decoration: const ShapeDecoration(
+                        decoration: ShapeDecoration(
                           shape: StadiumBorder(),
-                          color: AppColors.warning,
+                          color: AppColors.peach,
                         ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -63,9 +71,9 @@ class StreakBanner extends StatelessWidget {
                           ),
                           child: Text(
                             _days(days),
-                            style: AppType.caption.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
+                            // Dark on the peach pill in both appearances.
+                            style: AppType.captionStrong.copyWith(
+                              color: _onPeach,
                             ),
                           ),
                         ),

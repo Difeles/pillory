@@ -70,9 +70,9 @@ class _Line extends StatelessWidget {
   const _Line();
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
     width: AppSizes.timelineLine,
-    child: ColoredBox(color: AppColors.divider),
+    child: ColoredBox(color: context.colors.divider),
   );
 }
 
@@ -92,38 +92,36 @@ class _Dot extends StatelessWidget {
         height: size,
         decoration: switch (state) {
           TimelineDotState.pending => BoxDecoration(
-            color: AppColors.background,
+            color: context.colors.background,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.inputBorder, width: 1.5),
+            border: Border.all(color: context.colors.inputBorder, width: 1.5),
           ),
           TimelineDotState.next => BoxDecoration(
-            color: AppColors.primary,
+            color: context.colors.primary,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.surface, width: 2),
-            boxShadow: const [
-              BoxShadow(color: AppColors.tint, spreadRadius: 3),
-            ],
+            border: Border.all(color: context.colors.surface, width: 2),
+            boxShadow: [BoxShadow(color: context.colors.tint, spreadRadius: 3)],
           ),
-          TimelineDotState.done => const BoxDecoration(
-            color: AppColors.success,
+          TimelineDotState.done => BoxDecoration(
+            color: context.colors.success,
             shape: BoxShape.circle,
           ),
           TimelineDotState.skipped => BoxDecoration(
-            color: AppColors.background,
+            color: context.colors.background,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.textSecondary, width: 1.5),
+            border: Border.all(color: context.colors.textSecondary, width: 1.5),
           ),
         },
         child: switch (state) {
-          TimelineDotState.done => const Icon(
+          TimelineDotState.done => Icon(
             Icons.check,
             size: size - 3,
-            color: Colors.white,
+            color: context.colors.onSuccess,
           ),
-          TimelineDotState.skipped => const Icon(
+          TimelineDotState.skipped => Icon(
             Icons.remove,
             size: size - 4,
-            color: AppColors.textSecondary,
+            color: context.colors.textSecondary,
           ),
           _ => null,
         },

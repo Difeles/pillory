@@ -3,10 +3,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../tokens.dart';
+import '../motion.dart';
 
 /// Shows a short confetti burst over the whole screen; fire and forget.
 void showConfetti(BuildContext context) {
-  if (MediaQuery.disableAnimationsOf(context)) return;
+  if (reduceMotion(context)) return;
   final overlay = Overlay.of(context, rootOverlay: true);
   late final OverlayEntry entry;
   entry = OverlayEntry(

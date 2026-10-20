@@ -112,9 +112,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
       Scrollable.ensureVisible(
         target,
         alignment: 0.3,
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : AppMotion.base,
+        duration: reduceMotion(context) ? Duration.zero : AppMotion.base,
         curve: AppMotion.curve,
       );
     });
@@ -279,6 +277,10 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     for (final i in list) {
       groups.putIfAbsent(_Period.of(i.minuteOfDay), () => []).add(i);
     }
+    // One prominent action per view: only the next dose is a filled button.
+    final next = list
+        .where((i) => i.status == IntakeStatus.pending)
+        .firstOrNull;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -286,7 +288,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
         for (final p in _Period.values)
           if (groups[p] case final items?) ...[
             _PeriodHeader(period: p, intakes: items),
-            for (final i in items) _card(i, today),
+            for (final i in items)
+              _card(i, today, prominent: identical(i, next)),
           ],
         const SizedBox(height: AppSpacing.md),
         _TipCard(
@@ -296,7 +299,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     );
   }
 
-  Widget _card(DayIntake i, DateTime today) {
+  Widget _card(DayIntake i, DateTime today, {required bool prominent}) {
     final highlighted =
         _highlight?.scheduleId == i.schedule.id &&
         _highlight?.minuteOfDay == i.minuteOfDay;
@@ -306,6 +309,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
       child: _IntakeCard(
         intake: i,
         highlighted: highlighted,
+        prominent: prominent || highlighted,
         // Marking a future dose as taken makes no sense.
         canMark: !_day.isAfter(today),
         // Only the live version of a schedule can be changed; earlier ones
@@ -382,7 +386,11 @@ class _PeriodHeader extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: Icon(period.icon, size: 20, color: AppColors.warning),
+                child: Icon(
+                  period.icon,
+                  size: 20,
+                  color: context.colors.warning,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -421,10 +429,8 @@ class _PlanCard extends StatelessWidget {
               children: [
                 Text(
                   'ПЛАН ДНЯ',
-                  style: AppType.caption.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
+                  style: AppType.overline.copyWith(
+                    color: context.colors.primary,
                   ),
                 ),
                 Text('$done из $total принято', style: AppType.title),
@@ -433,7 +439,7 @@ class _PlanCard extends StatelessWidget {
                       ? 'Всё принято — отличный день!'
                       : 'Осталось принять: $left',
                   style: AppType.caption.copyWith(
-                    color: AppColors.textSecondary,
+                    color: context.colors.textSecondary,
                   ),
                 ),
               ],
@@ -462,9 +468,9 @@ class _TipCard extends StatelessWidget {
   Widget build(BuildContext context) => AppCard(
     child: Row(
       children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 28,
-          backgroundColor: AppColors.tint,
+          backgroundColor: context.colors.tint,
           child: MascotPill(size: 36),
         ),
         const SizedBox(width: AppSpacing.ms),
@@ -487,6 +493,7 @@ class _IntakeCard extends StatelessWidget {
   const _IntakeCard({
     required this.intake,
     required this.highlighted,
+    required this.prominent,
     required this.canMark,
     required this.manageable,
     required this.onEdit,
@@ -498,6 +505,7 @@ class _IntakeCard extends StatelessWidget {
 
   final DayIntake intake;
   final bool highlighted;
+  final bool prominent;
   final bool canMark;
   final bool manageable;
   final VoidCallback onEdit;
@@ -572,7 +580,7 @@ class _IntakeCard extends StatelessWidget {
                     Text(
                       _subtitle,
                       style: AppType.caption.copyWith(
-                        color: AppColors.textSecondary,
+                        color: context.colors.textSecondary,
                       ),
                     ),
                     if (intake.skipped) ...[
@@ -588,10 +596,10 @@ class _IntakeCard extends StatelessWidget {
                   child: IconButton.filled(
                     tooltip: intake.canReset ? 'Отменить отметку' : 'Принято',
                     style: IconButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.success,
-                      disabledForegroundColor: Colors.white,
+                      backgroundColor: context.colors.success,
+                      foregroundColor: context.colors.onSuccess,
+                      disabledBackgroundColor: context.colors.success,
+                      disabledForegroundColor: context.colors.onSuccess,
                     ),
                     icon: const Icon(Icons.check),
                     onPressed: intake.canReset ? onReset : null,
@@ -619,18 +627,24 @@ class _IntakeCard extends StatelessWidget {
                 Pressable(
                   child: TextButton(
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
+                      foregroundColor: context.colors.textSecondary,
                     ),
                     onPressed: canMark ? onSkip : null,
                     child: const Text('Пропустить'),
                   ),
                 ),
                 Pressable(
-                  child: FilledButton.icon(
-                    onPressed: canMark ? onTake : null,
-                    icon: const Icon(Icons.check),
-                    label: const Text('Принять'),
-                  ),
+                  child: prominent
+                      ? FilledButton.icon(
+                          onPressed: canMark ? onTake : null,
+                          icon: const Icon(Icons.check),
+                          label: const Text('Принять'),
+                        )
+                      : FilledButton.tonalIcon(
+                          onPressed: canMark ? onTake : null,
+                          icon: const Icon(Icons.check),
+                          label: const Text('Принять'),
+                        ),
                 ),
               ],
             ),
@@ -687,28 +701,30 @@ Future<bool> confirmEndSchedule(
 }
 
 /// Icon and name of a mark; shared by the day and history screens.
-Widget intakeStatusLabel(IntakeStatus status) => Row(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    switch (status) {
-      IntakeStatus.taken => const Icon(
-        Icons.check_circle,
-        color: AppColors.success,
-      ),
-      IntakeStatus.skipped => const Icon(
-        Icons.remove_circle_outline,
-        color: AppColors.textSecondary,
-      ),
-      IntakeStatus.pending => const Icon(
-        Icons.radio_button_unchecked,
-        color: AppColors.textSecondary,
-      ),
-    },
-    const SizedBox(width: AppSpacing.xs),
-    Text(switch (status) {
-      IntakeStatus.taken => 'Принято',
-      IntakeStatus.skipped => 'Пропущено',
-      IntakeStatus.pending => 'Не отмечено',
-    }),
-  ],
+Widget intakeStatusLabel(IntakeStatus status) => Builder(
+  builder: (context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      switch (status) {
+        IntakeStatus.taken => Icon(
+          Icons.check_circle,
+          color: context.colors.success,
+        ),
+        IntakeStatus.skipped => Icon(
+          Icons.remove_circle_outline,
+          color: context.colors.textSecondary,
+        ),
+        IntakeStatus.pending => Icon(
+          Icons.radio_button_unchecked,
+          color: context.colors.textSecondary,
+        ),
+      },
+      const SizedBox(width: AppSpacing.xs),
+      Text(switch (status) {
+        IntakeStatus.taken => 'Принято',
+        IntakeStatus.skipped => 'Пропущено',
+        IntakeStatus.pending => 'Не отмечено',
+      }),
+    ],
+  ),
 );

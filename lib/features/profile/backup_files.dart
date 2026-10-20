@@ -35,7 +35,7 @@ class FilePickerBackupFiles implements BackupFiles {
     if ((await file.length() ?? 0) > maxBackupBytes) {
       throw const BackupException(
         BackupProblem.tooLarge,
-        'Файл слишком большой для резервной копии Pillory',
+        'Файл слишком большой для резервной копии PillPal',
       );
     }
     return file.readAsBytes();

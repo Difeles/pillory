@@ -29,8 +29,8 @@ Future<bool> showConfirmDialog(
           child: FilledButton(
             style: danger
                 ? FilledButton.styleFrom(
-                    backgroundColor: AppColors.danger,
-                    foregroundColor: Colors.white,
+                    backgroundColor: context.colors.danger,
+                    foregroundColor: context.colors.onDanger,
                   )
                 : null,
             onPressed: () => Navigator.pop(c, true),

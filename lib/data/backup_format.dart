@@ -193,7 +193,7 @@ BackupData parseBackup(Uint8List bytes) {
   if (bytes.length > maxBackupBytes) {
     throw const BackupException(
       BackupProblem.tooLarge,
-      'Файл слишком большой для резервной копии Pillory',
+      'Файл слишком большой для резервной копии PillPal',
     );
   }
   final Object? root;
@@ -208,7 +208,7 @@ BackupData parseBackup(Uint8List bytes) {
   if (root is! Map<String, Object?> || root['format'] != backupFormat) {
     throw const BackupException(
       BackupProblem.notBackup,
-      'Это не резервная копия Pillory',
+      'Это не резервная копия PillPal',
     );
   }
   final version = root['formatVersion'];
@@ -221,14 +221,14 @@ BackupData parseBackup(Uint8List bytes) {
   if (version > backupFormatVersion) {
     throw const BackupException(
       BackupProblem.newerFormat,
-      'Копия создана более новой версией Pillory. Обновите приложение, '
+      'Копия создана более новой версией PillPal. Обновите приложение, '
       'чтобы её восстановить',
     );
   }
   if (root['encryption'] != null) {
     throw const BackupException(
       BackupProblem.newerFormat,
-      'Эта версия Pillory не умеет открывать зашифрованные копии',
+      'Эта версия PillPal не умеет открывать зашифрованные копии',
     );
   }
   final data = _Obj(root, 'файл');

@@ -1,42 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'motion.dart';
 import 'tokens.dart';
 
-const _scheme = ColorScheme(
-  brightness: Brightness.light,
-  primary: AppColors.primary,
-  onPrimary: Colors.white,
-  primaryContainer: AppColors.tint,
-  onPrimaryContainer: AppColors.primaryDeep,
+ColorScheme _scheme(AppPalette p, Brightness brightness) => ColorScheme(
+  brightness: brightness,
+  primary: p.primary,
+  onPrimary: p.onPrimary,
+  primaryContainer: p.tint,
+  onPrimaryContainer: p.primaryDeep,
   // Chips, segments and the navigation indicator read the secondary roles.
-  secondary: AppColors.primaryDeep,
-  onSecondary: Colors.white,
-  secondaryContainer: AppColors.tint,
-  onSecondaryContainer: AppColors.primaryDeep,
-  tertiary: AppColors.success,
-  onTertiary: Colors.white,
-  error: AppColors.danger,
-  onError: Colors.white,
-  errorContainer: AppColors.dangerTint,
-  onErrorContainer: AppColors.danger,
-  surface: AppColors.surface,
-  onSurface: AppColors.textPrimary,
-  onSurfaceVariant: AppColors.textSecondary,
-  surfaceContainerLowest: AppColors.surface,
-  surfaceContainerLow: AppColors.surface,
-  surfaceContainer: AppColors.surface,
-  surfaceContainerHigh: AppColors.surface,
-  surfaceContainerHighest: AppColors.tint,
-  outline: AppColors.inputBorder,
-  outlineVariant: AppColors.divider,
-  inverseSurface: AppColors.textPrimary,
-  onInverseSurface: Colors.white,
-  inversePrimary: AppColors.tint,
+  secondary: p.primaryDeep,
+  onSecondary: p.onPrimary,
+  secondaryContainer: p.tint,
+  onSecondaryContainer: p.primaryDeep,
+  tertiary: p.success,
+  onTertiary: p.onSuccess,
+  error: p.danger,
+  onError: p.onDanger,
+  errorContainer: p.dangerTint,
+  onErrorContainer: p.danger,
+  surface: p.surface,
+  onSurface: p.textPrimary,
+  onSurfaceVariant: p.textSecondary,
+  surfaceContainerLowest: p.surface,
+  surfaceContainerLow: p.surface,
+  surfaceContainer: p.surface,
+  surfaceContainerHigh: p.surface,
+  surfaceContainerHighest: p.tint,
+  outline: p.inputBorder,
+  outlineVariant: p.divider,
+  inverseSurface: p.textPrimary,
+  onInverseSurface: p.background,
+  inversePrimary: p.tint,
   surfaceTint: Colors.transparent,
 );
 
-ThemeData buildAppTheme() {
+ThemeData buildAppTheme([Brightness brightness = Brightness.light]) {
+  final p = brightness == Brightness.dark ? AppPalette.dark : AppPalette.light;
   const fieldRadius = BorderRadius.all(Radius.circular(AppRadii.sm));
   OutlineInputBorder field(Color color, [double width = 1]) =>
       OutlineInputBorder(
@@ -59,45 +61,49 @@ ThemeData buildAppTheme() {
         labelMedium: AppType.caption,
       ).apply(
         fontFamily: AppType.family,
-        bodyColor: AppColors.textPrimary,
-        displayColor: AppColors.textPrimary,
+        bodyColor: p.textPrimary,
+        displayColor: p.textPrimary,
       );
   final label = textTheme.labelLarge!;
   return ThemeData(
     useMaterial3: true,
-    colorScheme: _scheme,
+    colorScheme: _scheme(p, brightness),
+    extensions: [p],
     fontFamily: AppType.family,
     textTheme: textTheme,
-    scaffoldBackgroundColor: AppColors.background,
+    scaffoldBackgroundColor: p.background,
     // No Material ripple or highlight: presses are shown by [Pressable].
     splashFactory: NoSplash.splashFactory,
     highlightColor: Colors.transparent,
     pageTransitionsTheme: appPageTransitions,
-    dividerTheme: const DividerThemeData(color: AppColors.divider),
+    dividerTheme: DividerThemeData(color: p.divider),
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColors.background,
+      backgroundColor: p.background,
       surfaceTintColor: Colors.transparent,
-      foregroundColor: AppColors.textPrimary,
+      foregroundColor: p.textPrimary,
       centerTitle: false,
       titleTextStyle: textTheme.titleLarge,
+      toolbarHeight: 64,
+      systemOverlayStyle: brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: AppColors.surface,
+      backgroundColor: p.surface,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: AppColors.tint,
+      indicatorColor: p.tint,
       iconTheme: WidgetStateProperty.resolveWith(
         (s) => IconThemeData(
           color: s.contains(WidgetState.selected)
-              ? AppColors.primaryDeep
-              : AppColors.textSecondary,
+              ? p.primaryDeep
+              : p.textSecondary,
         ),
       ),
       labelTextStyle: WidgetStateProperty.resolveWith(
-        (s) => textTheme.labelMedium!.copyWith(
-          fontWeight: FontWeight.w600,
+        (s) => AppType.label.copyWith(
           color: s.contains(WidgetState.selected)
-              ? AppColors.primaryDeep
-              : AppColors.textSecondary,
+              ? p.primaryDeep
+              : p.textSecondary,
         ),
       ),
     ),
@@ -106,18 +112,16 @@ ThemeData buildAppTheme() {
       helperMaxLines: 3,
       errorMaxLines: 3,
       filled: true,
-      fillColor: AppColors.surfaceLow,
-      border: field(AppColors.divider),
-      enabledBorder: field(AppColors.divider),
-      disabledBorder: field(AppColors.divider),
-      focusedBorder: field(AppColors.primary, 2),
-      errorBorder: field(AppColors.danger),
-      focusedErrorBorder: field(AppColors.danger, 2),
-      labelStyle: textTheme.bodyLarge!.copyWith(color: AppColors.textSecondary),
-      helperStyle: textTheme.bodySmall!.copyWith(
-        color: AppColors.textSecondary,
-      ),
-      errorStyle: textTheme.bodySmall!.copyWith(color: AppColors.danger),
+      fillColor: p.surfaceLow,
+      border: field(p.divider),
+      enabledBorder: field(p.divider),
+      disabledBorder: field(p.divider),
+      focusedBorder: field(p.primary, 2),
+      errorBorder: field(p.danger),
+      focusedErrorBorder: field(p.danger, 2),
+      labelStyle: textTheme.bodyLarge!.copyWith(color: p.textSecondary),
+      helperStyle: textTheme.bodySmall!.copyWith(color: p.textSecondary),
+      errorStyle: textTheme.bodySmall!.copyWith(color: p.danger),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
@@ -131,8 +135,8 @@ ThemeData buildAppTheme() {
         minimumSize: tapSize,
         shape: pill,
         textStyle: label,
-        foregroundColor: AppColors.primaryDeep,
-        side: const BorderSide(color: AppColors.inputBorder),
+        foregroundColor: p.primaryDeep,
+        side: BorderSide(color: p.inputBorder),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -140,23 +144,21 @@ ThemeData buildAppTheme() {
         minimumSize: tapSize,
         shape: pill,
         textStyle: label,
-        foregroundColor: AppColors.primaryDeep,
+        foregroundColor: p.primaryDeep,
       ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: AppColors.surfaceLow,
-      selectedColor: AppColors.tint,
+      backgroundColor: p.surfaceLow,
+      selectedColor: p.tint,
       // Selection shows in the fill and border; a tick would cover the avatar.
       showCheckmark: false,
-      checkmarkColor: AppColors.primaryDeep,
-      labelStyle: label.copyWith(color: AppColors.textPrimary),
-      secondaryLabelStyle: label.copyWith(color: AppColors.primaryDeep),
+      checkmarkColor: p.primaryDeep,
+      labelStyle: label.copyWith(color: p.textPrimary),
+      secondaryLabelStyle: label.copyWith(color: p.primaryDeep),
       shape: pill,
       side: WidgetStateBorderSide.resolveWith(
         (s) => BorderSide(
-          color: s.contains(WidgetState.selected)
-              ? AppColors.primary
-              : AppColors.inputBorder,
+          color: s.contains(WidgetState.selected) ? p.primary : p.inputBorder,
         ),
       ),
     ),
@@ -165,46 +167,42 @@ ThemeData buildAppTheme() {
         shape: pill,
         minimumSize: tapSize,
         textStyle: label,
-        foregroundColor: AppColors.textPrimary,
-        selectedForegroundColor: AppColors.primaryDeep,
-        selectedBackgroundColor: AppColors.tint,
-        side: const BorderSide(color: AppColors.inputBorder),
+        foregroundColor: p.textPrimary,
+        selectedForegroundColor: p.primaryDeep,
+        selectedBackgroundColor: p.tint,
+        side: BorderSide(color: p.inputBorder),
       ),
     ),
     dialogTheme: DialogThemeData(
-      backgroundColor: AppColors.surface,
+      backgroundColor: p.surface,
       surfaceTintColor: Colors.transparent,
       shape: const RoundedSuperellipseBorder(
         borderRadius: BorderRadius.all(Radius.circular(AppRadii.lg)),
       ),
       titleTextStyle: textTheme.titleLarge,
-      contentTextStyle: textTheme.bodyMedium!.copyWith(
-        color: AppColors.textSecondary,
-      ),
+      contentTextStyle: textTheme.bodyMedium!.copyWith(color: p.textSecondary),
     ),
-    datePickerTheme: const DatePickerThemeData(
-      backgroundColor: AppColors.surface,
+    datePickerTheme: DatePickerThemeData(
+      backgroundColor: p.surface,
       surfaceTintColor: Colors.transparent,
     ),
-    timePickerTheme: const TimePickerThemeData(
-      backgroundColor: AppColors.surface,
-    ),
+    timePickerTheme: TimePickerThemeData(backgroundColor: p.surface),
     popupMenuTheme: PopupMenuThemeData(
-      color: AppColors.surface,
+      color: p.surface,
       surfaceTintColor: Colors.transparent,
       textStyle: textTheme.bodyMedium,
       shape: const RoundedRectangleBorder(borderRadius: fieldRadius),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: AppColors.textPrimary,
-      contentTextStyle: textTheme.bodyMedium!.copyWith(color: Colors.white),
-      actionTextColor: AppColors.tint,
+      backgroundColor: p.textPrimary,
+      contentTextStyle: textTheme.bodyMedium!.copyWith(color: p.background),
+      actionTextColor: p.tint,
       shape: const RoundedRectangleBorder(borderRadius: fieldRadius),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
+      backgroundColor: p.primary,
+      foregroundColor: p.onPrimary,
       shape: pill,
       extendedTextStyle: label,
     ),

@@ -63,9 +63,9 @@ class ProfileScreen extends ConsumerWidget {
           AppCard(
             child: Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 32,
-                  backgroundColor: AppColors.tint,
+                  backgroundColor: context.colors.tint,
                   child: MascotPill(size: 44),
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -127,6 +127,18 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
           const SectionHeader(title: 'Настройки'),
+          SettingChoiceRow<Appearance>(
+            icon: Icons.contrast,
+            title: 'Тема',
+            options: const {
+              Appearance.system: 'Как в системе',
+              Appearance.light: 'Светлая',
+              Appearance.dark: 'Тёмная',
+            },
+            selected: prefs.appearance,
+            onChanged: (v) => extras.setPref(PrefKey.appearance, v.name),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           SettingToggleRow(
             icon: Icons.vibration,
             title: 'Тактильный отклик',
@@ -265,10 +277,10 @@ class _WeekDay extends StatelessWidget {
         intakes.isNotEmpty &&
         day != today;
     final (bg, fg, icon) = complete
-        ? (AppColors.success, Colors.white, Icons.check)
+        ? (context.colors.success, context.colors.onSuccess, Icons.check)
         : missed
-        ? (AppColors.warningTint, AppColors.warning, Icons.close)
-        : (AppColors.surfaceLow, AppColors.textSecondary, null);
+        ? (context.colors.warningTint, context.colors.warning, Icons.close)
+        : (context.colors.surfaceLow, context.colors.textSecondary, null);
     return Semantics(
       label:
           '$label: ${complete
@@ -288,8 +300,10 @@ class _WeekDay extends StatelessWidget {
           Text(
             label,
             style: AppType.caption.copyWith(
-              fontWeight: day == today ? FontWeight.w800 : FontWeight.w500,
-              color: day == today ? AppColors.primary : AppColors.textSecondary,
+              fontWeight: day == today ? FontWeight.w700 : FontWeight.w500,
+              color: day == today
+                  ? context.colors.primary
+                  : context.colors.textSecondary,
             ),
           ),
         ],
@@ -310,7 +324,7 @@ class _BadgeTile extends StatelessWidget {
         '${badge.title}: ${earned ? 'получено' : 'не получено'}. ${badge.hint}',
     excludeSemantics: true,
     child: Material(
-      color: earned ? AppColors.tint : AppColors.surfaceLow,
+      color: earned ? context.colors.tint : context.colors.surfaceLow,
       shape: RoundedSuperellipseBorder(
         borderRadius: BorderRadius.circular(AppRadii.sm),
       ),
@@ -319,10 +333,14 @@ class _BadgeTile extends StatelessWidget {
         child: Column(
           children: [
             CircleAvatar(
-              backgroundColor: earned ? AppColors.peach : AppColors.surfaceMid,
+              backgroundColor: earned
+                  ? AppColors.peach
+                  : context.colors.surfaceMid,
               child: Icon(
                 earned ? Icons.emoji_events : Icons.lock_outline,
-                color: earned ? AppColors.primaryDeep : AppColors.textSecondary,
+                color: earned
+                    ? AppColors.primaryDeep
+                    : context.colors.textSecondary,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -334,7 +352,7 @@ class _BadgeTile extends StatelessWidget {
             Text(
               badge.hint,
               textAlign: TextAlign.center,
-              style: AppType.caption.copyWith(fontSize: 11),
+              style: AppType.micro.copyWith(fontWeight: FontWeight.w400),
             ),
           ],
         ),
@@ -438,7 +456,9 @@ Future<void> _import(BuildContext context, WidgetRef ref) async {
             ),
             Pressable(
               child: TextButton(
-                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.colors.danger,
+                ),
                 onPressed: () => Navigator.pop(c, 'replace'),
                 child: const Text('Заменить'),
               ),

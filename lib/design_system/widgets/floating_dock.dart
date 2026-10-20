@@ -29,6 +29,9 @@ class FloatingDock extends StatelessWidget {
   Widget build(BuildContext context) {
     // Sits closer to the screen edge than a plain SafeArea would put it.
     final inset = MediaQuery.viewPaddingOf(context).bottom;
+    final colors = context.colors;
+    // Increase Contrast: no frosted glass, an opaque bar with a clear edge.
+    final solid = MediaQuery.highContrastOf(context);
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -41,23 +44,23 @@ class FloatingDock extends StatelessWidget {
         // The shadow sits outside the clip; the glass (blur, translucent
         // fill, ghost border) inside it.
         child: DecoratedBox(
-          decoration: const ShapeDecoration(
-            shape: StadiumBorder(),
-            shadows: AppShadows.raised,
+          decoration: ShapeDecoration(
+            shape: const StadiumBorder(),
+            shadows: colors.raisedShadow,
           ),
           child: ClipPath(
             clipper: const ShapeBorderClipper(shape: StadiumBorder()),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: _glass(
+              solid: solid,
               child: DecoratedBox(
                 decoration: ShapeDecoration(
                   shape: StadiumBorder(
                     side: BorderSide(
-                      color: Colors.white.withValues(alpha: .65),
+                      color: solid ? colors.inputBorder : colors.glassBorder,
                       width: 1.5,
                     ),
                   ),
-                  color: Colors.white.withValues(alpha: .55),
+                  color: solid ? colors.surface : colors.glass,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.xs),
@@ -66,7 +69,7 @@ class FloatingDock extends StatelessWidget {
                       // One indicator that springs from tab to tab.
                       Positioned.fill(
                         child: AnimatedAlign(
-                          duration: AppMotion.tab,
+                          duration: motionOf(context, AppMotion.tab),
                           curve: AppMotion.spring,
                           alignment: Alignment(
                             -1 + 2 * index / (items.length - 1),
@@ -75,10 +78,10 @@ class FloatingDock extends StatelessWidget {
                           child: FractionallySizedBox(
                             widthFactor: 1 / items.length,
                             heightFactor: 1,
-                            child: const DecoratedBox(
+                            child: DecoratedBox(
                               decoration: ShapeDecoration(
                                 shape: StadiumBorder(),
-                                color: AppColors.tint,
+                                color: context.colors.tint,
                               ),
                             ),
                           ),
@@ -108,6 +111,13 @@ class FloatingDock extends StatelessWidget {
   }
 }
 
+Widget _glass({required bool solid, required Widget child}) => solid
+    ? child
+    : BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: child,
+      );
+
 class _DockButton extends StatelessWidget {
   const _DockButton({
     required this.item,
@@ -135,9 +145,11 @@ class _DockButton extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 56),
             child: TweenAnimationBuilder<Color?>(
               tween: ColorTween(
-                end: selected ? AppColors.primaryDeep : AppColors.textSecondary,
+                end: selected
+                    ? context.colors.primaryDeep
+                    : context.colors.textSecondary,
               ),
-              duration: AppMotion.tab,
+              duration: motionOf(context, AppMotion.tab),
               builder: (context, color, _) => Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -145,7 +157,7 @@ class _DockButton extends StatelessWidget {
                   // The icon pops a little when its tab is chosen.
                   AnimatedScale(
                     scale: selected ? 1.18 : 1,
-                    duration: AppMotion.tab,
+                    duration: motionOf(context, AppMotion.tab),
                     curve: AppMotion.spring,
                     child: Icon(
                       selected ? item.selectedIcon : item.icon,
@@ -156,11 +168,7 @@ class _DockButton extends StatelessWidget {
                     item.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppType.caption.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: color,
-                    ),
+                    style: AppType.micro.copyWith(color: color),
                   ),
                 ],
               ),

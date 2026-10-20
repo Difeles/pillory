@@ -17,7 +17,11 @@ abstract final class PrefKey {
   static const haptics = 'haptics';
   static const confetti = 'confetti';
   static const hints = 'expiryHints';
+  static const appearance = 'appearance';
 }
+
+/// Which colours the app uses: the device's choice, or one of its own.
+enum Appearance { system, light, dark }
 
 /// App settings with their defaults (all switches on).
 class AppPrefs {
@@ -26,6 +30,7 @@ class AppPrefs {
     this.haptics = true,
     this.confetti = true,
     this.hints = true,
+    this.appearance = Appearance.system,
   });
 
   factory AppPrefs.fromMap(Map<String, String> m) => AppPrefs(
@@ -33,12 +38,16 @@ class AppPrefs {
     haptics: m[PrefKey.haptics] != 'false',
     confetti: m[PrefKey.confetti] != 'false',
     hints: m[PrefKey.hints] != 'false',
+    appearance:
+        Appearance.values.asNameMap()[m[PrefKey.appearance]] ??
+        Appearance.system,
   );
 
   final String name;
   final bool haptics;
   final bool confetti;
   final bool hints;
+  final Appearance appearance;
 }
 
 /// The manual shopping list and the app settings.

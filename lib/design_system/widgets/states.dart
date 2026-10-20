@@ -12,20 +12,19 @@ class EmptyState extends StatelessWidget {
     required this.title,
     this.message,
     this.action,
-    this.iconColor = AppColors.primary,
-    this.iconBackground = AppColors.tint,
+    this.iconColor,
+    this.iconBackground,
   });
 
   final IconData icon;
   final String title;
   final String? message;
   final Widget? action;
-  final Color iconColor;
-  final Color iconBackground;
+  final Color? iconColor;
+  final Color? iconBackground;
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -36,23 +35,23 @@ class EmptyState extends StatelessWidget {
               width: AppSizes.illustration,
               height: AppSizes.illustration,
               decoration: BoxDecoration(
-                color: iconBackground,
+                color: iconBackground ?? context.colors.tint,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: AppSizes.illustrationIcon,
-                color: iconColor,
+                color: iconColor ?? context.colors.primary,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            Text(title, style: text.titleLarge, textAlign: TextAlign.center),
+            Text(title, style: AppType.title, textAlign: TextAlign.center),
             if (message != null) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
                 message!,
-                style: text.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
+                style: AppType.body.copyWith(
+                  color: context.colors.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -78,8 +77,8 @@ class ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => EmptyState(
     icon: Icons.error_outline,
-    iconColor: AppColors.danger,
-    iconBackground: AppColors.dangerTint,
+    iconColor: context.colors.danger,
+    iconBackground: context.colors.dangerTint,
     title: message,
     action: Pressable(
       child: FilledButton.tonalIcon(
@@ -113,7 +112,7 @@ class _LoadingStateState extends State<LoadingState>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (reduceMotion(context)) {
       _pulse.value = 1;
     } else if (!_pulse.isAnimating) {
       _pulse.repeat(reverse: true);
@@ -134,7 +133,7 @@ class _LoadingStateState extends State<LoadingState>
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: AppColors.divider,
+          color: context.colors.divider,
           borderRadius: BorderRadius.circular(AppRadii.sm),
         ),
       ),
@@ -152,7 +151,7 @@ class _LoadingStateState extends State<LoadingState>
                   margin: const EdgeInsets.only(bottom: AppSpacing.ms),
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: context.colors.surface,
                     borderRadius: BorderRadius.circular(AppRadii.md),
                   ),
                   child: Column(

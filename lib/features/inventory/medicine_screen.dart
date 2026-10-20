@@ -44,7 +44,6 @@ class MedicineScreen extends ConsumerWidget {
     }
     final medicine = stock.medicine;
     final archived = medicine.archivedAt != null;
-    final text = Theme.of(context).textTheme;
     final details = [
       if (medicine.form != null) medicine.form!.label,
       if (medicine.strength != null) medicine.strength!,
@@ -103,16 +102,13 @@ class MedicineScreen extends ConsumerWidget {
                         children: [
                           Semantics(
                             header: true,
-                            child: Text(
-                              medicine.name,
-                              style: text.headlineSmall,
-                            ),
+                            child: Text(medicine.name, style: AppType.title),
                           ),
                           if (details.isNotEmpty)
                             Text(
                               details,
-                              style: text.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
+                              style: AppType.body.copyWith(
+                                color: context.colors.textSecondary,
                               ),
                             ),
                           if (archived) ...[
@@ -160,8 +156,8 @@ class MedicineScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'Общий остаток',
-                          style: text.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
+                          style: AppType.caption.copyWith(
+                            color: context.colors.textSecondary,
                           ),
                         ),
                         Text(quantity, style: AppType.numeric),
@@ -282,7 +278,6 @@ class _PackageTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final text = Theme.of(context).textTheme;
     final expiry = package.expiresOn;
     final today = DateTime.now();
     final badges = [
@@ -333,7 +328,7 @@ class _PackageTile extends ConsumerWidget {
               children: [
                 Text(
                   '${formatQuantity(package.quantity)} ${package.unit}',
-                  style: text.titleMedium?.copyWith(
+                  style: AppType.cardTitle.copyWith(
                     fontFeatures: AppType.numeric.fontFeatures,
                   ),
                 ),
@@ -639,11 +634,13 @@ class _PillGrid extends StatelessWidget {
               radius: 18,
               backgroundColor: i < left
                   ? AppColors.peach
-                  : AppColors.surfaceMid,
+                  : context.colors.surfaceMid,
               child: Icon(
                 i < left ? Icons.medication : Icons.check,
                 size: 18,
-                color: i < left ? AppColors.primary : AppColors.textSecondary,
+                color: i < left
+                    ? AppColors.primaryDeep
+                    : context.colors.textSecondary,
               ),
             ),
         ],

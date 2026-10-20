@@ -38,7 +38,6 @@ class MedicineCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final text = Theme.of(context).textTheme;
     final medicine = stock.medicine;
     final package = stock.primaryPackage;
     final details = [
@@ -72,12 +71,12 @@ class MedicineCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(medicine.name, style: text.titleMedium),
+                    Text(medicine.name, style: AppType.cardTitle),
                     if (details.isNotEmpty)
                       Text(
                         details,
-                        style: text.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
+                        style: AppType.body.copyWith(
+                          color: context.colors.textSecondary,
                         ),
                       ),
                     if (status != null) ...[
@@ -88,8 +87,8 @@ class MedicineCard extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         'Проверьте инструкцию и местные правила утилизации',
-                        style: text.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
+                        style: AppType.caption.copyWith(
+                          color: context.colors.textSecondary,
                         ),
                       ),
                     ],
@@ -112,7 +111,9 @@ class MedicineCard extends ConsumerWidget {
             children: [
               Text(
                 'Остаток',
-                style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                style: AppType.caption.copyWith(
+                  color: context.colors.textSecondary,
+                ),
               ),
               if (quick)
                 QuantityStepper(
@@ -153,11 +154,12 @@ class _StockBar extends StatelessWidget {
       child: LinearProgressIndicator(
         value: share,
         minHeight: 8,
-        backgroundColor: AppColors.surfaceMid,
+        backgroundColor: context.colors.surfaceMid,
         color: switch (problem) {
-          null => AppColors.primary,
-          StockProblem.low || StockProblem.expiringSoon => AppColors.warning,
-          _ => AppColors.danger,
+          null => context.colors.primary,
+          StockProblem.low ||
+          StockProblem.expiringSoon => context.colors.warning,
+          _ => context.colors.danger,
         },
       ),
     );
@@ -178,13 +180,16 @@ class MedicineAvatar extends StatelessWidget {
       width: AppSizes.avatar,
       height: AppSizes.avatar,
       decoration: BoxDecoration(
-        color: fill,
+        color: fill ?? context.colors.tint,
         borderRadius: BorderRadius.circular(AppRadii.sm),
       ),
       child: Icon(
         icon,
         size: AppSizes.avatarIcon,
-        color: AppColors.textPrimary,
+        // Dark on the light pastel in both appearances.
+        color: form == null
+            ? context.colors.primaryDeep
+            : AppColors.textPrimary,
       ),
     );
   }
@@ -194,7 +199,7 @@ class MedicineAvatar extends StatelessWidget {
 IconData medicineFormIcon(MedicineForm? form) => _formLook(form).$1;
 
 /// Icon and pastel fill for a form; pastels are only ever backgrounds.
-(IconData, Color) _formLook(MedicineForm? form) => switch (form) {
+(IconData, Color?) _formLook(MedicineForm? form) => switch (form) {
   MedicineForm.tablet ||
   MedicineForm.capsule ||
   MedicineForm.suppository => (Icons.medication_outlined, AppColors.pink),
@@ -205,8 +210,7 @@ IconData medicineFormIcon(MedicineForm? form) => _formLook(form).$1;
   MedicineForm.cream => (Icons.healing_outlined, AppColors.mint),
   MedicineForm.spray => (Icons.sanitizer_outlined, AppColors.mint),
   MedicineForm.powder => (Icons.grain, AppColors.orange),
-  MedicineForm.other ||
-  null => (Icons.medical_services_outlined, AppColors.tint),
+  MedicineForm.other || null => (Icons.medical_services_outlined, null),
 };
 
 /// The single status of a card: the most important problem, else the

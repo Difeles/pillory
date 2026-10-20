@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../tokens.dart';
 import 'mascot_pill.dart';
@@ -19,43 +20,46 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     // The bar has a fixed height, so its text scales only up to a point.
-    return MediaQuery.withClampedTextScaling(
-      maxScaleFactor: 1.3,
-      child: SafeArea(
-        bottom: false,
-        child: SizedBox(
-          height: 64,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
-              children: [
-                const MascotPill(size: 36),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'PILLPAL',
-                        style: AppType.caption.copyWith(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
-                          color: AppColors.primary,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // Status bar icons: light on the dark appearance, dark on the light.
+      value: Theme.brightnessOf(context) == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: SafeArea(
+          bottom: false,
+          child: SizedBox(
+            height: 64,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Row(
+                children: [
+                  const MascotPill(size: 36),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'PILLPAL',
+                          style: AppType.overline.copyWith(
+                            color: context.colors.primary,
+                          ),
                         ),
-                      ),
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppType.title.copyWith(height: 1.1),
-                      ),
-                    ],
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppType.title.copyWith(height: 1.1),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                ...actions,
-              ],
+                  ...actions,
+                ],
+              ),
             ),
           ),
         ),

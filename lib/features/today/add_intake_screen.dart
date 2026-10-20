@@ -295,7 +295,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                         child: Text(
                           f.errorText!,
                           style: AppType.caption.copyWith(
-                            color: AppColors.danger,
+                            color: context.colors.danger,
                           ),
                         ),
                       ),
@@ -484,8 +484,8 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
               Pressable(
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                    side: const BorderSide(color: AppColors.danger),
+                    foregroundColor: context.colors.danger,
+                    side: BorderSide(color: context.colors.danger),
                   ),
                   onPressed: _saving
                       ? null

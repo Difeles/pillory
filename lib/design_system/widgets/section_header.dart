@@ -17,7 +17,7 @@ class SectionHeader extends StatelessWidget {
         Expanded(
           child: Semantics(
             header: true,
-            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+            child: Text(title, style: AppType.cardTitle),
           ),
         ),
         ?trailing,

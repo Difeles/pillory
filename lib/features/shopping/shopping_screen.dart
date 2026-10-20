@@ -127,9 +127,9 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                         ),
                       ),
                       listed.contains(a.stock.medicine.name.toLowerCase())
-                          ? const Icon(
+                          ? Icon(
                               Icons.check_circle,
-                              color: AppColors.success,
+                              color: context.colors.success,
                             )
                           : Pressable(
                               child: FilledButton.icon(

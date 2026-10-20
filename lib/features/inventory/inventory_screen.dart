@@ -74,25 +74,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
             decoration: InputDecoration(
               hintText: 'Поиск по $count лекарствам',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: Pressable(
-                scale: .88,
-                child: IconButton(
-                  tooltip: 'Сканер штрихкода — скоро',
-                  icon: const Icon(Icons.qr_code_scanner),
-                  onPressed: () => ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(
-                      const SnackBar(content: Text('Сканер штрихкода — скоро')),
-                    ),
-                ),
-              ),
               border: _pillBorder,
               enabledBorder: _pillBorder,
               focusedBorder: _pillBorder.copyWith(
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: context.colors.primary, width: 2),
               ),
             ),
           ),
@@ -103,8 +88,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
           child: IconButton.filledTonal(
             tooltip: _archive ? 'Вернуться в аптечку' : 'Архив',
             style: IconButton.styleFrom(
-              backgroundColor: _archive ? AppColors.tint : AppColors.surface,
-              foregroundColor: AppColors.primaryDeep,
+              backgroundColor: _archive
+                  ? context.colors.tint
+                  : context.colors.surface,
+              foregroundColor: context.colors.primaryDeep,
               minimumSize: const Size.square(kMinTapSize),
             ),
             icon: Icon(
@@ -318,10 +305,8 @@ class _Summary extends StatelessWidget {
                     children: [
                       Text(
                         'ГОТОВНОСТЬ АПТЕЧКИ',
-                        style: AppType.caption.copyWith(
-                          color: AppColors.success,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1,
+                        style: AppType.overline.copyWith(
+                          color: context.colors.success,
                         ),
                       ),
                       Text(
@@ -334,10 +319,10 @@ class _Summary extends StatelessWidget {
                 ProgressRing(
                   value: share,
                   size: 48,
-                  child: const Icon(
+                  child: Icon(
                     Icons.medical_services,
                     size: 18,
-                    color: AppColors.primary,
+                    color: context.colors.primary,
                   ),
                 ),
               ],
@@ -349,23 +334,30 @@ class _Summary extends StatelessWidget {
                 tile(
                   'Всего',
                   all.length,
-                  AppColors.surfaceLow,
-                  AppColors.textPrimary,
+                  context.colors.surfaceLow,
+                  context.colors.textPrimary,
                 ),
                 tile(
                   'Истекают',
                   expiring,
-                  AppColors.warningTint,
-                  AppColors.warning,
+                  context.colors.warningTint,
+                  context.colors.warning,
                 ),
-                tile('Мало', low, AppColors.dangerTint, AppColors.danger),
+                tile(
+                  'Мало',
+                  low,
+                  context.colors.dangerTint,
+                  context.colors.danger,
+                ),
               ],
             ),
             if (hint && expiring + low > 0) ...[
               const SizedBox(height: AppSpacing.ms),
               Text(
                 'Пора докупить: ${expiring + low} — загляните во вкладку «Покупки»',
-                style: AppType.caption.copyWith(color: AppColors.primaryDeep),
+                style: AppType.caption.copyWith(
+                  color: context.colors.primaryDeep,
+                ),
               ),
             ],
           ],

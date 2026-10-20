@@ -33,7 +33,7 @@ class FormSaveBar extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
     child: DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.background),
+      decoration: BoxDecoration(color: context.colors.background),
       child: SafeArea(
         top: false,
         child: Padding(

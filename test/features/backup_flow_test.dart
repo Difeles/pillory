@@ -180,7 +180,7 @@ void main() {
     await tester.tap(find.text('Восстановить из копии'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Это не резервная копия Pillory'), findsOneWidget);
+    expect(find.text('Это не резервная копия PillPal'), findsOneWidget);
     expect(find.text('Заменить данные?'), findsNothing);
     expect(await tester.runAsync(names), ['Старое']);
   });

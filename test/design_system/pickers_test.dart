@@ -50,4 +50,35 @@ void main() {
     expect(find.text('Выберите время'), findsOneWidget);
     expect(find.text('09'), findsWidgets);
   });
+
+  testWidgets('time wheels are adjustable for screen readers', (tester) async {
+    final handle = tester.ensureSemantics();
+    await open(tester, TargetPlatform.android, true);
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Часы')),
+      matchesSemantics(
+        label: 'Часы',
+        value: '09',
+        increasedValue: '10',
+        decreasedValue: '08',
+        hasIncreaseAction: true,
+        hasDecreaseAction: true,
+      ),
+    );
+    handle.dispose();
+  });
+
+  testWidgets('calendar days read as full dates', (tester) async {
+    final handle = tester.ensureSemantics();
+    await open(tester, TargetPlatform.android, false);
+    expect(find.bySemanticsLabel('10 мая 2030'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('the sheet can be swiped away', (tester) async {
+    await open(tester, TargetPlatform.android, false);
+    await tester.drag(find.text('Выберите дату'), const Offset(0, 300));
+    await tester.pumpAndSettle();
+    expect(find.text('Выберите дату'), findsNothing);
+  });
 }

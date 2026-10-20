@@ -116,7 +116,7 @@ abstract final class AppType {
     fontWeight: FontWeight.w600,
   );
   static const body = TextStyle(
-    fontSize: 15,
+    fontSize: 16,
     height: 1.4,
     fontWeight: FontWeight.w400,
   );
@@ -131,6 +131,33 @@ abstract final class AppType {
     fontWeight: FontWeight.w700,
     fontFeatures: [FontFeature.tabularFigures()],
   );
+  static const captionStrong = TextStyle(
+    fontSize: 13,
+    height: 1.35,
+    fontWeight: FontWeight.w700,
+  );
+
+  /// Small caps-style heading over a block ("ПЛАН ДНЯ"); colour at the use.
+  static const overline = TextStyle(
+    fontSize: 12,
+    height: 1.35,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1,
+  );
+
+  /// Tab labels and other tiny captions.
+  static const micro = TextStyle(
+    fontSize: 11,
+    height: 1.2,
+    fontWeight: FontWeight.w700,
+  );
+
+  /// The digits on the time wheels: light, so a big number does not shout.
+  static const wheel = TextStyle(
+    fontSize: 22,
+    height: 1.25,
+    fontWeight: FontWeight.w400,
+  );
   static const label = TextStyle(
     fontSize: 14,
     height: 1.25,
@@ -140,3 +167,140 @@ abstract final class AppType {
 
 /// Smallest comfortable touch target.
 const kMinTapSize = 48.0;
+
+/// The colours of one appearance. [AppColors] holds the light values as
+/// constants; widgets read the current ones with `context.colors`.
+@immutable
+class AppPalette extends ThemeExtension<AppPalette> {
+  const AppPalette({
+    required this.primary,
+    required this.onPrimary,
+    required this.accent,
+    required this.primaryDeep,
+    required this.tint,
+    required this.background,
+    required this.surface,
+    required this.surfaceLow,
+    required this.surfaceMid,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.inputBorder,
+    required this.divider,
+    required this.success,
+    required this.onSuccess,
+    required this.successTint,
+    required this.warning,
+    required this.warningTint,
+    required this.danger,
+    required this.onDanger,
+    required this.dangerTint,
+    required this.glass,
+    required this.glassBorder,
+    required this.cardShadow,
+    required this.raisedShadow,
+  });
+
+  /// Fill of primary actions (white text on it).
+  final Color primary;
+  final Color onPrimary;
+
+  /// The brand colour as text or an icon on the page: [primary] in the light
+  /// appearance, a lighter tone in the dark one.
+  final Color accent;
+  final Color primaryDeep;
+  final Color tint;
+  final Color background;
+  final Color surface;
+  final Color surfaceLow;
+  final Color surfaceMid;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color inputBorder;
+  final Color divider;
+  final Color success;
+  final Color onSuccess;
+  final Color successTint;
+  final Color warning;
+  final Color warningTint;
+  final Color danger;
+  final Color onDanger;
+  final Color dangerTint;
+
+  /// The dock's frosted fill and its hairline.
+  final Color glass;
+  final Color glassBorder;
+  final List<BoxShadow> cardShadow;
+  final List<BoxShadow> raisedShadow;
+
+  static const light = AppPalette(
+    primary: AppColors.primary,
+    onPrimary: Colors.white,
+    accent: AppColors.primary,
+    primaryDeep: AppColors.primaryDeep,
+    tint: AppColors.tint,
+    background: AppColors.background,
+    surface: AppColors.surface,
+    surfaceLow: AppColors.surfaceLow,
+    surfaceMid: AppColors.surfaceMid,
+    textPrimary: AppColors.textPrimary,
+    textSecondary: AppColors.textSecondary,
+    inputBorder: AppColors.inputBorder,
+    divider: AppColors.divider,
+    success: AppColors.success,
+    onSuccess: Colors.white,
+    successTint: AppColors.successTint,
+    warning: AppColors.warning,
+    warningTint: AppColors.warningTint,
+    danger: AppColors.danger,
+    onDanger: Colors.white,
+    dangerTint: AppColors.dangerTint,
+    glass: Color(0x8CFFFFFF),
+    glassBorder: Color(0xA6FFFFFF),
+    cardShadow: AppShadows.card,
+    raisedShadow: AppShadows.raised,
+  );
+
+  static const dark = AppPalette(
+    primary: Color(0xFF6B5BE0),
+    onPrimary: Colors.white,
+    accent: Color(0xFFA89CFF),
+    primaryDeep: Color(0xFFD0C8FF),
+    tint: Color(0xFF34306A),
+    background: Color(0xFF121218),
+    surface: Color(0xFF1D1C24),
+    surfaceLow: Color(0xFF26252E),
+    surfaceMid: Color(0xFF2F2E38),
+    textPrimary: Color(0xFFE6E4EE),
+    textSecondary: Color(0xFFC9C6D4),
+    inputBorder: Color(0xFF8F8C9C),
+    divider: Color(0xFF35343F),
+    success: Color(0xFF5FD8B5),
+    onSuccess: Color(0xFF00382B),
+    successTint: Color(0xFF14382F),
+    warning: Color(0xFFFFB59C),
+    warningTint: Color(0xFF4A2418),
+    danger: Color(0xFFFFB4AB),
+    onDanger: Color(0xFF690005),
+    dangerTint: Color(0xFF5A1D18),
+    glass: Color(0x991D1C24),
+    glassBorder: Color(0x24FFFFFF),
+    cardShadow: [
+      BoxShadow(color: Color(0x66000000), blurRadius: 16, offset: Offset(0, 4)),
+    ],
+    raisedShadow: [
+      BoxShadow(color: Color(0x99000000), blurRadius: 24, offset: Offset(0, 8)),
+    ],
+  );
+
+  @override
+  AppPalette copyWith() => this;
+
+  @override
+  AppPalette lerp(AppPalette? other, double t) => t < .5 ? this : other ?? this;
+}
+
+extension AppPaletteOf on BuildContext {
+  /// The current appearance's colours; the light ones where no theme set any.
+  AppPalette get colors =>
+      Theme.of(this).extension<AppPalette>() ?? AppPalette.light;
+}

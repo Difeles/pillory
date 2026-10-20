@@ -18,9 +18,9 @@ class SegmentedPills<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-    decoration: const ShapeDecoration(
+    decoration: ShapeDecoration(
       shape: StadiumBorder(),
-      color: AppColors.surfaceLow,
+      color: context.colors.surfaceLow,
     ),
     child: Padding(
       padding: const EdgeInsets.all(AppSpacing.xs),
@@ -29,7 +29,7 @@ class SegmentedPills<T> extends StatelessWidget {
           // One indicator that springs to the chosen option, like the dock's.
           Positioned.fill(
             child: AnimatedAlign(
-              duration: AppMotion.tab,
+              duration: motionOf(context, AppMotion.tab),
               curve: AppMotion.spring,
               alignment: Alignment(
                 options.length < 2
@@ -43,11 +43,11 @@ class SegmentedPills<T> extends StatelessWidget {
               child: FractionallySizedBox(
                 widthFactor: 1 / options.length,
                 heightFactor: 1,
-                child: const DecoratedBox(
+                child: DecoratedBox(
                   decoration: ShapeDecoration(
                     shape: StadiumBorder(),
-                    color: AppColors.surface,
-                    shadows: AppShadows.card,
+                    color: context.colors.surface,
+                    shadows: context.colors.cardShadow,
                   ),
                 ),
               ),
@@ -75,10 +75,10 @@ class SegmentedPills<T> extends StatelessWidget {
                               child: TweenAnimationBuilder<Color?>(
                                 tween: ColorTween(
                                   end: e.key == selected
-                                      ? AppColors.primaryDeep
-                                      : AppColors.textSecondary,
+                                      ? context.colors.primaryDeep
+                                      : context.colors.textSecondary,
                                 ),
-                                duration: AppMotion.tab,
+                                duration: motionOf(context, AppMotion.tab),
                                 builder: (context, color, _) => Text(
                                   e.value,
                                   textAlign: TextAlign.center,
@@ -117,7 +117,9 @@ class ChoiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primaryDeep : AppColors.textSecondary;
+    final color = selected
+        ? context.colors.primaryDeep
+        : context.colors.textSecondary;
     return Semantics(
       button: true,
       selected: selected,
@@ -126,15 +128,15 @@ class ChoiceTile extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           child: AnimatedContainer(
-            duration: AppMotion.base,
+            duration: motionOf(context, AppMotion.base),
             curve: AppMotion.smooth,
             decoration: ShapeDecoration(
-              color: selected ? AppColors.tint : AppColors.surfaceLow,
+              color: selected ? context.colors.tint : context.colors.surfaceLow,
               shape: RoundedSuperellipseBorder(
                 borderRadius: BorderRadius.circular(AppRadii.sm),
                 // Always as wide, so choosing a tile does not resize it.
                 side: BorderSide(
-                  color: selected ? AppColors.primary : Colors.transparent,
+                  color: selected ? context.colors.primary : Colors.transparent,
                   width: 1.5,
                 ),
               ),
@@ -154,10 +156,7 @@ class ChoiceTile extends StatelessWidget {
                   Text(
                     label,
                     textAlign: TextAlign.center,
-                    style: AppType.caption.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: color,
-                    ),
+                    style: AppType.captionStrong.copyWith(color: color),
                   ),
                 ],
               ),
@@ -188,7 +187,7 @@ class SettingToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: AppColors.surfaceLow,
+    color: context.colors.surfaceLow,
     shape: RoundedSuperellipseBorder(
       borderRadius: BorderRadius.circular(AppRadii.sm),
     ),
@@ -201,11 +200,61 @@ class SettingToggleRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadii.sm),
         ),
         secondary: CircleAvatar(
-          backgroundColor: AppColors.tint,
-          child: Icon(icon, color: AppColors.primaryDeep),
+          backgroundColor: context.colors.tint,
+          child: Icon(icon, color: context.colors.primaryDeep),
         ),
         title: Text(title, style: AppType.cardTitle),
         subtitle: Text(subtitle, style: AppType.caption),
+      ),
+    ),
+  );
+}
+
+/// A settings row with a choice between a few options, under its title.
+class SettingChoiceRow<T> extends StatelessWidget {
+  const SettingChoiceRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final Map<T, String> options;
+  final T selected;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: context.colors.surfaceLow,
+    shape: RoundedSuperellipseBorder(
+      borderRadius: BorderRadius.circular(AppRadii.sm),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: context.colors.tint,
+                child: Icon(icon, color: context.colors.primaryDeep),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: Text(title, style: AppType.cardTitle)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.ms),
+          SegmentedPills<T>(
+            options: options,
+            selected: selected,
+            onChanged: onChanged,
+          ),
+        ],
       ),
     ),
   );

@@ -4,28 +4,26 @@ import '../tokens.dart';
 
 /// The pill mascot, drawn in code. [happy] toggles the smile.
 class MascotPill extends StatelessWidget {
-  const MascotPill({
-    super.key,
-    this.size = 40,
-    this.color = AppColors.primary,
-    this.happy = true,
-  });
+  const MascotPill({super.key, this.size = 40, this.color, this.happy = true});
 
   final double size;
-  final Color color;
+
+  /// The body colour; the appearance's primary when null.
+  final Color? color;
   final bool happy;
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: CustomPaint(
       size: Size.square(size),
-      painter: _MascotPainter(color, happy),
+      painter: _MascotPainter(color ?? context.colors.primary, happy),
     ),
   );
 }
 
 class _MascotPainter extends CustomPainter {
   _MascotPainter(this.color, this.happy);
+
   final Color color;
   final bool happy;
 

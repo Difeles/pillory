@@ -17,6 +17,20 @@ const _months = [
   'Ноябрь',
   'Декабрь',
 ];
+const _monthsOf = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+];
 const _weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -64,7 +78,7 @@ Future<T?> _show<T>(
     barrierDismissible: true,
     barrierLabel: 'Закрыть',
     barrierColor: Colors.black38,
-    transitionDuration: AppMotion.tab,
+    transitionDuration: motionOf(context, AppMotion.tab),
     pageBuilder: (c, _, _) => Align(
       alignment: Alignment.bottomCenter,
       child: build((v) => Navigator.pop(c, v)),
@@ -83,7 +97,7 @@ Future<T?> _show<T>(
 }
 
 /// The rounded sheet around a picker: handle, title, cancel and confirm.
-class _Sheet extends StatelessWidget {
+class _Sheet extends StatefulWidget {
   const _Sheet({
     required this.title,
     required this.child,
@@ -97,8 +111,28 @@ class _Sheet extends StatelessWidget {
   final VoidCallback onCancel;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
+  State<_Sheet> createState() => _SheetState();
+}
+
+class _SheetState extends State<_Sheet> {
+  double _dy = 0;
+  bool _dragging = false;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    onDismiss: widget.onCancel,
+    child: AnimatedContainer(
+      duration: _dragging
+          ? Duration.zero
+          : motionOf(context, AppMotion.release),
+      curve: AppMotion.spring,
+      transform: Matrix4.translationValues(0, _dy, 0),
+      child: _body(context),
+    ),
+  );
+
+  Widget _body(BuildContext context) => Material(
+    color: context.colors.surface,
     shape: const RoundedSuperellipseBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.lg)),
     ),
@@ -115,28 +149,50 @@ class _Sheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: const ShapeDecoration(
-                shape: StadiumBorder(),
-                color: AppColors.divider,
+            // Only the header drags the sheet away: the body scrolls.
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onVerticalDragStart: (_) => setState(() => _dragging = true),
+              onVerticalDragUpdate: (d) => setState(
+                () => _dy = (_dy + d.delta.dy).clamp(0, double.infinity),
+              ),
+              onVerticalDragEnd: (d) {
+                if (_dy > 80 || (d.primaryVelocity ?? 0) > 700) {
+                  widget.onCancel();
+                } else {
+                  setState(() {
+                    _dragging = false;
+                    _dy = 0;
+                  });
+                }
+              },
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: ShapeDecoration(
+                      shape: StadiumBorder(),
+                      color: context.colors.divider,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(widget.title, style: AppType.title),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(title, style: AppType.title),
-            ),
             const SizedBox(height: AppSpacing.sm),
-            child,
+            widget.child,
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
                 Expanded(
                   child: Pressable(
                     child: OutlinedButton(
-                      onPressed: onCancel,
+                      onPressed: widget.onCancel,
                       child: const Text('Отмена'),
                     ),
                   ),
@@ -145,7 +201,7 @@ class _Sheet extends StatelessWidget {
                 Expanded(
                   child: Pressable(
                     child: FilledButton(
-                      onPressed: onOk,
+                      onPressed: widget.onOk,
                       child: const Text('Готово'),
                     ),
                   ),
@@ -238,21 +294,14 @@ class _CalendarSheetState extends State<_CalendarSheet> {
               children: [
                 for (final d in _weekdays)
                   Expanded(
-                    child: Center(
-                      child: Text(
-                        d,
-                        style: AppType.caption.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                    child: Center(child: Text(d, style: AppType.captionStrong)),
                   ),
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
             ClipRect(
               child: AnimatedSwitcher(
-                duration: AppMotion.tab,
+                duration: motionOf(context, AppMotion.tab),
                 switchInCurve: AppMotion.smooth,
                 transitionBuilder: (child, a) => SlideTransition(
                   position: Tween(
@@ -294,14 +343,17 @@ class _CalendarSheetState extends State<_CalendarSheet> {
     final enabled = !date.isBefore(widget.first) && !date.isAfter(widget.last);
     final selected = date == _selected;
     final fg = selected
-        ? Colors.white
+        ? context.colors.onPrimary
         : enabled
-        ? AppColors.textPrimary
-        : AppColors.inputBorder.withValues(alpha: .5);
+        ? context.colors.textPrimary
+        : context.colors.inputBorder.withValues(alpha: .78);
     return Semantics(
       button: true,
       selected: selected,
       enabled: enabled,
+      // The full date, so a screen reader does not just say "20".
+      label: '$n ${_monthsOf[_month.month - 1]} ${_month.year}',
+      excludeSemantics: true,
       child: Pressable(
         scale: .85,
         child: GestureDetector(
@@ -311,7 +363,7 @@ class _CalendarSheetState extends State<_CalendarSheet> {
             height: 44,
             child: Center(
               child: AnimatedContainer(
-                duration: AppMotion.base,
+                duration: motionOf(context, AppMotion.base),
                 curve: AppMotion.smooth,
                 width: 40,
                 height: 40,
@@ -319,10 +371,10 @@ class _CalendarSheetState extends State<_CalendarSheet> {
                 decoration: ShapeDecoration(
                   shape: CircleBorder(
                     side: date == today && !selected
-                        ? const BorderSide(color: AppColors.primary)
+                        ? BorderSide(color: context.colors.primary)
                         : BorderSide.none,
                   ),
-                  color: selected ? AppColors.primary : Colors.transparent,
+                  color: selected ? context.colors.primary : Colors.transparent,
                 ),
                 child: Text('$n', style: AppType.label.copyWith(color: fg)),
               ),
@@ -381,20 +433,27 @@ class _TimeSheetState extends State<_TimeSheet> {
             height: 48,
             decoration: ShapeDecoration(
               shape: const StadiumBorder(),
-              color: AppColors.tint.withValues(alpha: .7),
+              color: context.colors.tint.withValues(alpha: .7),
             ),
           ),
           Row(
             children: [
               Expanded(
-                child: _Wheel(count: 24, initial: _h, onChanged: (v) => _h = v),
+                child: _Wheel(
+                  label: 'Часы',
+                  count: 24,
+                  initial: _h,
+                  onChanged: (v) => _h = v,
+                ),
               ),
-              Text(
-                ':',
-                style: AppType.title.copyWith(fontWeight: FontWeight.w400),
-              ),
+              Text(':', style: AppType.wheel),
               Expanded(
-                child: _Wheel(count: 60, initial: _m, onChanged: (v) => _m = v),
+                child: _Wheel(
+                  label: 'Минуты',
+                  count: 60,
+                  initial: _m,
+                  onChanged: (v) => _m = v,
+                ),
               ),
             ],
           ),
@@ -404,35 +463,74 @@ class _TimeSheetState extends State<_TimeSheet> {
   );
 }
 
-class _Wheel extends StatelessWidget {
+class _Wheel extends StatefulWidget {
   const _Wheel({
+    required this.label,
     required this.count,
     required this.initial,
     required this.onChanged,
   });
 
+  final String label;
   final int count;
   final int initial;
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) => ListWheelScrollView.useDelegate(
-    controller: FixedExtentScrollController(initialItem: initial),
-    itemExtent: 48,
-    diameterRatio: 1.6,
-    perspective: .003,
-    physics: const FixedExtentScrollPhysics(),
-    onSelectedItemChanged: (i) => onChanged(i % count),
-    childDelegate: ListWheelChildLoopingListDelegate(
-      children: [
-        for (var i = 0; i < count; i++)
-          Center(
-            child: Text(
-              i.toString().padLeft(2, '0'),
-              style: AppType.title.copyWith(fontWeight: FontWeight.w400),
-            ),
-          ),
-      ],
+  State<_Wheel> createState() => _WheelState();
+}
+
+class _WheelState extends State<_Wheel> {
+  late final _c = FixedExtentScrollController(initialItem: widget.initial);
+  late int _v = widget.initial;
+
+  String _text(int v) => (v % widget.count).toString().padLeft(2, '0');
+
+  void _step(int by) {
+    final to = _c.selectedItem + by;
+    reduceMotion(context)
+        ? _c.jumpToItem(to)
+        : _c.animateToItem(
+            to,
+            duration: AppMotion.base,
+            curve: AppMotion.smooth,
+          );
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    // One adjustable node (swipe up / down), instead of 24 loose numbers.
+    label: widget.label,
+    value: _text(_v),
+    increasedValue: _text(_v + 1),
+    decreasedValue: _text(_v - 1 + widget.count),
+    onIncrease: () => _step(1),
+    onDecrease: () => _step(-1),
+    child: ExcludeSemantics(
+      child: ListWheelScrollView.useDelegate(
+        controller: _c,
+        itemExtent: 48,
+        diameterRatio: 1.6,
+        perspective: .003,
+        physics: const FixedExtentScrollPhysics(),
+        onSelectedItemChanged: (i) {
+          final v = i % widget.count;
+          setState(() => _v = v);
+          widget.onChanged(v);
+        },
+        childDelegate: ListWheelChildLoopingListDelegate(
+          children: [
+            for (var i = 0; i < widget.count; i++)
+              Center(child: Text(_text(i), style: AppType.wheel)),
+          ],
+        ),
+      ),
     ),
   );
 }

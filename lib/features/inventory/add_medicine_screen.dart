@@ -125,7 +125,6 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
         child: ListView(
           padding: formPadding,
           children: [
-            if (creating) ...[const _ScannerCard(), gap],
             const SectionHeader(title: 'Основное'),
             TextFormField(
               controller: _name,
@@ -236,7 +235,9 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               // Its own line: next to the quantity it overflows at large text.
               Text(
                 'Единица',
-                style: AppType.caption.copyWith(color: AppColors.textSecondary),
+                style: AppType.caption.copyWith(
+                  color: context.colors.textSecondary,
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
               SegmentedPills<String>(
@@ -299,35 +300,3 @@ IconData _storageIcon(StorageSpot s) => switch (s) {
   StorageSpot.fridge => Icons.kitchen_outlined,
   StorageSpot.bag => Icons.backpack_outlined,
 };
-
-/// Barcode scanning is not built yet.
-class _ScannerCard extends StatelessWidget {
-  const _ScannerCard();
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.tint,
-    shape: RoundedSuperellipseBorder(
-      borderRadius: BorderRadius.circular(AppRadii.lg),
-    ),
-    child: Pressable(
-      scale: .98,
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(AppSpacing.md),
-        shape: RoundedSuperellipseBorder(
-          borderRadius: BorderRadius.circular(AppRadii.lg),
-        ),
-        title: const Text('Сканировать пачку', style: AppType.cardTitle),
-        subtitle: const Text('Название и срок годности по штрихкоду — скоро'),
-        trailing: const CircleAvatar(
-          radius: 24,
-          backgroundColor: AppColors.primary,
-          child: Icon(Icons.qr_code_scanner, color: Colors.white),
-        ),
-        onTap: () => ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(const SnackBar(content: Text('Сканер — скоро'))),
-      ),
-    ),
-  );
-}

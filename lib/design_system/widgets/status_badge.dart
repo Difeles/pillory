@@ -20,11 +20,20 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (fg, bg) = switch (tone) {
-      StatusTone.neutral => (AppColors.textSecondary, AppColors.background),
-      StatusTone.accent => (AppColors.primaryDeep, AppColors.tint),
-      StatusTone.success => (AppColors.success, AppColors.successTint),
-      StatusTone.warning => (AppColors.warning, AppColors.warningTint),
-      StatusTone.danger => (AppColors.danger, AppColors.dangerTint),
+      StatusTone.neutral => (
+        context.colors.textSecondary,
+        context.colors.background,
+      ),
+      StatusTone.accent => (context.colors.primaryDeep, context.colors.tint),
+      StatusTone.success => (
+        context.colors.success,
+        context.colors.successTint,
+      ),
+      StatusTone.warning => (
+        context.colors.warning,
+        context.colors.warningTint,
+      ),
+      StatusTone.danger => (context.colors.danger, context.colors.dangerTint),
     };
     return DecoratedBox(
       decoration: ShapeDecoration(color: bg, shape: const StadiumBorder()),
@@ -39,11 +48,7 @@ class StatusBadge extends StatelessWidget {
             Icon(icon, size: AppSizes.badgeIcon, color: fg),
             const SizedBox(width: AppSpacing.xs),
             Flexible(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium
-                    ?.copyWith(color: fg),
-              ),
+              child: Text(label, style: AppType.caption.copyWith(color: fg)),
             ),
           ],
         ),

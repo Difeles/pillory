@@ -3,6 +3,16 @@ import 'package:flutter/cupertino.dart';
 
 import 'tokens.dart';
 
+/// True when the person asked for less motion. iOS reports this as Reduce
+/// Motion, Android as "remove animations".
+bool reduceMotion(BuildContext context) =>
+    MediaQuery.disableAnimationsOf(context) ||
+    View.of(context).platformDispatcher.accessibilityFeatures.reduceMotion;
+
+/// [d], or no time at all when motion is reduced.
+Duration motionOf(BuildContext context, Duration d) =>
+    reduceMotion(context) ? Duration.zero : d;
+
 /// Shrinks its child while a finger is down on it, then springs back. It
 /// only listens to the pointer, so the button inside keeps its own tap.
 class Pressable extends StatefulWidget {
@@ -16,27 +26,49 @@ class Pressable extends StatefulWidget {
 }
 
 class _PressableState extends State<Pressable> {
+  // A press belongs to the innermost Pressable: a button inside a card must
+  // not shrink the card as well.
+  static final _claimed = <int>{};
+
   bool _down = false;
   Offset _start = Offset.zero;
+  int? _mine;
 
   void _set(bool v) {
     if (_down != v) setState(() => _down = v);
   }
 
+  void _release(PointerEvent e) {
+    if (e.pointer != _mine) return;
+    _claimed.remove(e.pointer);
+    _mine = null;
+    _set(false);
+  }
+
+  @override
+  void dispose() {
+    if (_mine != null) _claimed.remove(_mine);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final still = MediaQuery.disableAnimationsOf(context);
+    final still = reduceMotion(context);
     return Listener(
       onPointerDown: (e) {
+        if (!_claimed.add(e.pointer)) return;
+        _mine = e.pointer;
         _start = e.localPosition;
         _set(true);
       },
       // A scroll or drag is not a press.
       onPointerMove: (e) {
-        if ((e.localPosition - _start).distance > 12) _set(false);
+        if (e.pointer == _mine && (e.localPosition - _start).distance > 12) {
+          _set(false);
+        }
       },
-      onPointerUp: (_) => _set(false),
-      onPointerCancel: (_) => _set(false),
+      onPointerUp: _release,
+      onPointerCancel: _release,
       child: AnimatedScale(
         scale: _down && !still ? widget.scale : 1,
         duration: _down ? AppMotion.press : AppMotion.release,
@@ -74,7 +106,7 @@ class _TabStackState extends State<TabStack>
     if (widget.index == _to) return;
     _from = _to;
     _to = widget.index;
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (reduceMotion(context)) {
       _from = _to;
       _c.value = 1;
     } else {
@@ -158,6 +190,7 @@ class _SlideFadeTransitions extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    if (reduceMotion(context)) return child;
     final enter = CurvedAnimation(
       parent: animation,
       curve: AppMotion.smooth,
