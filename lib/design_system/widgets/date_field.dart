@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../features/inventory/format.dart';
 import '../tokens.dart';
+import '../pickers.dart';
+import '../motion.dart';
 
 /// A read-only field that opens the date picker. [onChanged] gets the
 /// picked date, or null when cleared; a null [onChanged] disables the field.
@@ -39,12 +41,12 @@ class DateField extends StatelessWidget {
   final String? clearTooltip;
 
   Future<void> _pick(BuildContext context) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: value ?? initialDate ?? DateTime.now(),
-      firstDate: firstDate ?? DateTime(2000),
-      lastDate: DateTime(2100),
-      helpText: helpText ?? label,
+    final picked = await pickDate(
+      context,
+      initial: value ?? initialDate ?? DateTime.now(),
+      first: firstDate ?? DateTime(2000),
+      last: DateTime(2100),
+      title: helpText ?? label,
     );
     if (picked != null) onChanged?.call(picked);
   }
@@ -55,22 +57,28 @@ class DateField extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: enabled,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-        onTap: enabled ? () => _pick(context) : null,
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: label,
-            enabled: enabled,
-            suffixIcon: value != null && clearTooltip != null && enabled
-                ? IconButton(
-                    tooltip: clearTooltip,
-                    icon: const Icon(Icons.close),
-                    onPressed: () => onChanged!(null),
-                  )
-                : Icon(icon),
+      child: Pressable(
+        scale: .98,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+          onTap: enabled ? () => _pick(context) : null,
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: label,
+              enabled: enabled,
+              suffixIcon: value != null && clearTooltip != null && enabled
+                  ? Pressable(
+                      scale: .88,
+                      child: IconButton(
+                        tooltip: clearTooltip,
+                        icon: const Icon(Icons.close),
+                        onPressed: () => onChanged!(null),
+                      ),
+                    )
+                  : Icon(icon),
+            ),
+            child: Text(value == null ? emptyText : formatDate(value!)),
           ),
-          child: Text(value == null ? emptyText : formatDate(value!)),
         ),
       ),
     );

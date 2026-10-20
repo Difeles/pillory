@@ -70,13 +70,9 @@ void main() {
         find.widgetWithText(TextFormField, 'Начальное количество'),
         '100',
       );
-      await tap(tester, find.byType(DropdownButtonFormField<String>));
-      await tap(tester, find.text('мл').last);
+      await tap(tester, find.text('мл'));
       await tap(tester, find.byType(DateField));
-      await tap(
-        tester,
-        find.text('ОК'),
-      ); // today, the picker's default; Cyrillic «ОК»
+      await tap(tester, find.text('Готово')); // today, the picker's default
       await tester.enterText(
         find.widgetWithText(
           TextFormField,
@@ -165,14 +161,14 @@ void main() {
       await tap(tester, find.text('Изменить расписание'));
 
       await tap(tester, find.widgetWithText(DateField, 'Начало'));
-      expect(find.byType(DatePickerDialog), findsNothing);
+      expect(find.text('Выберите дату'), findsNothing);
 
       await tap(
         tester,
         find.widgetWithText(DateField, 'Окончание (необязательно)'),
       );
-      expect(find.byType(DatePickerDialog), findsOneWidget);
-      await tap(tester, find.text('ОК'));
+      expect(find.text('Выберите дату'), findsOneWidget);
+      await tap(tester, find.text('Готово'));
       expect(find.byTooltip('Очистить'), findsOneWidget);
       await tap(tester, find.byTooltip('Очистить'));
       expect(find.text('Не указано'), findsOneWidget);

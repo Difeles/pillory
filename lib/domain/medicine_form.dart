@@ -23,16 +23,30 @@ const quantityUnits = <String>['шт.', 'мл', 'г', 'доз'];
 
 /// What a medicine is for. Stored by enum name.
 enum MedicineCategory {
-  painkiller('Обезболивающие'),
+  painkiller('Обезболивающие и жаропонижающие'),
+
+  /// Merged into [painkiller] in the picker; kept so stored values still read.
   antipyretic('Жаропонижающие'),
-  digestive('ЖКТ'),
-  allergy('Аллергия'),
-  vitamins('Витамины'),
-  cold('Простуда'),
+  digestive('ЖКТ и пищеварение'),
+  allergy('Антигистаминные'),
+  wounds('Раны и перевязки'),
+  cold('Лекарства от простуды'),
+  sedative('Успокоительные'),
+  cardio('Сердечные'),
+  antidepressant('Антидепрессанты'),
+  hormonal('КОК и гормональные'),
+  antibiotic('Антибиотики'),
+  vitamins('Витамины и БАДы'),
   other('Другое');
 
   const MedicineCategory(this.label);
   final String label;
+
+  /// What the add form offers, in display order.
+  static final pickable = [
+    for (final c in values)
+      if (c != antipyretic) c,
+  ];
 }
 
 /// Where a medicine is kept. Stored by enum name.

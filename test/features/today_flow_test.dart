@@ -361,4 +361,23 @@ void main() {
       expect(chip.onSelected, isNull);
     });
   });
+
+  testWidgets('a schedule cannot be saved without a medicine', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byTooltip('Добавить приём'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Сохранить приём'));
+    await tester.pumpAndSettle();
+    expect(find.text('Сначала создайте лекарство'), findsOneWidget);
+    expect(find.text('Сохранить приём'), findsOneWidget); // still on the form
+
+    await inventory.createMedicine(
+      const NewMedicine(name: 'Нурофен', initialQuantity: 8, unit: 'шт.'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Сохранить приём'));
+    await tester.pumpAndSettle();
+    expect(find.text('Выберите лекарство'), findsWidgets);
+    expect(find.text('Сохранить приём'), findsOneWidget);
+  });
 }

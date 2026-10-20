@@ -17,6 +17,8 @@ import 'add_medicine_screen.dart';
 import 'format.dart';
 import 'inventory_providers.dart';
 import 'medicine_card.dart';
+import '../../design_system/pickers.dart';
+import '../../design_system/motion.dart';
 
 /// One medicine: its details, its packages and what can be done with them.
 class MedicineScreen extends ConsumerWidget {
@@ -52,24 +54,28 @@ class MedicineScreen extends ConsumerWidget {
       // The name is the header below, so it is not repeated here.
       appBar: AppBar(
         actions: [
-          PopupMenuButton<VoidCallback>(
-            tooltip: 'Лекарство',
-            onSelected: (action) => action(),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => AddMedicineScreen(editing: medicine),
+          Pressable(
+            scale: .88,
+            child: PopupMenuButton<VoidCallback>(
+              tooltip: 'Лекарство',
+              onSelected: (action) => action(),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => AddMedicineScreen(editing: medicine),
+                    ),
                   ),
+                  child: const Text('Изменить'),
                 ),
-                child: const Text('Изменить'),
-              ),
-              PopupMenuItem(
-                value: () =>
-                    archived ? _restore(context, ref) : _archive(context, ref),
-                child: Text(archived ? 'Вернуть из архива' : 'В архив'),
-              ),
-            ],
+                PopupMenuItem(
+                  value: () => archived
+                      ? _restore(context, ref)
+                      : _archive(context, ref),
+                  child: Text(archived ? 'Вернуть из архива' : 'В архив'),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -181,24 +187,28 @@ class MedicineScreen extends ConsumerWidget {
               ),
             ),
           if (!archived) ...[
-            FilledButton.tonalIcon(
-              onPressed: () => _addPackage(context, ref, stock),
-              icon: const Icon(Icons.add),
-              label: const Text('Добавить упаковку'),
+            Pressable(
+              child: FilledButton.tonalIcon(
+                onPressed: () => _addPackage(context, ref, stock),
+                icon: const Icon(Icons.add),
+                label: const Text('Добавить упаковку'),
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                await ref
-                    .read(extrasRepositoryProvider)
-                    .addShopping(medicine.name, medicineId: medicine.id);
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Добавлено в список покупок')),
-                );
-              },
-              icon: const Icon(Icons.shopping_bag_outlined),
-              label: const Text('В список покупок'),
+            Pressable(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  await ref
+                      .read(extrasRepositoryProvider)
+                      .addShopping(medicine.name, medicineId: medicine.id);
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('Добавлено в список покупок')),
+                  );
+                },
+                icon: const Icon(Icons.shopping_bag_outlined),
+                label: const Text('В список покупок'),
+              ),
             ),
           ],
         ],
@@ -338,30 +348,33 @@ class _PackageTile extends ConsumerWidget {
               ],
             ),
           ),
-          PopupMenuButton<VoidCallback>(
-            tooltip: 'Упаковка',
-            onSelected: (action) => action(),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: () => _correct(context, ref),
-                child: const Text('Скорректировать остаток'),
-              ),
-              PopupMenuItem(
-                value: () => _pickExpiry(context, ref),
-                child: const Text('Срок годности'),
-              ),
-              if (expiry != null)
+          Pressable(
+            scale: .88,
+            child: PopupMenuButton<VoidCallback>(
+              tooltip: 'Упаковка',
+              onSelected: (action) => action(),
+              itemBuilder: (_) => [
                 PopupMenuItem(
-                  value: () => ref
-                      .read(inventoryRepositoryProvider)
-                      .updatePackageExpiry(package.id, null),
-                  child: const Text('Убрать срок годности'),
+                  value: () => _correct(context, ref),
+                  child: const Text('Скорректировать остаток'),
                 ),
-              PopupMenuItem(
-                value: () => _history(context, ref),
-                child: const Text('История движения'),
-              ),
-            ],
+                PopupMenuItem(
+                  value: () => _pickExpiry(context, ref),
+                  child: const Text('Срок годности'),
+                ),
+                if (expiry != null)
+                  PopupMenuItem(
+                    value: () => ref
+                        .read(inventoryRepositoryProvider)
+                        .updatePackageExpiry(package.id, null),
+                    child: const Text('Убрать срок годности'),
+                  ),
+                PopupMenuItem(
+                  value: () => _history(context, ref),
+                  child: const Text('История движения'),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -369,13 +382,13 @@ class _PackageTile extends ConsumerWidget {
   }
 
   Future<void> _pickExpiry(BuildContext context, WidgetRef ref) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: package.expiresOn ?? DateTime.now(),
+    final picked = await pickDate(
+      context,
+      initial: package.expiresOn ?? DateTime.now(),
       // Past dates stay selectable: people also record expired medicines.
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      helpText: 'Срок годности',
+      first: DateTime(2000),
+      last: DateTime(2100),
+      title: 'Срок годности',
     );
     if (picked != null) {
       await ref
@@ -430,15 +443,18 @@ class _PackageTile extends ConsumerWidget {
                 shrinkWrap: true,
                 children: [
                   for (final t in list)
-                    ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        '${_kind(t.kind)}: ${_signed(t.delta)} ${package.unit}',
-                      ),
-                      subtitle: Text(
-                        'Остаток ${formatQuantity(t.quantityAfter)} '
-                        '${package.unit} · ${_when(t.createdAt)}',
+                    Pressable(
+                      scale: .98,
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          '${_kind(t.kind)}: ${_signed(t.delta)} ${package.unit}',
+                        ),
+                        subtitle: Text(
+                          'Остаток ${formatQuantity(t.quantityAfter)} '
+                          '${package.unit} · ${_when(t.createdAt)}',
+                        ),
                       ),
                     ),
                 ],
@@ -447,9 +463,11 @@ class _PackageTile extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: const Text('Закрыть'),
+          Pressable(
+            child: TextButton(
+              onPressed: () => Navigator.pop(c),
+              child: const Text('Закрыть'),
+            ),
           ),
         ],
       ),
@@ -518,20 +536,24 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
       ],
     ),
     actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Отмена'),
+      Pressable(
+        child: TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
       ),
-      FilledButton(
-        onPressed: () {
-          final q = parseQuantity(_quantity.text);
-          if (q == null || !q.isFinite || q < 0) {
-            setState(() => _error = 'Введите число 0 или больше');
-            return;
-          }
-          Navigator.pop(context, (q, _expiresOn));
-        },
-        child: const Text('Добавить'),
+      Pressable(
+        child: FilledButton(
+          onPressed: () {
+            final q = parseQuantity(_quantity.text);
+            if (q == null || !q.isFinite || q < 0) {
+              setState(() => _error = 'Введите число 0 или больше');
+              return;
+            }
+            Navigator.pop(context, (q, _expiresOn));
+          },
+          child: const Text('Добавить'),
+        ),
       ),
     ],
   );
@@ -572,20 +594,24 @@ class _CorrectDialogState extends State<_CorrectDialog> {
       ),
     ),
     actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Отмена'),
+      Pressable(
+        child: TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
       ),
-      FilledButton(
-        onPressed: () {
-          final q = parseQuantity(_quantity.text);
-          if (q == null || !q.isFinite || q < 0) {
-            setState(() => _error = 'Введите число 0 или больше');
-            return;
-          }
-          Navigator.pop(context, q);
-        },
-        child: const Text('Сохранить'),
+      Pressable(
+        child: FilledButton(
+          onPressed: () {
+            final q = parseQuantity(_quantity.text);
+            if (q == null || !q.isFinite || q < 0) {
+              setState(() => _error = 'Введите число 0 или больше');
+              return;
+            }
+            Navigator.pop(context, q);
+          },
+          child: const Text('Сохранить'),
+        ),
       ),
     ],
   );

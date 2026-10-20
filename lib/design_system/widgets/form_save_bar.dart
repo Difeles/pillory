@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tokens.dart';
+import '../motion.dart';
 
 /// Body padding for a scrolling form.
 const formPadding = EdgeInsets.fromLTRB(
@@ -43,10 +44,13 @@ class FormSaveBar extends StatelessWidget {
           child: SizedBox(
             width: double.infinity,
             height: 56,
-            child: FilledButton.icon(
-              onPressed: saving ? null : onSave,
-              icon: const Icon(Icons.check_circle_outline),
-              label: Text(label),
+            child: Pressable(
+              scale: .97,
+              child: FilledButton.icon(
+                onPressed: saving ? null : onSave,
+                icon: const Icon(Icons.check),
+                label: Text(label),
+              ),
             ),
           ),
         ),

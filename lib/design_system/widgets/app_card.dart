@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../motion.dart';
 import '../tokens.dart';
 
 enum AppCardVariant {
@@ -51,31 +52,32 @@ class AppCard extends StatelessWidget {
         _ => BorderSide.none,
       },
     );
-    return Semantics(
-      container: true,
-      button: onTap != null,
-      child: DecoratedBox(
-        decoration: ShapeDecoration(
-          shape: shape,
-          shadows: flat ? null : AppShadows.card,
-        ),
-        child: Material(
-          color: switch (variant) {
-            AppCardVariant.muted => AppColors.surfaceLow,
-            AppCardVariant.done => AppColors.successTint,
-            _ => AppColors.surface,
-          },
-          shape: shape,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: kMinTapSize),
-              child: Padding(padding: padding, child: child),
-            ),
+    final card = DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: shape,
+        shadows: flat ? null : AppShadows.card,
+      ),
+      child: Material(
+        color: switch (variant) {
+          AppCardVariant.muted => AppColors.surfaceLow,
+          AppCardVariant.done => AppColors.successTint,
+          _ => AppColors.surface,
+        },
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: kMinTapSize),
+            child: Padding(padding: padding, child: child),
           ),
         ),
       ),
+    );
+    return Semantics(
+      container: true,
+      button: onTap != null,
+      child: onTap == null ? card : Pressable(scale: .975, child: card),
     );
   }
 }

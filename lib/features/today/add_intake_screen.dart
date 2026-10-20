@@ -18,6 +18,8 @@ import '../inventory/add_medicine_screen.dart';
 import '../inventory/format.dart';
 import '../inventory/inventory_providers.dart';
 import 'today_screen.dart';
+import '../../design_system/pickers.dart';
+import '../../design_system/motion.dart';
 
 const _weekdayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
@@ -80,12 +82,12 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
     DateTime initial,
     String help, {
     bool fromToday = false,
-  }) => showDatePicker(
-    context: context,
-    initialDate: initial,
-    firstDate: fromToday ? _today : DateTime(2000),
-    lastDate: DateTime(2100),
-    helpText: help,
+  }) => pickDate(
+    context,
+    initial: initial,
+    first: fromToday ? _today : DateTime(2000),
+    last: DateTime(2100),
+    title: help,
   );
 
   Future<void> _newMedicine() async {
@@ -97,8 +99,24 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
   }
 
   Future<void> _save(List<MedicineStock> stock) async {
-    if (!_formKey.currentState!.validate() || _saving) return;
+    final valid = _formKey.currentState!.validate();
     final messenger = ScaffoldMessenger.of(context);
+    // With an empty cabinet there is no medicine field to validate.
+    if (_medicineId == null) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              stock.isEmpty
+                  ? 'Сначала создайте лекарство'
+                  : 'Выберите лекарство',
+            ),
+          ),
+        );
+      return;
+    }
+    if (!valid || _saving) return;
     final navigator = Navigator.of(context);
     final dose = parseQuantity(_dose.text)!;
     NewSchedule draft(String medicineId) => NewSchedule(
@@ -255,16 +273,19 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                       runSpacing: chipGap,
                       children: [
                         for (final s in stock)
-                          ChoiceChip(
-                            label: Text(s.medicine.name),
-                            selected: s.medicine.id == _medicineId,
-                            // Changing the medicine would move its history to
-                            // another one.
-                            onSelected: _editing == null
-                                ? (_) => setState(
-                                    () => _medicineId = s.medicine.id,
-                                  )
-                                : null,
+                          Pressable(
+                            scale: .93,
+                            child: ChoiceChip(
+                              label: Text(s.medicine.name),
+                              selected: s.medicine.id == _medicineId,
+                              // Changing the medicine would move its history to
+                              // another one.
+                              onSelected: _editing == null
+                                  ? (_) => setState(
+                                      () => _medicineId = s.medicine.id,
+                                    )
+                                  : null,
+                            ),
                           ),
                       ],
                     ),
@@ -284,10 +305,12 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
             if (_editing == null)
               Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _newMedicine,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Новое лекарство'),
+                child: Pressable(
+                  child: TextButton.icon(
+                    onPressed: _newMedicine,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Новое лекарство'),
+                  ),
                 ),
               )
             else
@@ -329,12 +352,16 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 runSpacing: chipGap,
                 children: [
                   for (var i = 0; i < 7; i++)
-                    FilterChip(
-                      label: Text(_weekdayLabels[i]),
-                      selected: _weekdays.contains(i + 1),
-                      onSelected: (on) => setState(
-                        () =>
-                            on ? _weekdays.add(i + 1) : _weekdays.remove(i + 1),
+                    Pressable(
+                      scale: .93,
+                      child: FilterChip(
+                        label: Text(_weekdayLabels[i]),
+                        selected: _weekdays.contains(i + 1),
+                        onSelected: (on) => setState(
+                          () => on
+                              ? _weekdays.add(i + 1)
+                              : _weekdays.remove(i + 1),
+                        ),
                       ),
                     ),
                 ],
@@ -386,9 +413,9 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                         : 'Добавить время',
                   ),
                   onPressed: () async {
-                    final t = await showTimePicker(
-                      context: context,
-                      initialTime: const TimeOfDay(hour: 9, minute: 0),
+                    final t = await pickTime(
+                      context,
+                      initial: const TimeOfDay(hour: 9, minute: 0),
                     );
                     if (t != null) {
                       setState(() => _times.add(t.hour * 60 + t.minute));
@@ -454,20 +481,26 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
             _preview(stock),
             if (_editing != null) ...[
               const SizedBox(height: AppSpacing.xl),
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.danger,
-                  side: const BorderSide(color: AppColors.danger),
+              Pressable(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                    side: const BorderSide(color: AppColors.danger),
+                  ),
+                  onPressed: _saving
+                      ? null
+                      : () async {
+                          final navigator = Navigator.of(context);
+                          if (await confirmEndSchedule(
+                            context,
+                            ref,
+                            _editing!,
+                          )) {
+                            navigator.pop();
+                          }
+                        },
+                  child: const Text('Завершить расписание'),
                 ),
-                onPressed: _saving
-                    ? null
-                    : () async {
-                        final navigator = Navigator.of(context);
-                        if (await confirmEndSchedule(context, ref, _editing!)) {
-                          navigator.pop();
-                        }
-                      },
-                child: const Text('Завершить расписание'),
               ),
             ],
           ],

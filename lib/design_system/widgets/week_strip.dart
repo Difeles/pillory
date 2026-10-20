@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../motion.dart';
 import '../tokens.dart';
 
 const _short = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -60,45 +61,58 @@ class WeekStrip extends StatelessWidget {
     return Semantics(
       button: true,
       selected: active,
-      child: Material(
-        color: active ? AppColors.primary : AppColors.surfaceLow,
-        shape: const StadiumBorder(),
-        elevation: active ? 4 : 0,
-        shadowColor: AppColors.primary,
-        child: InkWell(
-          customBorder: const StadiumBorder(),
+      child: Pressable(
+        scale: .92,
+        child: GestureDetector(
           onTap: () => onSelected(day),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.ms),
-            child: Column(
-              children: [
-                Text(
-                  _short[i],
-                  style: AppType.caption.copyWith(
-                    color: active ? AppColors.tint : AppColors.textSecondary,
-                    fontWeight: FontWeight.w700,
+          child: AnimatedContainer(
+            duration: AppMotion.base,
+            curve: AppMotion.smooth,
+            decoration: ShapeDecoration(
+              shape: const StadiumBorder(),
+              color: active ? AppColors.primary : AppColors.surfaceLow,
+              shadows: active
+                  ? const [
+                      BoxShadow(
+                        color: Color(0x665848C5),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.ms),
+              child: Column(
+                children: [
+                  Text(
+                    _short[i],
+                    style: AppType.caption.copyWith(
+                      color: active ? AppColors.tint : AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${day.day}',
-                  style: AppType.label.copyWith(
-                    fontSize: 16,
-                    color: active ? Colors.white : AppColors.textPrimary,
+                  const SizedBox(height: 2),
+                  Text(
+                    '${day.day}',
+                    style: AppType.label.copyWith(
+                      fontSize: 16,
+                      color: active ? Colors.white : AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: done(day)
-                        ? (active ? Colors.white : AppColors.success)
-                        : Colors.transparent,
+                  const SizedBox(height: 4),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: done(day)
+                          ? (active ? Colors.white : AppColors.success)
+                          : Colors.transparent,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

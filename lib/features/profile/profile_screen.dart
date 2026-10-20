@@ -24,6 +24,7 @@ import '../inventory/inventory_providers.dart';
 import '../today/today_providers.dart';
 import '../inventory/format.dart';
 import 'backup_files.dart';
+import '../../design_system/motion.dart';
 
 const _dayLetters = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
@@ -87,10 +88,13 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Изменить имя',
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => _editName(context, extras, prefs.name),
+                Pressable(
+                  scale: .88,
+                  child: IconButton(
+                    tooltip: 'Изменить имя',
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => _editName(context, extras, prefs.name),
+                  ),
                 ),
               ],
             ),
@@ -156,15 +160,21 @@ class ProfileScreen extends ConsumerWidget {
               style: AppType.caption,
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.upload_file_outlined),
-            title: const Text('Сохранить резервную копию'),
-            onTap: () => _guard(context, () => _export(context, ref)),
+          Pressable(
+            scale: .98,
+            child: ListTile(
+              leading: const Icon(Icons.upload_file_outlined),
+              title: const Text('Сохранить резервную копию'),
+              onTap: () => _guard(context, () => _export(context, ref)),
+            ),
           ),
-          ListTile(
-            leading: const Icon(Icons.restore_outlined),
-            title: const Text('Восстановить из копии'),
-            onTap: () => _guard(context, () => _import(context, ref)),
+          Pressable(
+            scale: .98,
+            child: ListTile(
+              leading: const Icon(Icons.restore_outlined),
+              title: const Text('Восстановить из копии'),
+              onTap: () => _guard(context, () => _import(context, ref)),
+            ),
           ),
         ],
       ),
@@ -214,13 +224,17 @@ class _NameDialogState extends State<_NameDialog> {
       textCapitalization: TextCapitalization.words,
     ),
     actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Отмена'),
+      Pressable(
+        child: TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
       ),
-      FilledButton(
-        onPressed: () => Navigator.pop(context, _c.text.trim()),
-        child: const Text('Сохранить'),
+      Pressable(
+        child: FilledButton(
+          onPressed: () => Navigator.pop(context, _c.text.trim()),
+          child: const Text('Сохранить'),
+        ),
       ),
     ],
   );
@@ -339,9 +353,11 @@ Future<void> _alert(BuildContext context, String title, String text) =>
         title: Text(title),
         content: Text(text),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: const Text('OK'),
+          Pressable(
+            child: TextButton(
+              onPressed: () => Navigator.pop(c),
+              child: const Text('OK'),
+            ),
           ),
         ],
       ),
@@ -408,18 +424,24 @@ Future<void> _import(BuildContext context, WidgetRef ref) async {
             'Это нельзя отменить.',
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(c, 'save'),
-              child: const Text('Сначала сохранить текущие'),
+            Pressable(
+              child: TextButton(
+                onPressed: () => Navigator.pop(c, 'save'),
+                child: const Text('Сначала сохранить текущие'),
+              ),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(c),
-              child: const Text('Отмена'),
+            Pressable(
+              child: TextButton(
+                onPressed: () => Navigator.pop(c),
+                child: const Text('Отмена'),
+              ),
             ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-              onPressed: () => Navigator.pop(c, 'replace'),
-              child: const Text('Заменить'),
+            Pressable(
+              child: TextButton(
+                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                onPressed: () => Navigator.pop(c, 'replace'),
+                child: const Text('Заменить'),
+              ),
             ),
           ],
         ),

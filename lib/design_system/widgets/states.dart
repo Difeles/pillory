@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tokens.dart';
+import '../motion.dart';
 
 /// Nothing to show: an icon illustration, a title, an optional explanation
 /// and an optional next step. Centred, and scrolls if the text is large.
@@ -80,10 +81,12 @@ class ErrorState extends StatelessWidget {
     iconColor: AppColors.danger,
     iconBackground: AppColors.dangerTint,
     title: message,
-    action: FilledButton.tonalIcon(
-      onPressed: onRetry,
-      icon: const Icon(Icons.refresh),
-      label: const Text('Повторить'),
+    action: Pressable(
+      child: FilledButton.tonalIcon(
+        onPressed: onRetry,
+        icon: const Icon(Icons.refresh),
+        label: const Text('Повторить'),
+      ),
     ),
   );
 }

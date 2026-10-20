@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../motion.dart';
 import '../tokens.dart';
 
 class DockItem {
@@ -26,13 +27,16 @@ class FloatingDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Sits closer to the screen edge than a plain SafeArea would put it.
+    final inset = MediaQuery.viewPaddingOf(context).bottom;
     return SafeArea(
+      bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.md,
           AppSpacing.xs,
           AppSpacing.md,
-          AppSpacing.sm,
+          inset > 12 ? inset - 4 : AppSpacing.sm,
         ),
         // The shadow sits outside the clip; the glass (blur, translucent
         // fill, ghost border) inside it.
@@ -57,16 +61,41 @@ class FloatingDock extends StatelessWidget {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.xs),
-                  child: Row(
+                  child: Stack(
                     children: [
-                      for (var i = 0; i < items.length; i++)
-                        Expanded(
-                          child: _DockButton(
-                            item: items[i],
-                            selected: i == index,
-                            onTap: () => onSelected(i),
+                      // One indicator that springs from tab to tab.
+                      Positioned.fill(
+                        child: AnimatedAlign(
+                          duration: AppMotion.tab,
+                          curve: AppMotion.spring,
+                          alignment: Alignment(
+                            -1 + 2 * index / (items.length - 1),
+                            0,
+                          ),
+                          child: FractionallySizedBox(
+                            widthFactor: 1 / items.length,
+                            heightFactor: 1,
+                            child: const DecoratedBox(
+                              decoration: ShapeDecoration(
+                                shape: StadiumBorder(),
+                                color: AppColors.tint,
+                              ),
+                            ),
                           ),
                         ),
+                      ),
+                      Row(
+                        children: [
+                          for (var i = 0; i < items.length; i++)
+                            Expanded(
+                              child: _DockButton(
+                                item: items[i],
+                                selected: i == index,
+                                onTap: () => onSelected(i),
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -92,36 +121,49 @@ class _DockButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primaryDeep : AppColors.textSecondary;
     return Semantics(
       button: true,
       selected: selected,
       label: item.label,
       excludeSemantics: true,
-      child: Material(
-        color: selected ? AppColors.tint : Colors.transparent,
-        shape: const StadiumBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
+      child: Pressable(
+        scale: .9,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 56),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(selected ? item.selectedIcon : item.icon, color: color),
-                Text(
-                  item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppType.caption.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: color,
+            child: TweenAnimationBuilder<Color?>(
+              tween: ColorTween(
+                end: selected ? AppColors.primaryDeep : AppColors.textSecondary,
+              ),
+              duration: AppMotion.tab,
+              builder: (context, color, _) => Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // The icon pops a little when its tab is chosen.
+                  AnimatedScale(
+                    scale: selected ? 1.18 : 1,
+                    duration: AppMotion.tab,
+                    curve: AppMotion.spring,
+                    child: Icon(
+                      selected ? item.selectedIcon : item.icon,
+                      color: color,
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppType.caption.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

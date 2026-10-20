@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tokens.dart';
+import '../motion.dart';
 
 /// − value +. A null callback disables its button (e.g. − at zero).
 class QuantityStepper extends StatelessWidget {
@@ -24,10 +25,13 @@ class QuantityStepper extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      IconButton.filledTonal(
-        tooltip: decrementTooltip,
-        onPressed: onDecrement,
-        icon: const Icon(Icons.remove),
+      Pressable(
+        scale: .88,
+        child: IconButton.filledTonal(
+          tooltip: decrementTooltip,
+          onPressed: onDecrement,
+          icon: const Icon(Icons.remove),
+        ),
       ),
       Flexible(
         child: Padding(
@@ -39,10 +43,13 @@ class QuantityStepper extends StatelessWidget {
           ),
         ),
       ),
-      IconButton.filledTonal(
-        tooltip: incrementTooltip,
-        onPressed: onIncrement,
-        icon: const Icon(Icons.add),
+      Pressable(
+        scale: .88,
+        child: IconButton.filledTonal(
+          tooltip: incrementTooltip,
+          onPressed: onIncrement,
+          icon: const Icon(Icons.add),
+        ),
       ),
     ],
   );

@@ -187,7 +187,7 @@ void main() {
     await tester.tap(find.byType(DateField));
     await tester.pumpAndSettle();
     await tester.tap(find.text('15'));
-    await tester.tap(find.text('OK'));
+    await tester.tap(find.text('Готово'));
     await tester.pumpAndSettle();
     expect(value, DateTime(2030, 5, 15));
     expect(find.text('15.05.2030'), findsOneWidget);
@@ -202,7 +202,7 @@ void main() {
     );
     await tester.tap(find.byType(DateField));
     await tester.pumpAndSettle();
-    expect(find.byType(DatePickerDialog), findsNothing);
+    expect(find.text('Выберите дату'), findsNothing);
   });
 
   testWidgets('showConfirmDialog returns the choice; danger is red', (

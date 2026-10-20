@@ -83,6 +83,16 @@ abstract final class AppMotion {
   static const base = Duration(milliseconds: 250);
   static const slow = Duration(milliseconds: 400);
   static const curve = Curves.easeOutCubic;
+
+  static const press = Duration(milliseconds: 90);
+  static const release = Duration(milliseconds: 380);
+  static const tab = Duration(milliseconds: 420);
+
+  /// Settles quickly, overshoots slightly: the "springy" feel.
+  static const spring = Cubic(.34, 1.4, .5, 1);
+
+  /// Settles quickly with no overshoot.
+  static const smooth = Cubic(.22, 1, .36, 1);
 }
 
 /// Type roles. Sizes are logical: the system text scale still applies.

@@ -13,6 +13,7 @@ import '../../domain/stock_status.dart';
 import 'add_medicine_screen.dart';
 import 'inventory_providers.dart';
 import 'medicine_card.dart';
+import '../../design_system/motion.dart';
 
 /// Room under the content for the floating add button.
 const _fabClearance = 96.0;
@@ -73,14 +74,17 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
             decoration: InputDecoration(
               hintText: 'Поиск по $count лекарствам',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                tooltip: 'Сканер штрихкода — скоро',
-                icon: const Icon(Icons.qr_code_scanner),
-                onPressed: () => ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    const SnackBar(content: Text('Сканер штрихкода — скоро')),
-                  ),
+              suffixIcon: Pressable(
+                scale: .88,
+                child: IconButton(
+                  tooltip: 'Сканер штрихкода — скоро',
+                  icon: const Icon(Icons.qr_code_scanner),
+                  onPressed: () => ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      const SnackBar(content: Text('Сканер штрихкода — скоро')),
+                    ),
+                ),
               ),
               border: _pillBorder,
               enabledBorder: _pillBorder,
@@ -94,17 +98,20 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
-        IconButton.filledTonal(
-          tooltip: _archive ? 'Вернуться в аптечку' : 'Архив',
-          style: IconButton.styleFrom(
-            backgroundColor: _archive ? AppColors.tint : AppColors.surface,
-            foregroundColor: AppColors.primaryDeep,
-            minimumSize: const Size.square(kMinTapSize),
+        Pressable(
+          scale: .88,
+          child: IconButton.filledTonal(
+            tooltip: _archive ? 'Вернуться в аптечку' : 'Архив',
+            style: IconButton.styleFrom(
+              backgroundColor: _archive ? AppColors.tint : AppColors.surface,
+              foregroundColor: AppColors.primaryDeep,
+              minimumSize: const Size.square(kMinTapSize),
+            ),
+            icon: Icon(
+              _archive ? Icons.medication_outlined : Icons.inventory_2_outlined,
+            ),
+            onPressed: () => setState(() => _archive = !_archive),
           ),
-          icon: Icon(
-            _archive ? Icons.medication_outlined : Icons.inventory_2_outlined,
-          ),
-          onPressed: () => setState(() => _archive = !_archive),
         ),
       ],
     ),
@@ -176,10 +183,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
                       message:
                           'Добавьте первое лекарство, чтобы следить за остатком '
                           'и сроком годности.',
-                      action: FilledButton.icon(
-                        onPressed: () => _add(context),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Добавить лекарство'),
+                      action: Pressable(
+                        child: FilledButton.icon(
+                          onPressed: () => _add(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Добавить лекарство'),
+                        ),
                       ),
                     ),
             );
@@ -219,13 +228,15 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
             empty: EmptyState(
               icon: Icons.filter_alt_off_outlined,
               title: 'Нет лекарств с таким статусом',
-              action: FilledButton.tonal(
-                onPressed: () => setState(() {
-                  _filter = StockFilter.all;
-                  _category = null;
-                  _query = '';
-                }),
-                child: const Text('Показать все'),
+              action: Pressable(
+                child: FilledButton.tonal(
+                  onPressed: () => setState(() {
+                    _filter = StockFilter.all;
+                    _category = null;
+                    _query = '';
+                  }),
+                  child: const Text('Показать все'),
+                ),
               ),
             ),
           );
@@ -390,17 +401,23 @@ class _CategoryBar extends StatelessWidget {
       child: Row(
         spacing: AppSpacing.sm,
         children: [
-          ChoiceChip(
-            label: const Text('Все категории'),
-            selected: selected == null,
-            onSelected: (_) => onSelected(null),
+          Pressable(
+            scale: .93,
+            child: ChoiceChip(
+              label: const Text('Все категории'),
+              selected: selected == null,
+              onSelected: (_) => onSelected(null),
+            ),
           ),
           for (final c in MedicineCategory.values)
             if (present.contains(c))
-              ChoiceChip(
-                label: Text(c.label),
-                selected: selected == c,
-                onSelected: (_) => onSelected(selected == c ? null : c),
+              Pressable(
+                scale: .93,
+                child: ChoiceChip(
+                  label: Text(c.label),
+                  selected: selected == c,
+                  onSelected: (_) => onSelected(selected == c ? null : c),
+                ),
               ),
         ],
       ),
@@ -428,10 +445,13 @@ class _FilterBar extends StatelessWidget {
         for (final f in StockFilter.values)
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.sm),
-            child: ChoiceChip(
-              label: Text(f.label),
-              selected: f == selected,
-              onSelected: (_) => onSelected(f),
+            child: Pressable(
+              scale: .93,
+              child: ChoiceChip(
+                label: Text(f.label),
+                selected: f == selected,
+                onSelected: (_) => onSelected(f),
+              ),
             ),
           ),
       ],

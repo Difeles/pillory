@@ -12,6 +12,7 @@ import '../../domain/medicine_form.dart';
 import '../../domain/models.dart';
 import 'format.dart';
 import 'medicine_card.dart';
+import '../../design_system/motion.dart';
 
 /// Creates a medicine, or edits the name, form and strength of [editing].
 /// Packages and quantities are managed on the medicine's own screen.
@@ -138,42 +139,52 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                   (v == null || v.trim().isEmpty) ? 'Введите название' : null,
             ),
             const SectionHeader(title: 'Категория действия'),
-            // Tiles grow with the text, so no fixed aspect ratio.
-            LayoutBuilder(
-              builder: (context, box) {
-                final w = (box.maxWidth - 2 * AppSpacing.sm) / 3;
-                return Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    for (final c in MedicineCategory.values)
-                      SizedBox(
-                        width: w,
-                        child: ChoiceTile(
-                          icon: _categoryIcon(c),
-                          label: c.label,
-                          selected: _category == c,
-                          onTap: () => setState(
-                            () => _category = _category == c ? null : c,
+            // Two columns, so words wrap at spaces; the tiles of a row share
+            // one height and grow with the text.
+            for (var i = 0; i < MedicineCategory.pickable.length; i += 2)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final c in MedicineCategory.pickable.skip(i).take(2))
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right: c == MedicineCategory.pickable[i]
+                                  ? AppSpacing.sm
+                                  : 0,
+                            ),
+                            child: ChoiceTile(
+                              icon: _categoryIcon(c),
+                              label: c.label,
+                              selected: _category == c,
+                              onTap: () => setState(
+                                () => _category = _category == c ? null : c,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                  ],
-                );
-              },
-            ),
+                    ],
+                  ),
+                ),
+              ),
             const SectionHeader(title: 'Форма выпуска'),
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
                 for (final f in MedicineForm.values)
-                  ChoiceChip(
-                    avatar: Icon(medicineFormIcon(f), size: 18),
-                    label: Text(f.label),
-                    selected: _form == f,
-                    onSelected: (_) =>
-                        setState(() => _form = _form == f ? null : f),
+                  Pressable(
+                    scale: .93,
+                    child: ChoiceChip(
+                      avatar: Icon(medicineFormIcon(f), size: 18),
+                      label: Text(f.label),
+                      selected: _form == f,
+                      onSelected: (_) =>
+                          setState(() => _form = _form == f ? null : f),
+                    ),
                   ),
               ],
             ),
@@ -191,12 +202,15 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               runSpacing: AppSpacing.sm,
               children: [
                 for (final st in StorageSpot.values)
-                  ChoiceChip(
-                    avatar: Icon(_storageIcon(st), size: 18),
-                    label: Text(st.label),
-                    selected: _storage == st,
-                    onSelected: (_) =>
-                        setState(() => _storage = _storage == st ? null : st),
+                  Pressable(
+                    scale: .93,
+                    child: ChoiceChip(
+                      avatar: Icon(_storageIcon(st), size: 18),
+                      label: Text(st.label),
+                      selected: _storage == st,
+                      onSelected: (_) =>
+                          setState(() => _storage = _storage == st ? null : st),
+                    ),
                   ),
               ],
             ),
@@ -220,15 +234,15 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               ),
               gap,
               // Its own line: next to the quantity it overflows at large text.
-              DropdownButtonFormField<String>(
-                initialValue: _unit,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Единица'),
-                items: [
-                  for (final u in quantityUnits)
-                    DropdownMenuItem(value: u, child: Text(u)),
-                ],
-                onChanged: (v) => setState(() => _unit = v ?? _unit),
+              Text(
+                'Единица',
+                style: AppType.caption.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              SegmentedPills<String>(
+                options: {for (final u in quantityUnits) u: u},
+                selected: _unit,
+                onChanged: (v) => setState(() => _unit = v),
               ),
               gap,
               DateField(
@@ -269,9 +283,15 @@ IconData _categoryIcon(MedicineCategory c) => switch (c) {
   MedicineCategory.antipyretic => Icons.thermostat,
   MedicineCategory.digestive => Icons.lunch_dining_outlined,
   MedicineCategory.allergy => Icons.local_florist_outlined,
-  MedicineCategory.vitamins => Icons.eco_outlined,
+  MedicineCategory.wounds => Icons.healing_outlined,
   MedicineCategory.cold => Icons.ac_unit,
+  MedicineCategory.sedative => Icons.spa_outlined,
+  MedicineCategory.cardio => Icons.favorite_border,
   MedicineCategory.other => Icons.more_horiz,
+  MedicineCategory.antidepressant => Icons.mood_outlined,
+  MedicineCategory.hormonal => Icons.female,
+  MedicineCategory.antibiotic => Icons.coronavirus_outlined,
+  MedicineCategory.vitamins => Icons.eco_outlined,
 };
 
 IconData _storageIcon(StorageSpot s) => switch (s) {
@@ -290,21 +310,24 @@ class _ScannerCard extends StatelessWidget {
     shape: RoundedSuperellipseBorder(
       borderRadius: BorderRadius.circular(AppRadii.lg),
     ),
-    child: ListTile(
-      contentPadding: const EdgeInsets.all(AppSpacing.md),
-      shape: RoundedSuperellipseBorder(
-        borderRadius: BorderRadius.circular(AppRadii.lg),
+    child: Pressable(
+      scale: .98,
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(AppSpacing.md),
+        shape: RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+        ),
+        title: const Text('Сканировать пачку', style: AppType.cardTitle),
+        subtitle: const Text('Название и срок годности по штрихкоду — скоро'),
+        trailing: const CircleAvatar(
+          radius: 24,
+          backgroundColor: AppColors.primary,
+          child: Icon(Icons.qr_code_scanner, color: Colors.white),
+        ),
+        onTap: () => ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(content: Text('Сканер — скоро'))),
       ),
-      title: const Text('Сканировать пачку', style: AppType.cardTitle),
-      subtitle: const Text('Название и срок годности по штрихкоду — скоро'),
-      trailing: const CircleAvatar(
-        radius: 24,
-        backgroundColor: AppColors.primary,
-        child: Icon(Icons.qr_code_scanner, color: Colors.white),
-      ),
-      onTap: () => ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('Сканер — скоро'))),
     ),
   );
 }

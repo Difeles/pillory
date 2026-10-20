@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'motion.dart';
 import 'tokens.dart';
 
 const _scheme = ColorScheme(
@@ -68,6 +69,10 @@ ThemeData buildAppTheme() {
     fontFamily: AppType.family,
     textTheme: textTheme,
     scaffoldBackgroundColor: AppColors.background,
+    // No Material ripple or highlight: presses are shown by [Pressable].
+    splashFactory: NoSplash.splashFactory,
+    highlightColor: Colors.transparent,
+    pageTransitionsTheme: appPageTransitions,
     dividerTheme: const DividerThemeData(color: AppColors.divider),
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.background,
@@ -141,6 +146,8 @@ ThemeData buildAppTheme() {
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceLow,
       selectedColor: AppColors.tint,
+      // Selection shows in the fill and border; a tick would cover the avatar.
+      showCheckmark: false,
       checkmarkColor: AppColors.primaryDeep,
       labelStyle: label.copyWith(color: AppColors.textPrimary),
       secondaryLabelStyle: label.copyWith(color: AppColors.primaryDeep),

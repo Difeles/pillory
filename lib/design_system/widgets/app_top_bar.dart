@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens.dart';
 import 'mascot_pill.dart';
+import '../motion.dart';
 
 /// Brand + screen title on the left, quick action and avatar on the right.
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
@@ -75,10 +76,17 @@ class TopBarAddButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => IconButton.filled(
-    tooltip: tooltip,
-    onPressed: onPressed,
-    style: IconButton.styleFrom(minimumSize: const Size.square(kMinTapSize)),
-    icon: const Icon(Icons.add),
+  Widget build(BuildContext context) => Pressable(
+    scale: .88,
+    child: IconButton.filled(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      // Smaller than the tap target: the button pads itself to 48 for touch.
+      style: IconButton.styleFrom(
+        minimumSize: const Size.square(40),
+        iconSize: 22,
+      ),
+      icon: const Icon(Icons.add),
+    ),
   );
 }

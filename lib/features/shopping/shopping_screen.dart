@@ -12,6 +12,7 @@ import '../../domain/extras.dart';
 import '../../domain/models.dart';
 import '../../domain/stock_status.dart';
 import '../inventory/inventory_providers.dart';
+import '../../design_system/motion.dart';
 
 /// A basic home first-aid kit: group title and the items to have.
 const basicKit = <(String, List<String>)>[
@@ -130,13 +131,15 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                               Icons.check_circle,
                               color: AppColors.success,
                             )
-                          : FilledButton.icon(
-                              onPressed: () => _add(
-                                a.stock.medicine.name,
-                                medicineId: a.stock.medicine.id,
+                          : Pressable(
+                              child: FilledButton.icon(
+                                onPressed: () => _add(
+                                  a.stock.medicine.name,
+                                  medicineId: a.stock.medicine.id,
+                                ),
+                                icon: const Icon(Icons.add_shopping_cart),
+                                label: const Text('В список'),
                               ),
-                              icon: const Icon(Icons.add_shopping_cart),
-                              label: const Text('В список'),
                             ),
                     ],
                   ),
@@ -158,10 +161,13 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              IconButton.filled(
-                tooltip: 'Добавить в список',
-                onPressed: _submit,
-                icon: const Icon(Icons.add),
+              Pressable(
+                scale: .88,
+                child: IconButton.filled(
+                  tooltip: 'Добавить в список',
+                  onPressed: _submit,
+                  icon: const Icon(Icons.add),
+                ),
               ),
             ],
           ),
@@ -173,28 +179,33 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
             )
           else ...[
             for (final i in items)
-              CheckboxListTile(
-                value: i.checked,
-                onChanged: (v) => extras.setChecked(i.id, v ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-                title: Text(
-                  i.name,
-                  style: TextStyle(
-                    decoration: i.checked ? TextDecoration.lineThrough : null,
+              Pressable(
+                scale: .98,
+                child: CheckboxListTile(
+                  value: i.checked,
+                  onChanged: (v) => extras.setChecked(i.id, v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text(
+                    i.name,
+                    style: TextStyle(
+                      decoration: i.checked ? TextDecoration.lineThrough : null,
+                    ),
                   ),
-                ),
-                secondary: IconButton(
-                  tooltip: 'Убрать из списка',
-                  icon: const Icon(Icons.close),
-                  onPressed: () => extras.removeShopping(i.id),
+                  secondary: IconButton(
+                    tooltip: 'Убрать из списка',
+                    icon: const Icon(Icons.close),
+                    onPressed: () => extras.removeShopping(i.id),
+                  ),
                 ),
               ),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => _copy(items),
-                icon: const Icon(Icons.copy_outlined),
-                label: const Text('Скопировать список'),
+              child: Pressable(
+                child: TextButton.icon(
+                  onPressed: () => _copy(items),
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Скопировать список'),
+                ),
               ),
             ),
           ],
@@ -224,10 +235,12 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                               tone: StatusTone.accent,
                             )
                           else
-                            TextButton.icon(
-                              onPressed: () => _add(item),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Добавить'),
+                            Pressable(
+                              child: TextButton.icon(
+                                onPressed: () => _add(item),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Добавить'),
+                              ),
                             ),
                         ],
                       ),

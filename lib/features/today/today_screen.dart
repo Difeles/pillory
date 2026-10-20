@@ -27,6 +27,8 @@ import '../inventory/medicine_card.dart';
 import 'add_intake_screen.dart';
 import 'history_screen.dart';
 import 'today_providers.dart';
+import '../../design_system/motion.dart';
+import '../../design_system/pickers.dart';
 
 const _months = [
   'января',
@@ -124,11 +126,11 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   });
 
   Future<void> _pickDay() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _day,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+    final picked = await pickDate(
+      context,
+      initial: _day,
+      first: DateTime(2020),
+      last: DateTime(2100),
     );
     if (picked != null) _select(picked);
   }
@@ -220,19 +222,25 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                   ),
                 ),
               ),
-              IconButton(
-                tooltip: 'История',
-                icon: const Icon(Icons.history),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const HistoryScreen(),
+              Pressable(
+                scale: .88,
+                child: IconButton(
+                  tooltip: 'История',
+                  icon: const Icon(Icons.history),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const HistoryScreen(),
+                    ),
                   ),
                 ),
               ),
-              IconButton(
-                tooltip: 'Весь месяц',
-                icon: const Icon(Icons.calendar_month_outlined),
-                onPressed: _pickDay,
+              Pressable(
+                scale: .88,
+                child: IconButton(
+                  tooltip: 'Весь месяц',
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  onPressed: _pickDay,
+                ),
               ),
             ],
           ),
@@ -504,26 +512,29 @@ class _IntakeCard extends StatelessWidget {
     if (intake.medicineStrength != null) intake.medicineStrength!,
   ].join(' · ');
 
-  Widget _menu() => PopupMenuButton<VoidCallback>(
-    tooltip: 'Управление расписанием',
-    onSelected: (action) => action(),
-    itemBuilder: (_) => manageable
-        ? [
-            PopupMenuItem(
-              value: onEdit,
-              child: const Text('Изменить расписание'),
-            ),
-            PopupMenuItem(
-              value: onEnd,
-              child: const Text('Завершить расписание'),
-            ),
-          ]
-        : const [
-            PopupMenuItem(
-              enabled: false,
-              child: Text('Расписание уже изменено или завершено'),
-            ),
-          ],
+  Widget _menu() => Pressable(
+    scale: .88,
+    child: PopupMenuButton<VoidCallback>(
+      tooltip: 'Управление расписанием',
+      onSelected: (action) => action(),
+      itemBuilder: (_) => manageable
+          ? [
+              PopupMenuItem(
+                value: onEdit,
+                child: const Text('Изменить расписание'),
+              ),
+              PopupMenuItem(
+                value: onEnd,
+                child: const Text('Завершить расписание'),
+              ),
+            ]
+          : const [
+              PopupMenuItem(
+                enabled: false,
+                child: Text('Расписание уже изменено или завершено'),
+              ),
+            ],
+    ),
   );
 
   @override
@@ -572,22 +583,28 @@ class _IntakeCard extends StatelessWidget {
                 ),
               ),
               if (taken)
-                IconButton.filled(
-                  tooltip: intake.canReset ? 'Отменить отметку' : 'Принято',
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppColors.success,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.success,
-                    disabledForegroundColor: Colors.white,
+                Pressable(
+                  scale: .88,
+                  child: IconButton.filled(
+                    tooltip: intake.canReset ? 'Отменить отметку' : 'Принято',
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.success,
+                      disabledForegroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.check),
+                    onPressed: intake.canReset ? onReset : null,
                   ),
-                  icon: const Icon(Icons.check),
-                  onPressed: intake.canReset ? onReset : null,
                 )
               else if (intake.skipped && intake.canReset)
-                IconButton(
-                  tooltip: 'Отменить отметку',
-                  icon: const Icon(Icons.undo),
-                  onPressed: onReset,
+                Pressable(
+                  scale: .88,
+                  child: IconButton(
+                    tooltip: 'Отменить отметку',
+                    icon: const Icon(Icons.undo),
+                    onPressed: onReset,
+                  ),
                 ),
               _menu(),
             ],
@@ -599,17 +616,21 @@ class _IntakeCard extends StatelessWidget {
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
-                TextButton(
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
+                Pressable(
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                    ),
+                    onPressed: canMark ? onSkip : null,
+                    child: const Text('Пропустить'),
                   ),
-                  onPressed: canMark ? onSkip : null,
-                  child: const Text('Пропустить'),
                 ),
-                FilledButton.icon(
-                  onPressed: canMark ? onTake : null,
-                  icon: const Icon(Icons.check),
-                  label: const Text('Принять'),
+                Pressable(
+                  child: FilledButton.icon(
+                    onPressed: canMark ? onTake : null,
+                    icon: const Icon(Icons.check),
+                    label: const Text('Принять'),
+                  ),
                 ),
               ],
             ),

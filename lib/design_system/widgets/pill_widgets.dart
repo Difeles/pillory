@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../motion.dart';
 import '../tokens.dart';
 
 /// Capsule segmented control; a [Wrap]-free equal-width row.
@@ -23,35 +24,67 @@ class SegmentedPills<T> extends StatelessWidget {
     ),
     child: Padding(
       padding: const EdgeInsets.all(AppSpacing.xs),
-      child: Row(
+      child: Stack(
         children: [
-          for (final e in options.entries)
-            Expanded(
-              child: Semantics(
-                button: true,
-                selected: e.key == selected,
-                child: Material(
-                  color: e.key == selected
-                      ? AppColors.surface
-                      : Colors.transparent,
-                  shape: const StadiumBorder(),
-                  elevation: e.key == selected ? 1 : 0,
-                  shadowColor: AppColors.primary,
-                  child: InkWell(
-                    customBorder: const StadiumBorder(),
-                    onTap: () => onChanged(e.key),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 44),
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Text(
-                            e.value,
-                            textAlign: TextAlign.center,
-                            style: AppType.label.copyWith(
-                              color: e.key == selected
-                                  ? AppColors.primaryDeep
-                                  : AppColors.textSecondary,
+          // One indicator that springs to the chosen option, like the dock's.
+          Positioned.fill(
+            child: AnimatedAlign(
+              duration: AppMotion.tab,
+              curve: AppMotion.spring,
+              alignment: Alignment(
+                options.length < 2
+                    ? 0
+                    : -1 +
+                          2 *
+                              options.keys.toList().indexOf(selected) /
+                              (options.length - 1),
+                0,
+              ),
+              child: FractionallySizedBox(
+                widthFactor: 1 / options.length,
+                heightFactor: 1,
+                child: const DecoratedBox(
+                  decoration: ShapeDecoration(
+                    shape: StadiumBorder(),
+                    color: AppColors.surface,
+                    shadows: AppShadows.card,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              for (final e in options.entries)
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: e.key == selected,
+                    child: Pressable(
+                      scale: .94,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => onChanged(e.key),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 44),
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              child: TweenAnimationBuilder<Color?>(
+                                tween: ColorTween(
+                                  end: e.key == selected
+                                      ? AppColors.primaryDeep
+                                      : AppColors.textSecondary,
+                                ),
+                                duration: AppMotion.tab,
+                                builder: (context, color, _) => Text(
+                                  e.value,
+                                  textAlign: TextAlign.center,
+                                  style: AppType.label.copyWith(color: color),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -59,8 +92,8 @@ class SegmentedPills<T> extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ),
+            ],
+          ),
         ],
       ),
     ),
@@ -88,38 +121,46 @@ class ChoiceTile extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      child: Material(
-        color: selected ? AppColors.tint : AppColors.surfaceLow,
-        shape: RoundedSuperellipseBorder(
-          borderRadius: BorderRadius.circular(AppRadii.sm),
-          side: selected
-              ? const BorderSide(color: AppColors.primary, width: 1.5)
-              : BorderSide.none,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
+      child: Pressable(
+        scale: .93,
+        child: GestureDetector(
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
-              vertical: AppSpacing.ms,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: color),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  label,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppType.caption.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
+          child: AnimatedContainer(
+            duration: AppMotion.base,
+            curve: AppMotion.smooth,
+            decoration: ShapeDecoration(
+              color: selected ? AppColors.tint : AppColors.surfaceLow,
+              shape: RoundedSuperellipseBorder(
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+                // Always as wide, so choosing a tile does not resize it.
+                side: BorderSide(
+                  color: selected ? AppColors.primary : Colors.transparent,
+                  width: 1.5,
                 ),
-              ],
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: AppSpacing.ms,
+              ),
+              // Centred, so a tile stretched to its row's height stays tidy.
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: color),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: AppType.caption.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -151,18 +192,21 @@ class SettingToggleRow extends StatelessWidget {
     shape: RoundedSuperellipseBorder(
       borderRadius: BorderRadius.circular(AppRadii.sm),
     ),
-    child: SwitchListTile(
-      value: value,
-      onChanged: onChanged,
-      shape: RoundedSuperellipseBorder(
-        borderRadius: BorderRadius.circular(AppRadii.sm),
+    child: Pressable(
+      scale: .98,
+      child: SwitchListTile(
+        value: value,
+        onChanged: onChanged,
+        shape: RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+        ),
+        secondary: CircleAvatar(
+          backgroundColor: AppColors.tint,
+          child: Icon(icon, color: AppColors.primaryDeep),
+        ),
+        title: Text(title, style: AppType.cardTitle),
+        subtitle: Text(subtitle, style: AppType.caption),
       ),
-      secondary: CircleAvatar(
-        backgroundColor: AppColors.tint,
-        child: Icon(icon, color: AppColors.primaryDeep),
-      ),
-      title: Text(title, style: AppType.cardTitle),
-      subtitle: Text(subtitle, style: AppType.caption),
     ),
   );
 }

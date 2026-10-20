@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../design_system/motion.dart';
 import '../design_system/widgets/floating_dock.dart';
 import '../features/inventory/inventory_screen.dart';
 import '../features/profile/profile_screen.dart';
@@ -27,8 +28,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return Scaffold(
       // The dock is glass: the tabs scroll underneath it.
       extendBody: true,
-      // IndexedStack keeps each tab's state (scroll position) when switching.
-      body: IndexedStack(
+      // Keeps each tab's state (scroll position) and glides between them.
+      body: TabStack(
         index: _index,
         children: [
           const TodayScreen(),
