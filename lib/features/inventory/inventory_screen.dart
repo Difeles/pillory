@@ -138,12 +138,17 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
   Widget build(BuildContext context) {
     final provider = _archive ? archivedStockProvider : medicineStockProvider;
     final stock = ref.watch(provider);
-    final isEmpty = stock.maybeWhen(
-      data: (l) => l.isEmpty,
-      orElse: () => false,
-    );
     return Scaffold(
-      appBar: AppTopBar(title: _archive ? 'Архив' : 'Аптечка'),
+      appBar: AppTopBar(
+        title: _archive ? 'Архив' : 'Аптечка',
+        actions: [
+          if (!_archive)
+            TopBarAddButton(
+              tooltip: 'Добавить лекарство',
+              onPressed: () => _add(context),
+            ),
+        ],
+      ),
       body: stock.when(
         loading: () => ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -226,13 +231,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
           );
         },
       ),
-      floatingActionButton: isEmpty || _archive
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _add(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Добавить лекарство'),
-            ),
     );
   }
 }

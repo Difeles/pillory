@@ -25,6 +25,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       if (request != null) setState(() => _index = 0);
     });
     return Scaffold(
+      // The dock is glass: the tabs scroll underneath it.
+      extendBody: true,
       // IndexedStack keeps each tab's state (scroll position) when switching.
       body: IndexedStack(
         index: _index,

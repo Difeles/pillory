@@ -10,6 +10,10 @@ import '../support/fake_inventory_repository.dart';
 
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
+    // Tall enough that the cards clear the floating add button.
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final inventory = FakeInventoryRepository();
     await tester.pumpWidget(
       ProviderScope(
@@ -87,16 +91,28 @@ void main() {
     expect(find.text('500 мг'), findsOneWidget);
     expect(find.text('1 шт.'), findsOneWidget);
 
-    await tester.ensureVisible(find.byTooltip('Увеличить остаток'));
+    // Mid-screen, clear of the glass dock.
+    await Scrollable.ensureVisible(
+      tester.element(find.byTooltip('Увеличить остаток')),
+      alignment: 0.3,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Увеличить остаток'));
     await tester.pumpAndSettle();
     expect(find.text('2 шт.'), findsOneWidget);
 
-    await tester.ensureVisible(find.byTooltip('Уменьшить остаток'));
+    // Mid-screen, clear of the glass dock.
+    await Scrollable.ensureVisible(
+      tester.element(find.byTooltip('Уменьшить остаток')),
+      alignment: 0.3,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Уменьшить остаток'));
-    await tester.ensureVisible(find.byTooltip('Уменьшить остаток'));
+    // Mid-screen, clear of the glass dock.
+    await Scrollable.ensureVisible(
+      tester.element(find.byTooltip('Уменьшить остаток')),
+      alignment: 0.3,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Уменьшить остаток'));
     await tester.pumpAndSettle();

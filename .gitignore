@@ -19,3 +19,6 @@
 app.*.symbols
 app.*.map.json
 .DS_Store
+
+# Local docs and design mock-ups
+/docs/

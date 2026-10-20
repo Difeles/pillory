@@ -5,7 +5,10 @@ import 'mascot_pill.dart';
 
 /// Brand + screen title on the left, quick action and avatar on the right.
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
-  const AppTopBar({super.key, required this.title});
+  const AppTopBar({super.key, required this.title, this.actions = const []});
+
+  /// Buttons at the right end.
+  final List<Widget> actions;
 
   final String title;
 
@@ -50,6 +53,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                     ],
                   ),
                 ),
+                ...actions,
               ],
             ),
           ),
@@ -57,4 +61,24 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       ),
     );
   }
+}
+
+/// The round "+" button for a top bar.
+class TopBarAddButton extends StatelessWidget {
+  const TopBarAddButton({
+    super.key,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton.filled(
+    tooltip: tooltip,
+    onPressed: onPressed,
+    style: IconButton.styleFrom(minimumSize: const Size.square(kMinTapSize)),
+    icon: const Icon(Icons.add),
+  );
 }

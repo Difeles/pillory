@@ -90,7 +90,7 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
           AppSpacing.md,
           AppSpacing.sm,
           AppSpacing.md,
-          AppSpacing.xl,
+          AppSpacing.xxl + AppSpacing.xl,
         ),
         children: [
           const SectionHeader(title: 'Срочно докупить'),

@@ -186,7 +186,17 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     final history = ref.watch(historyProvider).value;
     final streak = ref.watch(streakProvider);
     return Scaffold(
-      appBar: AppTopBar(title: 'Приём'),
+      appBar: AppTopBar(
+        title: 'Приём',
+        actions: [
+          TopBarAddButton(
+            tooltip: 'Добавить приём',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const AddIntakeScreen()),
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.md,
@@ -251,15 +261,6 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
             },
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        // Tabs are kept alive side by side; two default hero tags would clash.
-        heroTag: 'add-intake',
-        tooltip: 'Добавить приём',
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const AddIntakeScreen()),
-        ),
-        child: const Icon(Icons.add),
       ),
     );
   }

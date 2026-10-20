@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../tokens.dart';
@@ -32,25 +34,43 @@ class FloatingDock extends StatelessWidget {
           AppSpacing.md,
           AppSpacing.sm,
         ),
+        // The shadow sits outside the clip; the glass (blur, translucent
+        // fill, ghost border) inside it.
         child: DecoratedBox(
           decoration: const ShapeDecoration(
             shape: StadiumBorder(),
-            color: AppColors.surface,
             shadows: AppShadows.raised,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xs),
-            child: Row(
-              children: [
-                for (var i = 0; i < items.length; i++)
-                  Expanded(
-                    child: _DockButton(
-                      item: items[i],
-                      selected: i == index,
-                      onTap: () => onSelected(i),
+          child: ClipPath(
+            clipper: const ShapeBorderClipper(shape: StadiumBorder()),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: DecoratedBox(
+                decoration: ShapeDecoration(
+                  shape: StadiumBorder(
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: .65),
+                      width: 1.5,
                     ),
                   ),
-              ],
+                  color: Colors.white.withValues(alpha: .55),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < items.length; i++)
+                        Expanded(
+                          child: _DockButton(
+                            item: items[i],
+                            selected: i == index,
+                            onTap: () => onSelected(i),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),

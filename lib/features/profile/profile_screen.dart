@@ -56,7 +56,7 @@ class ProfileScreen extends ConsumerWidget {
           AppSpacing.md,
           AppSpacing.sm,
           AppSpacing.md,
-          AppSpacing.xl,
+          AppSpacing.xxl + AppSpacing.xl,
         ),
         children: [
           AppCard(
