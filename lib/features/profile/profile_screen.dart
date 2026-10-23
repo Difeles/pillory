@@ -21,6 +21,7 @@ import '../../domain/streak.dart';
 import '../today/today_providers.dart';
 import '../../l10n/l10n.dart';
 import '../account/account_screen.dart';
+import '../cycle/cycle_screen.dart';
 import '../diary/diary_screen.dart';
 import 'report_screen.dart';
 import '../../design_system/motion.dart';
@@ -129,6 +130,18 @@ class ProfileScreen extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const DiaryScreen()),
+              ),
+            ),
+          ),
+          Pressable(
+            scale: .98,
+            child: ListTile(
+              leading: const Icon(Icons.water_drop_outlined),
+              title: Text(context.l10n.cycleTitle),
+              subtitle: Text(context.l10n.cycleSubtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const CycleScreen()),
               ),
             ),
           ),

@@ -42,6 +42,7 @@ class DiaryEntry {
     required this.at,
     this.mood,
     this.symptoms = const [],
+    this.migraine,
     this.note,
   });
 
@@ -53,6 +54,9 @@ class DiaryEntry {
 
   /// What the trouble was: names from [diarySymptoms] or the person's own.
   final List<String> symptoms;
+
+  /// A migraine that day: 1 (mild) to 3 (severe); null for none.
+  final int? migraine;
   final String? note;
 }
 
@@ -62,19 +66,24 @@ class NewDiaryEntry {
     required this.at,
     this.mood,
     this.symptoms = const [],
+    this.migraine,
     this.note,
   });
 
   final DateTime at;
   final int? mood;
   final List<String> symptoms;
+  final int? migraine;
   final String? note;
 }
 
 /// Why an entry is refused; the text is for the user.
 String? validateDiaryEntry(NewDiaryEntry e) {
   final note = e.note?.trim() ?? '';
-  if (e.mood == null && e.symptoms.isEmpty && note.isEmpty) {
+  if (e.mood == null &&
+      e.symptoms.isEmpty &&
+      e.migraine == null &&
+      note.isEmpty) {
     return 'Заполните хотя бы одно поле';
   }
   if (e.symptoms.length > maxDiarySymptoms) {

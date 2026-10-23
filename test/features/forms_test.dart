@@ -67,7 +67,7 @@ void main() {
         'Сироп',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Начальное количество'),
+        find.widgetWithText(TextFormField, 'Сколько было в упаковке'),
         '100',
       );
       await tap(tester, find.text('мл'));
@@ -95,13 +95,14 @@ void main() {
       await openCabinet(tester);
       await tap(tester, find.text('Добавить лекарство'));
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Начальное количество'),
+        find.widgetWithText(TextFormField, 'Сколько было в упаковке'),
         '-1',
       );
       await tap(tester, find.text('Добавить в аптечку'));
 
       expect(find.text('Введите название'), findsOneWidget);
-      expect(find.text('Введите число 0 или больше'), findsOneWidget);
+      // Both amounts follow what was typed first.
+      expect(find.text('Введите число 0 или больше'), findsNWidgets(2));
       expect(await inventory.watchStock().first, isEmpty);
     });
 
@@ -116,7 +117,7 @@ void main() {
       await tap(tester, find.text('Изменить'));
 
       expect(find.text('Запас'), findsOneWidget); // the threshold stays
-      expect(find.text('Начальное количество'), findsNothing);
+      expect(find.text('Сколько было в упаковке'), findsNothing);
       expect(find.text('Единица'), findsNothing);
       expect(find.text('Срок годности'), findsNothing);
     });

@@ -96,6 +96,7 @@ class DriftInventoryRepository implements InventoryRepository {
       await _insertPackage(
         medicineId: medicineId,
         quantity: d.initialQuantity,
+        packSize: d.packSize,
         unit: d.unit,
         expiresOn: d.expiresOn,
         now: now,
@@ -110,10 +111,18 @@ class DriftInventoryRepository implements InventoryRepository {
     required double quantity,
     required String unit,
     DateTime? expiresOn,
+    double? packSize,
   }) async {
     if (!quantity.isFinite || quantity < 0) {
       throw const InvalidMedicineException(
         'Количество не может быть отрицательным',
+      );
+    }
+    if (packSize != null &&
+        (!packSize.isFinite ||
+            normalizeQuantity(packSize) < normalizeQuantity(quantity))) {
+      throw const InvalidMedicineException(
+        'В упаковке не могло быть меньше, чем осталось сейчас',
       );
     }
     return _db.transaction(() async {
@@ -129,6 +138,7 @@ class DriftInventoryRepository implements InventoryRepository {
       return _insertPackage(
         medicineId: medicineId,
         quantity: normalizeQuantity(quantity),
+        packSize: packSize == null ? null : normalizeQuantity(packSize),
         unit: unit.trim(),
         expiresOn: expiresOn == null ? null : dateOnly(expiresOn),
         now: _now(),
@@ -285,6 +295,7 @@ class DriftInventoryRepository implements InventoryRepository {
   Future<String> _insertPackage({
     required String medicineId,
     required double quantity,
+    double? packSize,
     required String unit,
     required DateTime? expiresOn,
     required DateTime now,
@@ -296,7 +307,7 @@ class DriftInventoryRepository implements InventoryRepository {
           MedicinePackagesCompanion.insert(
             id: packageId,
             medicineId: medicineId,
-            initialQuantity: quantity,
+            initialQuantity: packSize ?? quantity,
             quantity: quantity,
             unit: unit,
             expiresOn: Value(expiresOn),

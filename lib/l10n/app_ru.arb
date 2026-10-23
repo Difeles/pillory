@@ -905,5 +905,117 @@
   "pLastPackage": "Единственную упаковку удалить нельзя: удалите лекарство",
   "deleteScheduleItem": "Удалить расписание",
   "deleteScheduleAskTitle": "Удалить расписание?",
-  "deleteScheduleAskText": "Расписание и все его отметки исчезнут, принятые таблетки вернутся в аптечку. Если лекарство просто больше не принимаете, лучше завершите расписание."
+  "deleteScheduleAskText": "Расписание и все его отметки исчезнут, принятые таблетки вернутся в аптечку. Если лекарство просто больше не принимаете, лучше завершите расписание.",
+  "migraineTitle": "Мигрень",
+  "migraineNone": "Нет",
+  "migraineMild": "Слабая",
+  "migraineModerate": "Средняя",
+  "migraineSevere": "Сильная",
+  "migraineDays": "Дней с мигренью в этом месяце: {n}",
+  "@migraineDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "migraineLevel": "Мигрень: {level}",
+  "@migraineLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "csvMigraine": "Мигрень",
+  "entriesOfDay": "Записи за {date}",
+  "@entriesOfDay": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noEntriesThatDay": "В этот день записей нет",
+  "showAllEntries": "Показать все",
+  "cycleTitle": "Календарь цикла",
+  "cycleSubtitle": "Месячные, прогноз, окно зачатия",
+  "cycleDayN": "День цикла {n}",
+  "@cycleDayN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleNextIn": "Следующие месячные: {date}, через {n} дн.",
+  "@cycleNextIn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleNextToday": "Следующие месячные ожидаются сегодня",
+  "cycleLate": "Месячные задерживаются на {n} дн. (ожидались {date})",
+  "@cycleLate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleEmpty": "Отметьте дни месячных в календаре: по ним приложение посчитает цикл и спрогнозирует следующие",
+  "cyclePeriod": "Месячные",
+  "cyclePredicted": "Ожидаются",
+  "cycleFertile": "Окно зачатия",
+  "cycleOvulation": "Овуляция",
+  "cycleMarkToday": "Месячные идут сегодня",
+  "cycleUnmarkToday": "Снять отметку с сегодняшнего дня",
+  "cycleYours": "Ваш цикл",
+  "cycleAverage": "Средняя длина цикла: {n} дн.",
+  "@cycleAverage": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleAveragePeriod": "Средняя длина месячных: {n} дн.",
+  "@cycleAveragePeriod": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleDefaults": "Пока взяты обычные значения: отметьте начало двух-трёх месячных, и расчёт станет вашим.",
+  "cycleHistory": "Последние циклы",
+  "cycleLengthDays": "{n} дн.",
+  "@cycleLengthDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleDisclaimer": "Прогноз — среднее по вашим отметкам, а не медицинская рекомендация и не способ контрацепции. При нерегулярном цикле или задержках обратитесь к врачу.",
+  "packageOrdinal": "Упаковка {n}",
+  "@packageOrdinal": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "packageInUse": "Её принимаете сейчас",
+  "packSizeLabel": "Сколько было в упаковке",
+  "packLeftLabel": "Сколько осталось сейчас",
+  "pPackSmaller": "В упаковке не могло быть меньше, чем осталось сейчас"
 }

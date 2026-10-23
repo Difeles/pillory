@@ -50,6 +50,7 @@ class BackupData {
     this.diary = const [],
     this.shopping = const [],
     this.settings = const [],
+    this.periodDays = const [],
     this.createdAt,
   });
 
@@ -70,7 +71,11 @@ class BackupData {
   final List<ShoppingItemRow> shopping;
   final List<AppSettingRow> settings;
 
+  /// Since schema 12; a file from before it leaves the calendar alone.
+  final List<PeriodDayRow> periodDays;
+
   bool get hasExtras => schemaVersion >= 8;
+  bool get hasCycle => schemaVersion >= 12;
 
   Map<String, int> get counts => {
     'medicines': medicines.length,
@@ -82,6 +87,7 @@ class BackupData {
     'diary': diary.length,
     'shopping': shopping.length,
     'settings': settings.length,
+    'periodDays': periodDays.length,
   };
 
   bool get isEmpty => counts.values.every((n) => n == 0);
@@ -205,6 +211,7 @@ String encodeBackup(BackupData d) {
             'at': _ts(e.at),
             'mood': e.mood,
             'symptoms': e.symptoms,
+            'migraine': e.migraine,
             'note': e.note,
           },
       ],
@@ -218,6 +225,7 @@ String encodeBackup(BackupData d) {
             'createdAt': _ts(i.createdAt),
           },
       ],
+      'periodDays': [for (final p in d.periodDays) _day.toSql(p.day)],
       'settings': [
         for (final x in byId(d.settings, (r) => r.key))
           {'key': x.key, 'value': x.value},
@@ -382,6 +390,7 @@ BackupData parseBackup(Uint8List bytes) {
         at: r.ts('at'),
         mood: r.intOrNull('mood', min: 1, max: 5),
         symptoms: r.strOrNull('symptoms'),
+        migraine: r.intOrNull('migraine', min: 1, max: 3),
         note: r.strOrNull('note'),
       ),
   ];
@@ -393,6 +402,14 @@ BackupData parseBackup(Uint8List bytes) {
         medicineId: r.strOrNull('medicineId'),
         checked: r.boolOr('checked', false, since: 8),
         createdAt: r.ts('createdAt'),
+      ),
+  ];
+  final rawDays = tables.m['periodDays'];
+  if (rawDays != null && rawDays is! List) _bad('data', 'periodDays');
+  final periodDays = [
+    for (final (i, v) in ((rawDays as List?) ?? const []).indexed)
+      PeriodDayRow(
+        day: (v is String ? _parseDay(v) : null) ?? _bad('periodDays', '[$i]'),
       ),
   ];
   final settings = [
@@ -427,6 +444,7 @@ BackupData parseBackup(Uint8List bytes) {
     diary: diary,
     shopping: shopping,
     settings: settings,
+    periodDays: periodDays,
   );
   _checkConsistency(backup, counts);
   return backup;

@@ -74,12 +74,12 @@ void main() {
       '500 мг',
     );
     await tester.scrollUntilVisible(
-      find.widgetWithText(TextFormField, 'Начальное количество'),
+      find.widgetWithText(TextFormField, 'Сколько было в упаковке'),
       100,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Начальное количество'),
+      find.widgetWithText(TextFormField, 'Сколько было в упаковке'),
       '1',
     );
     await tester.tap(find.text('Добавить в аптечку'));

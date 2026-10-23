@@ -69,8 +69,11 @@ void main() {
 
     await tester.tap(find.text('Добавить упаковку'));
     await tester.pumpAndSettle();
-    expect(find.text('шт.'), findsOneWidget); // the unit is fixed, not asked
-    await tester.enterText(find.widgetWithText(TextField, 'Количество'), '5');
+    expect(find.text('шт.'), findsNWidgets(2)); // fixed, not asked: two suffixes
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Сколько было в упаковке'),
+      '5',
+    );
     await tester.tap(find.text('Добавить'));
     await tester.pumpAndSettle();
 
@@ -112,7 +115,7 @@ void main() {
   testWidgets('editing renames the medicine', (tester) async {
     await openMedicine(tester);
     await menu(tester, 'Лекарство', 'Изменить');
-    expect(find.text('Начальное количество'), findsNothing);
+    expect(find.text('Сколько было в упаковке'), findsNothing);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Название *'),
       'Аспирин Кардио',

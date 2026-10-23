@@ -36,6 +36,22 @@ void main() {
     expect(stock.primaryPackage.id, 'a');
   });
 
+  test('the package in use is the one that expires first', () {
+    final stock = MedicineStock(
+      medicine: Medicine(
+        id: 'm',
+        name: 'X',
+        unit: 'шт.',
+        createdAt: DateTime(2026),
+      ),
+      packages: [
+        pkg('full', 28, 'шт.', DateTime(2028)),
+        pkg('open', 25, 'шт.', DateTime(2027)),
+      ],
+    );
+    expect(stock.primaryPackage.id, 'open');
+  });
+
   test('a used-up package does not hide the next one', () {
     final medicine = Medicine(
       id: 'm',

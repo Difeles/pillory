@@ -39,11 +39,16 @@ abstract class InventoryRepository {
   /// Adds another package (e.g. a different expiry date) to a medicine. The
   /// unit must be the medicine's own; throws [InvalidMedicineException]
   /// otherwise, for a negative quantity and for an archived medicine.
+  ///
+  /// [quantity] is what is in the package now; [packSize] is what it held new
+  /// (the same when null, more for an opened package). A [packSize] below
+  /// [quantity] throws [InvalidMedicineException].
   Future<String> addPackage({
     required String medicineId,
     required double quantity,
     required String unit,
     DateTime? expiresOn,
+    double? packSize,
   });
 
   /// Changes a package quantity by [delta] and records the change in history,

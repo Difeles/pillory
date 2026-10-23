@@ -203,14 +203,33 @@ class MedicineScreen extends ConsumerWidget {
               ],
             ),
           ),
-          if (!archived && stock.primaryPackage.initialQuantity <= 30) ...[
-            SectionHeader(title: context.l10n.stockInPackage),
-            AppCard(
-              child: _PillGrid(
-                package: stock.primaryPackage,
-                look: medicine.look,
+          if (!archived) ...[
+            // Each package that still has something, in the order it is used.
+            for (final (i, p) in inUseOrder(
+              stock.counted,
+              DateTime.now(),
+            ).where((p) => p.initialQuantity <= 30).indexed) ...[
+              if (i == 0) SectionHeader(title: context.l10n.stockInPackage),
+              if (i > 0) const SizedBox(height: AppSpacing.sm),
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (stock.counted.where((x) => x.quantity > 0).length > 1)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: Text(
+                          i == 0
+                              ? '${context.l10n.packageOrdinal(i + 1)} · ${context.l10n.packageInUse}'
+                              : context.l10n.packageOrdinal(i + 1),
+                          style: AppType.label,
+                        ),
+                      ),
+                    _PillGrid(package: p, look: medicine.look),
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
           SectionHeader(title: context.l10n.secPackages),
           for (final p in stock.packages)
@@ -309,7 +328,7 @@ class MedicineScreen extends ConsumerWidget {
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     final problem = context.l10n.problem;
-    final result = await showDialog<(double, DateTime?)>(
+    final result = await showDialog<(double, double, DateTime?)>(
       context: context,
       builder: (_) => _AddPackageDialog(unit: stock.unit),
     );
@@ -319,9 +338,10 @@ class MedicineScreen extends ConsumerWidget {
           .read(inventoryRepositoryProvider)
           .addPackage(
             medicineId: medicineId,
-            quantity: result.$1,
+            quantity: result.$2,
+            packSize: result.$1,
             unit: stock.unit,
-            expiresOn: result.$2,
+            expiresOn: result.$3,
           );
     } on InvalidMedicineException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(problem(e.message))));
@@ -585,12 +605,15 @@ class _AddPackageDialog extends StatefulWidget {
 }
 
 class _AddPackageDialogState extends State<_AddPackageDialog> {
+  final _size = TextEditingController(text: '1');
   final _quantity = TextEditingController(text: '1');
+  bool _quantityTouched = false;
   DateTime? _expiresOn;
   String? _error;
 
   @override
   void dispose() {
+    _size.dispose();
     _quantity.dispose();
     super.dispose();
   }
@@ -604,13 +627,26 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
       mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
+          controller: _size,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: context.l10n.packSizeLabel,
+            suffixText: context.l10n.unit(widget.unit),
+          ),
+          onChanged: (v) {
+            if (!_quantityTouched) _quantity.text = v;
+          },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextField(
           controller: _quantity,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: context.l10n.quantityLabel,
+            labelText: context.l10n.packLeftLabel,
             suffixText: context.l10n.unit(widget.unit),
             errorText: _error,
           ),
+          onChanged: (_) => _quantityTouched = true,
         ),
         const SizedBox(height: AppSpacing.md),
         DateField(
@@ -632,11 +668,16 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
         child: FilledButton(
           onPressed: () {
             final q = parseQuantity(_quantity.text);
+            final size = parseQuantity(_size.text);
             if (q == null || !q.isFinite || q < 0) {
               setState(() => _error = context.l10n.enterNumberZero);
               return;
             }
-            Navigator.pop(context, (q, _expiresOn));
+            if (size == null || !size.isFinite || size < q) {
+              setState(() => _error = context.l10n.pPackSmaller);
+              return;
+            }
+            Navigator.pop(context, (size, q, _expiresOn));
           },
           child: Text(context.l10n.add),
         ),

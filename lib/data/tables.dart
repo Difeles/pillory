@@ -223,6 +223,21 @@ class DiaryEntries extends Table {
   TextColumn get symptoms => text().nullable()();
   TextColumn get note => text().nullable()();
 
+  /// A migraine that day: 1 (mild) to 3 (severe); null for none.
+  IntColumn get migraine => integer().nullable().check(
+    migraine.isNull() | migraine.isBetweenValues(1, 3),
+  )();
+
   @override
   Set<Column> get primaryKey => {id};
+}
+
+/// A day with a period, one row each. Periods and cycles are read from runs
+/// of days (see lib/domain/cycle.dart).
+@DataClassName('PeriodDayRow')
+class PeriodDays extends Table {
+  TextColumn get day => text().map(const DateOnlyConverter())();
+
+  @override
+  Set<Column> get primaryKey => {day};
 }

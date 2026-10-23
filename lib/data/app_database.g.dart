@@ -4007,8 +4007,28 @@ class $DiaryEntriesTable extends DiaryEntries
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _migraineMeta = const VerificationMeta(
+    'migraine',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, at, mood, symptoms, note];
+  late final GeneratedColumn<int> migraine = GeneratedColumn<int>(
+    'migraine',
+    aliasedName,
+    true,
+    check: () =>
+        migraine.isNull() | ComparableExpr(migraine).isBetweenValues(1, 3),
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    at,
+    mood,
+    symptoms,
+    note,
+    migraine,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -4049,6 +4069,12 @@ class $DiaryEntriesTable extends DiaryEntries
         note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
+    if (data.containsKey('migraine')) {
+      context.handle(
+        _migraineMeta,
+        migraine.isAcceptableOrUnknown(data['migraine']!, _migraineMeta),
+      );
+    }
     return context;
   }
 
@@ -4078,6 +4104,10 @@ class $DiaryEntriesTable extends DiaryEntries
         DriftSqlType.string,
         data['${effectivePrefix}note'],
       ),
+      migraine: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}migraine'],
+      ),
     );
   }
 
@@ -4099,12 +4129,16 @@ class DiaryEntryRow extends DataClass implements Insertable<DiaryEntryRow> {
   /// What the trouble was: a JSON list of names (see lib/domain/diary.dart).
   final String? symptoms;
   final String? note;
+
+  /// A migraine that day: 1 (mild) to 3 (severe); null for none.
+  final int? migraine;
   const DiaryEntryRow({
     required this.id,
     required this.at,
     this.mood,
     this.symptoms,
     this.note,
+    this.migraine,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4120,6 +4154,9 @@ class DiaryEntryRow extends DataClass implements Insertable<DiaryEntryRow> {
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
+    if (!nullToAbsent || migraine != null) {
+      map['migraine'] = Variable<int>(migraine);
+    }
     return map;
   }
 
@@ -4132,6 +4169,9 @@ class DiaryEntryRow extends DataClass implements Insertable<DiaryEntryRow> {
           ? const Value.absent()
           : Value(symptoms),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      migraine: migraine == null && nullToAbsent
+          ? const Value.absent()
+          : Value(migraine),
     );
   }
 
@@ -4146,6 +4186,7 @@ class DiaryEntryRow extends DataClass implements Insertable<DiaryEntryRow> {
       mood: serializer.fromJson<int?>(json['mood']),
       symptoms: serializer.fromJson<String?>(json['symptoms']),
       note: serializer.fromJson<String?>(json['note']),
+      migraine: serializer.fromJson<int?>(json['migraine']),
     );
   }
   @override
@@ -4157,6 +4198,7 @@ class DiaryEntryRow extends DataClass implements Insertable<DiaryEntryRow> {
       'mood': serializer.toJson<int?>(mood),
       'symptoms': serializer.toJson<String?>(symptoms),
       'note': serializer.toJson<String?>(note),
+      'migraine': serializer.toJson<int?>(migraine),
     };
   }
 
@@ -4166,12 +4208,14 @@ class DiaryEntryRow extends DataClass implements Insertable<DiaryEntryRow> {
     Value<int?> mood = const Value.absent(),
     Value<String?> symptoms = const Value.absent(),
     Value<String?> note = const Value.absent(),
+    Value<int?> migraine = const Value.absent(),
   }) => DiaryEntryRow(
     id: id ?? this.id,
     at: at ?? this.at,
     mood: mood.present ? mood.value : this.mood,
     symptoms: symptoms.present ? symptoms.value : this.symptoms,
     note: note.present ? note.value : this.note,
+    migraine: migraine.present ? migraine.value : this.migraine,
   );
   DiaryEntryRow copyWithCompanion(DiaryEntriesCompanion data) {
     return DiaryEntryRow(
@@ -4180,6 +4224,7 @@ class DiaryEntryRow extends DataClass implements Insertable<DiaryEntryRow> {
       mood: data.mood.present ? data.mood.value : this.mood,
       symptoms: data.symptoms.present ? data.symptoms.value : this.symptoms,
       note: data.note.present ? data.note.value : this.note,
+      migraine: data.migraine.present ? data.migraine.value : this.migraine,
     );
   }
 
@@ -4190,13 +4235,14 @@ class DiaryEntryRow extends DataClass implements Insertable<DiaryEntryRow> {
           ..write('at: $at, ')
           ..write('mood: $mood, ')
           ..write('symptoms: $symptoms, ')
-          ..write('note: $note')
+          ..write('note: $note, ')
+          ..write('migraine: $migraine')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, at, mood, symptoms, note);
+  int get hashCode => Object.hash(id, at, mood, symptoms, note, migraine);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4205,7 +4251,8 @@ class DiaryEntryRow extends DataClass implements Insertable<DiaryEntryRow> {
           other.at == this.at &&
           other.mood == this.mood &&
           other.symptoms == this.symptoms &&
-          other.note == this.note);
+          other.note == this.note &&
+          other.migraine == this.migraine);
 }
 
 class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
@@ -4214,6 +4261,7 @@ class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
   final Value<int?> mood;
   final Value<String?> symptoms;
   final Value<String?> note;
+  final Value<int?> migraine;
   final Value<int> rowid;
   const DiaryEntriesCompanion({
     this.id = const Value.absent(),
@@ -4221,6 +4269,7 @@ class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
     this.mood = const Value.absent(),
     this.symptoms = const Value.absent(),
     this.note = const Value.absent(),
+    this.migraine = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DiaryEntriesCompanion.insert({
@@ -4229,6 +4278,7 @@ class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
     this.mood = const Value.absent(),
     this.symptoms = const Value.absent(),
     this.note = const Value.absent(),
+    this.migraine = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        at = Value(at);
@@ -4238,6 +4288,7 @@ class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
     Expression<int>? mood,
     Expression<String>? symptoms,
     Expression<String>? note,
+    Expression<int>? migraine,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4246,6 +4297,7 @@ class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
       if (mood != null) 'mood': mood,
       if (symptoms != null) 'symptoms': symptoms,
       if (note != null) 'note': note,
+      if (migraine != null) 'migraine': migraine,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4256,6 +4308,7 @@ class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
     Value<int?>? mood,
     Value<String?>? symptoms,
     Value<String?>? note,
+    Value<int?>? migraine,
     Value<int>? rowid,
   }) {
     return DiaryEntriesCompanion(
@@ -4264,6 +4317,7 @@ class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
       mood: mood ?? this.mood,
       symptoms: symptoms ?? this.symptoms,
       note: note ?? this.note,
+      migraine: migraine ?? this.migraine,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4286,6 +4340,9 @@ class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (migraine.present) {
+      map['migraine'] = Variable<int>(migraine.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4300,6 +4357,155 @@ class DiaryEntriesCompanion extends UpdateCompanion<DiaryEntryRow> {
           ..write('mood: $mood, ')
           ..write('symptoms: $symptoms, ')
           ..write('note: $note, ')
+          ..write('migraine: $migraine, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PeriodDaysTable extends PeriodDays
+    with TableInfo<$PeriodDaysTable, PeriodDayRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PeriodDaysTable(this.attachedDatabase, [this._alias]);
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, String> day =
+      GeneratedColumn<String>(
+        'day',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($PeriodDaysTable.$converterday);
+  @override
+  List<GeneratedColumn> get $columns => [day];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'period_days';
+  @override
+  Set<GeneratedColumn> get $primaryKey => {day};
+  @override
+  PeriodDayRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PeriodDayRow(
+      day: $PeriodDaysTable.$converterday.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}day'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $PeriodDaysTable createAlias(String alias) {
+    return $PeriodDaysTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, String> $converterday =
+      const DateOnlyConverter();
+}
+
+class PeriodDayRow extends DataClass implements Insertable<PeriodDayRow> {
+  final DateTime day;
+  const PeriodDayRow({required this.day});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    {
+      map['day'] = Variable<String>($PeriodDaysTable.$converterday.toSql(day));
+    }
+    return map;
+  }
+
+  PeriodDaysCompanion toCompanion(bool nullToAbsent) {
+    return PeriodDaysCompanion(day: Value(day));
+  }
+
+  factory PeriodDayRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PeriodDayRow(day: serializer.fromJson<DateTime>(json['day']));
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{'day': serializer.toJson<DateTime>(day)};
+  }
+
+  PeriodDayRow copyWith({DateTime? day}) => PeriodDayRow(day: day ?? this.day);
+  PeriodDayRow copyWithCompanion(PeriodDaysCompanion data) {
+    return PeriodDayRow(day: data.day.present ? data.day.value : this.day);
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PeriodDayRow(')
+          ..write('day: $day')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => day.hashCode;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PeriodDayRow && other.day == this.day);
+}
+
+class PeriodDaysCompanion extends UpdateCompanion<PeriodDayRow> {
+  final Value<DateTime> day;
+  final Value<int> rowid;
+  const PeriodDaysCompanion({
+    this.day = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PeriodDaysCompanion.insert({
+    required DateTime day,
+    this.rowid = const Value.absent(),
+  }) : day = Value(day);
+  static Insertable<PeriodDayRow> custom({
+    Expression<String>? day,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (day != null) 'day': day,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PeriodDaysCompanion copyWith({Value<DateTime>? day, Value<int>? rowid}) {
+    return PeriodDaysCompanion(
+      day: day ?? this.day,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (day.present) {
+      map['day'] = Variable<String>(
+        $PeriodDaysTable.$converterday.toSql(day.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PeriodDaysCompanion(')
+          ..write('day: $day, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4323,6 +4529,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ShoppingItemsTable shoppingItems = $ShoppingItemsTable(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $DiaryEntriesTable diaryEntries = $DiaryEntriesTable(this);
+  late final $PeriodDaysTable periodDays = $PeriodDaysTable(this);
   late final Index idxPackagesMedicine = Index(
     'idx_packages_medicine',
     'CREATE INDEX idx_packages_medicine ON medicine_packages (medicine_id)',
@@ -4357,6 +4564,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     shoppingItems,
     appSettings,
     diaryEntries,
+    periodDays,
     idxPackagesMedicine,
     idxTransactionsPackage,
     idxSchedulesMedicine,
@@ -7705,6 +7913,7 @@ typedef $$DiaryEntriesTableCreateCompanionBuilder =
       Value<int?> mood,
       Value<String?> symptoms,
       Value<String?> note,
+      Value<int?> migraine,
       Value<int> rowid,
     });
 typedef $$DiaryEntriesTableUpdateCompanionBuilder =
@@ -7714,6 +7923,7 @@ typedef $$DiaryEntriesTableUpdateCompanionBuilder =
       Value<int?> mood,
       Value<String?> symptoms,
       Value<String?> note,
+      Value<int?> migraine,
       Value<int> rowid,
     });
 
@@ -7748,6 +7958,11 @@ class $$DiaryEntriesTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
     column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get migraine => $composableBuilder(
+    column: $table.migraine,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7785,6 +8000,11 @@ class $$DiaryEntriesTableOrderingComposer
     column: $table.note,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get migraine => $composableBuilder(
+    column: $table.migraine,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DiaryEntriesTableAnnotationComposer
@@ -7810,6 +8030,9 @@ class $$DiaryEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<int> get migraine =>
+      $composableBuilder(column: $table.migraine, builder: (column) => column);
 }
 
 class $$DiaryEntriesTableTableManager
@@ -7848,6 +8071,7 @@ class $$DiaryEntriesTableTableManager
                 Value<int?> mood = const Value.absent(),
                 Value<String?> symptoms = const Value.absent(),
                 Value<String?> note = const Value.absent(),
+                Value<int?> migraine = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DiaryEntriesCompanion(
                 id: id,
@@ -7855,6 +8079,7 @@ class $$DiaryEntriesTableTableManager
                 mood: mood,
                 symptoms: symptoms,
                 note: note,
+                migraine: migraine,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7864,6 +8089,7 @@ class $$DiaryEntriesTableTableManager
                 Value<int?> mood = const Value.absent(),
                 Value<String?> symptoms = const Value.absent(),
                 Value<String?> note = const Value.absent(),
+                Value<int?> migraine = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DiaryEntriesCompanion.insert(
                 id: id,
@@ -7871,6 +8097,7 @@ class $$DiaryEntriesTableTableManager
                 mood: mood,
                 symptoms: symptoms,
                 note: note,
+                migraine: migraine,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -7907,6 +8134,130 @@ typedef $$DiaryEntriesTableProcessedTableManager =
       DiaryEntryRow,
       PrefetchHooks Function()
     >;
+typedef $$PeriodDaysTableCreateCompanionBuilder = PeriodDaysCompanion Function({
+  required DateTime day,
+  Value<int> rowid,
+});
+typedef $$PeriodDaysTableUpdateCompanionBuilder = PeriodDaysCompanion Function({
+  Value<DateTime> day,
+  Value<int> rowid,
+});
+
+class $$PeriodDaysTableFilterComposer
+    extends Composer<_$AppDatabase, $PeriodDaysTable> {
+  $$PeriodDaysTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<DateTime, DateTime, String> get day =>
+      $composableBuilder(
+        column: $table.day,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+}
+
+class $$PeriodDaysTableOrderingComposer
+    extends Composer<_$AppDatabase, $PeriodDaysTable> {
+  $$PeriodDaysTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get day => $composableBuilder(
+    column: $table.day,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PeriodDaysTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PeriodDaysTable> {
+  $$PeriodDaysTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<DateTime, String> get day =>
+      $composableBuilder(column: $table.day, builder: (column) => column);
+}
+
+class $$PeriodDaysTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PeriodDaysTable,
+          PeriodDayRow,
+          $$PeriodDaysTableFilterComposer,
+          $$PeriodDaysTableOrderingComposer,
+          $$PeriodDaysTableAnnotationComposer,
+          $$PeriodDaysTableCreateCompanionBuilder,
+          $$PeriodDaysTableUpdateCompanionBuilder,
+          (
+            PeriodDayRow,
+            BaseReferences<_$AppDatabase, $PeriodDaysTable, PeriodDayRow>,
+          ),
+          PeriodDayRow,
+          PrefetchHooks Function()
+        > {
+  $$PeriodDaysTableTableManager(_$AppDatabase db, $PeriodDaysTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PeriodDaysTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PeriodDaysTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PeriodDaysTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<DateTime> day = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) => PeriodDaysCompanion(day: day, rowid: rowid),
+          createCompanionCallback: ({
+            required DateTime day,
+            Value<int> rowid = const Value.absent(),
+          }) => PeriodDaysCompanion.insert(day: day, rowid: rowid),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PeriodDaysTable, PeriodDayRow>(table),
+                  BaseReferences<_$AppDatabase, $PeriodDaysTable, PeriodDayRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PeriodDaysTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PeriodDaysTable,
+      PeriodDayRow,
+      $$PeriodDaysTableFilterComposer,
+      $$PeriodDaysTableOrderingComposer,
+      $$PeriodDaysTableAnnotationComposer,
+      $$PeriodDaysTableCreateCompanionBuilder,
+      $$PeriodDaysTableUpdateCompanionBuilder,
+      (
+        PeriodDayRow,
+        BaseReferences<_$AppDatabase, $PeriodDaysTable, PeriodDayRow>,
+      ),
+      PeriodDayRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7929,4 +8280,6 @@ class $AppDatabaseManager {
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$DiaryEntriesTableTableManager get diaryEntries =>
       $$DiaryEntriesTableTableManager(_db, _db.diaryEntries);
+  $$PeriodDaysTableTableManager get periodDays =>
+      $$PeriodDaysTableTableManager(_db, _db.periodDays);
 }

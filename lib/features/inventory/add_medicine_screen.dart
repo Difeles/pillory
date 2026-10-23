@@ -33,7 +33,11 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _strength = TextEditingController();
+  final _size = TextEditingController(text: '1');
   final _quantity = TextEditingController(text: '1');
+
+  // Until the amount left is typed, it follows the size: usually it is full.
+  bool _quantityTouched = false;
   final _threshold = TextEditingController();
   MedicineForm? _form;
   MedicineCategory? _category;
@@ -63,6 +67,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   void dispose() {
     _name.dispose();
     _strength.dispose();
+    _size.dispose();
     _quantity.dispose();
     _threshold.dispose();
     super.dispose();
@@ -106,6 +111,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               storage: _storage,
               look: _look,
               initialQuantity: parseQuantity(_quantity.text)!,
+              packSize: parseQuantity(_size.text),
               unit: _unit,
               expiresOn: _expiresOn,
             ),
@@ -241,19 +247,42 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
             SectionHeader(title: l.secStock),
             if (creating) ...[
               TextFormField(
-                controller: _quantity,
+                controller: _size,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
                 decoration: InputDecoration(
-                  labelText: l.initialQuantity,
+                  labelText: l.packSizeLabel,
                   suffixText: l.unit(_unit),
                 ),
+                onChanged: (v) {
+                  if (!_quantityTouched) _quantity.text = v;
+                },
                 validator: (v) {
                   final q = parseQuantity(v ?? '');
                   return (q == null || !q.isFinite || q < 0)
                       ? l.enterNumberZero
                       : null;
+                },
+              ),
+              gap,
+              TextFormField(
+                controller: _quantity,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: l.packLeftLabel,
+                  suffixText: l.unit(_unit),
+                ),
+                onChanged: (_) => _quantityTouched = true,
+                validator: (v) {
+                  final q = parseQuantity(v ?? '');
+                  if (q == null || !q.isFinite || q < 0) {
+                    return l.enterNumberZero;
+                  }
+                  final size = parseQuantity(_size.text);
+                  return size != null && q > size ? l.pPackSmaller : null;
                 },
               ),
               gap,

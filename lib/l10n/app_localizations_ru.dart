@@ -1754,4 +1754,136 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get deleteScheduleAskText =>
       'Расписание и все его отметки исчезнут, принятые таблетки вернутся в аптечку. Если лекарство просто больше не принимаете, лучше завершите расписание.';
+
+  @override
+  String get migraineTitle => 'Мигрень';
+
+  @override
+  String get migraineNone => 'Нет';
+
+  @override
+  String get migraineMild => 'Слабая';
+
+  @override
+  String get migraineModerate => 'Средняя';
+
+  @override
+  String get migraineSevere => 'Сильная';
+
+  @override
+  String migraineDays(int n) {
+    return 'Дней с мигренью в этом месяце: $n';
+  }
+
+  @override
+  String migraineLevel(String level) {
+    return 'Мигрень: $level';
+  }
+
+  @override
+  String get csvMigraine => 'Мигрень';
+
+  @override
+  String entriesOfDay(String date) {
+    return 'Записи за $date';
+  }
+
+  @override
+  String get noEntriesThatDay => 'В этот день записей нет';
+
+  @override
+  String get showAllEntries => 'Показать все';
+
+  @override
+  String get cycleTitle => 'Календарь цикла';
+
+  @override
+  String get cycleSubtitle => 'Месячные, прогноз, окно зачатия';
+
+  @override
+  String cycleDayN(int n) {
+    return 'День цикла $n';
+  }
+
+  @override
+  String cycleNextIn(String date, int n) {
+    return 'Следующие месячные: $date, через $n дн.';
+  }
+
+  @override
+  String get cycleNextToday => 'Следующие месячные ожидаются сегодня';
+
+  @override
+  String cycleLate(String date, int n) {
+    return 'Месячные задерживаются на $n дн. (ожидались $date)';
+  }
+
+  @override
+  String get cycleEmpty =>
+      'Отметьте дни месячных в календаре: по ним приложение посчитает цикл и спрогнозирует следующие';
+
+  @override
+  String get cyclePeriod => 'Месячные';
+
+  @override
+  String get cyclePredicted => 'Ожидаются';
+
+  @override
+  String get cycleFertile => 'Окно зачатия';
+
+  @override
+  String get cycleOvulation => 'Овуляция';
+
+  @override
+  String get cycleMarkToday => 'Месячные идут сегодня';
+
+  @override
+  String get cycleUnmarkToday => 'Снять отметку с сегодняшнего дня';
+
+  @override
+  String get cycleYours => 'Ваш цикл';
+
+  @override
+  String cycleAverage(int n) {
+    return 'Средняя длина цикла: $n дн.';
+  }
+
+  @override
+  String cycleAveragePeriod(int n) {
+    return 'Средняя длина месячных: $n дн.';
+  }
+
+  @override
+  String get cycleDefaults =>
+      'Пока взяты обычные значения: отметьте начало двух-трёх месячных, и расчёт станет вашим.';
+
+  @override
+  String get cycleHistory => 'Последние циклы';
+
+  @override
+  String cycleLengthDays(int n) {
+    return '$n дн.';
+  }
+
+  @override
+  String get cycleDisclaimer =>
+      'Прогноз — среднее по вашим отметкам, а не медицинская рекомендация и не способ контрацепции. При нерегулярном цикле или задержках обратитесь к врачу.';
+
+  @override
+  String packageOrdinal(int n) {
+    return 'Упаковка $n';
+  }
+
+  @override
+  String get packageInUse => 'Её принимаете сейчас';
+
+  @override
+  String get packSizeLabel => 'Сколько было в упаковке';
+
+  @override
+  String get packLeftLabel => 'Сколько осталось сейчас';
+
+  @override
+  String get pPackSmaller =>
+      'В упаковке не могло быть меньше, чем осталось сейчас';
 }

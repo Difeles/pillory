@@ -3259,6 +3259,222 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Расписание и все его отметки исчезнут, принятые таблетки вернутся в аптечку. Если лекарство просто больше не принимаете, лучше завершите расписание.'**
   String get deleteScheduleAskText;
+
+  /// No description provided for @migraineTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Мигрень'**
+  String get migraineTitle;
+
+  /// No description provided for @migraineNone.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет'**
+  String get migraineNone;
+
+  /// No description provided for @migraineMild.
+  ///
+  /// In ru, this message translates to:
+  /// **'Слабая'**
+  String get migraineMild;
+
+  /// No description provided for @migraineModerate.
+  ///
+  /// In ru, this message translates to:
+  /// **'Средняя'**
+  String get migraineModerate;
+
+  /// No description provided for @migraineSevere.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сильная'**
+  String get migraineSevere;
+
+  /// No description provided for @migraineDays.
+  ///
+  /// In ru, this message translates to:
+  /// **'Дней с мигренью в этом месяце: {n}'**
+  String migraineDays(int n);
+
+  /// No description provided for @migraineLevel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Мигрень: {level}'**
+  String migraineLevel(String level);
+
+  /// No description provided for @csvMigraine.
+  ///
+  /// In ru, this message translates to:
+  /// **'Мигрень'**
+  String get csvMigraine;
+
+  /// No description provided for @entriesOfDay.
+  ///
+  /// In ru, this message translates to:
+  /// **'Записи за {date}'**
+  String entriesOfDay(String date);
+
+  /// No description provided for @noEntriesThatDay.
+  ///
+  /// In ru, this message translates to:
+  /// **'В этот день записей нет'**
+  String get noEntriesThatDay;
+
+  /// No description provided for @showAllEntries.
+  ///
+  /// In ru, this message translates to:
+  /// **'Показать все'**
+  String get showAllEntries;
+
+  /// No description provided for @cycleTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Календарь цикла'**
+  String get cycleTitle;
+
+  /// No description provided for @cycleSubtitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Месячные, прогноз, окно зачатия'**
+  String get cycleSubtitle;
+
+  /// No description provided for @cycleDayN.
+  ///
+  /// In ru, this message translates to:
+  /// **'День цикла {n}'**
+  String cycleDayN(int n);
+
+  /// No description provided for @cycleNextIn.
+  ///
+  /// In ru, this message translates to:
+  /// **'Следующие месячные: {date}, через {n} дн.'**
+  String cycleNextIn(String date, int n);
+
+  /// No description provided for @cycleNextToday.
+  ///
+  /// In ru, this message translates to:
+  /// **'Следующие месячные ожидаются сегодня'**
+  String get cycleNextToday;
+
+  /// No description provided for @cycleLate.
+  ///
+  /// In ru, this message translates to:
+  /// **'Месячные задерживаются на {n} дн. (ожидались {date})'**
+  String cycleLate(String date, int n);
+
+  /// No description provided for @cycleEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'Отметьте дни месячных в календаре: по ним приложение посчитает цикл и спрогнозирует следующие'**
+  String get cycleEmpty;
+
+  /// No description provided for @cyclePeriod.
+  ///
+  /// In ru, this message translates to:
+  /// **'Месячные'**
+  String get cyclePeriod;
+
+  /// No description provided for @cyclePredicted.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ожидаются'**
+  String get cyclePredicted;
+
+  /// No description provided for @cycleFertile.
+  ///
+  /// In ru, this message translates to:
+  /// **'Окно зачатия'**
+  String get cycleFertile;
+
+  /// No description provided for @cycleOvulation.
+  ///
+  /// In ru, this message translates to:
+  /// **'Овуляция'**
+  String get cycleOvulation;
+
+  /// No description provided for @cycleMarkToday.
+  ///
+  /// In ru, this message translates to:
+  /// **'Месячные идут сегодня'**
+  String get cycleMarkToday;
+
+  /// No description provided for @cycleUnmarkToday.
+  ///
+  /// In ru, this message translates to:
+  /// **'Снять отметку с сегодняшнего дня'**
+  String get cycleUnmarkToday;
+
+  /// No description provided for @cycleYours.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ваш цикл'**
+  String get cycleYours;
+
+  /// No description provided for @cycleAverage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Средняя длина цикла: {n} дн.'**
+  String cycleAverage(int n);
+
+  /// No description provided for @cycleAveragePeriod.
+  ///
+  /// In ru, this message translates to:
+  /// **'Средняя длина месячных: {n} дн.'**
+  String cycleAveragePeriod(int n);
+
+  /// No description provided for @cycleDefaults.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пока взяты обычные значения: отметьте начало двух-трёх месячных, и расчёт станет вашим.'**
+  String get cycleDefaults;
+
+  /// No description provided for @cycleHistory.
+  ///
+  /// In ru, this message translates to:
+  /// **'Последние циклы'**
+  String get cycleHistory;
+
+  /// No description provided for @cycleLengthDays.
+  ///
+  /// In ru, this message translates to:
+  /// **'{n} дн.'**
+  String cycleLengthDays(int n);
+
+  /// No description provided for @cycleDisclaimer.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прогноз — среднее по вашим отметкам, а не медицинская рекомендация и не способ контрацепции. При нерегулярном цикле или задержках обратитесь к врачу.'**
+  String get cycleDisclaimer;
+
+  /// No description provided for @packageOrdinal.
+  ///
+  /// In ru, this message translates to:
+  /// **'Упаковка {n}'**
+  String packageOrdinal(int n);
+
+  /// No description provided for @packageInUse.
+  ///
+  /// In ru, this message translates to:
+  /// **'Её принимаете сейчас'**
+  String get packageInUse;
+
+  /// No description provided for @packSizeLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сколько было в упаковке'**
+  String get packSizeLabel;
+
+  /// No description provided for @packLeftLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сколько осталось сейчас'**
+  String get packLeftLabel;
+
+  /// No description provided for @pPackSmaller.
+  ///
+  /// In ru, this message translates to:
+  /// **'В упаковке не могло быть меньше, чем осталось сейчас'**
+  String get pPackSmaller;
 }
 
 class _AppLocalizationsDelegate

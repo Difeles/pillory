@@ -114,6 +114,7 @@ String reportCsv(ReportData r, AppLocalizations l) {
         _d(e.at),
         _t(e.at),
         e.mood,
+        e.migraine == null ? null : l.migraine(e.migraine!),
         e.symptoms.map(l.symptom).join(', '),
         e.note,
       ],
@@ -124,6 +125,7 @@ String reportCsv(ReportData r, AppLocalizations l) {
 /// The line the PDF prints for a diary entry.
 String diaryLine(AppLocalizations l, DiaryEntry e) => [
   if (e.mood != null) l.moodText(e.mood!),
+  if (e.migraine != null) l.migraineLevel(l.migraine(e.migraine!)),
   if (e.symptoms.isNotEmpty) e.symptoms.map(l.symptom).join(', '),
   if (e.note != null) e.note!,
 ].join(', ');

@@ -144,6 +144,20 @@ void main() {
       expect(two.isLow, isTrue); // 20 in total
     });
 
+    test('a used-up package does not set the threshold', () {
+      final a = assess(
+        stock([
+          pkg(0, initial: 100),
+          pkg(28, initial: 28),
+          pkg(25, initial: 25),
+        ]),
+        today,
+      );
+      expect(a.threshold, 5.6);
+      expect(a.usable, 53);
+      expect(a.isLow, isFalse);
+    });
+
     test('an own threshold replaces the default rule', () {
       MedicineStock s(double q, double t) =>
           stock([pkg(q, initial: 100)], threshold: t);

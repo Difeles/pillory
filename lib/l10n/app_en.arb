@@ -905,5 +905,117 @@
   "pLastPackage": "The only package cannot be deleted: delete the medicine instead",
   "deleteScheduleItem": "Delete the schedule",
   "deleteScheduleAskTitle": "Delete the schedule?",
-  "deleteScheduleAskText": "The schedule and all its marks will disappear, and the pills it took go back to stock. If you simply stopped taking it, end the schedule instead."
+  "deleteScheduleAskText": "The schedule and all its marks will disappear, and the pills it took go back to stock. If you simply stopped taking it, end the schedule instead.",
+  "migraineTitle": "Migraine",
+  "migraineNone": "None",
+  "migraineMild": "Mild",
+  "migraineModerate": "Moderate",
+  "migraineSevere": "Severe",
+  "migraineDays": "Migraine days this month: {n}",
+  "@migraineDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "migraineLevel": "Migraine: {level}",
+  "@migraineLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "csvMigraine": "Migraine",
+  "entriesOfDay": "Entries on {date}",
+  "@entriesOfDay": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noEntriesThatDay": "No entries that day",
+  "showAllEntries": "Show all",
+  "cycleTitle": "Cycle calendar",
+  "cycleSubtitle": "Periods, forecast, fertile window",
+  "cycleDayN": "Cycle day {n}",
+  "@cycleDayN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleNextIn": "Next period: {date}, in {n} days",
+  "@cycleNextIn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleNextToday": "The next period is due today",
+  "cycleLate": "Period is {n} days late (expected {date})",
+  "@cycleLate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleEmpty": "Mark your period days in the calendar: the app works out your cycle and forecasts the next ones",
+  "cyclePeriod": "Period",
+  "cyclePredicted": "Expected",
+  "cycleFertile": "Fertile window",
+  "cycleOvulation": "Ovulation",
+  "cycleMarkToday": "Period today",
+  "cycleUnmarkToday": "Remove today's mark",
+  "cycleYours": "Your cycle",
+  "cycleAverage": "Average cycle: {n} days",
+  "@cycleAverage": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleAveragePeriod": "Average period: {n} days",
+  "@cycleAveragePeriod": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleDefaults": "Typical values are used for now: mark the start of two or three periods and the forecast becomes yours.",
+  "cycleHistory": "Latest cycles",
+  "cycleLengthDays": "{n} days",
+  "@cycleLengthDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleDisclaimer": "The forecast is an average of your marks, not medical advice and not contraception. See a doctor for an irregular cycle or late periods.",
+  "packageOrdinal": "Package {n}",
+  "@packageOrdinal": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "packageInUse": "You take from this one now",
+  "packSizeLabel": "How much the package held",
+  "packLeftLabel": "How much is left now",
+  "pPackSmaller": "The package cannot have held less than what is left"
 }

@@ -145,10 +145,10 @@ class _StockBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = stock.counted.fold<double>(
-      0,
-      (sum, p) => sum + p.initialQuantity,
-    );
+    // Used-up packages stay in the list but are not part of the whole.
+    final initial = stock.counted
+        .where((p) => p.quantity > 0)
+        .fold<double>(0, (sum, p) => sum + p.initialQuantity);
     final share = initial <= 0
         ? 0.0
         : (stock.totalQuantity / initial).clamp(0.0, 1.0);

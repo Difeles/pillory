@@ -321,19 +321,7 @@ List<({String packageId, double amount})> planDeduction(
   double dose,
   DateTime today,
 ) {
-  final usable = packages.where((p) => p.quantity > 0).toList()
-    ..sort((a, b) {
-      final ea = isExpired(a.expiresOn, today),
-          eb = isExpired(b.expiresOn, today);
-      if (ea != eb) return ea ? 1 : -1;
-      final xa = a.expiresOn, xb = b.expiresOn;
-      if (xa != xb) {
-        if (xa == null) return 1;
-        if (xb == null) return -1;
-        return xa.compareTo(xb);
-      }
-      return a.createdAt.compareTo(b.createdAt);
-    });
+  final usable = inUseOrder(packages, today);
   final plan = <({String packageId, double amount})>[];
   var left = normalizeQuantity(dose);
   for (final p in usable) {

@@ -24,6 +24,7 @@ class DriftBackupRepository {
       intakeLogs: await _db.select(_db.intakeLogs).get(),
       intakeDeductions: await _db.select(_db.intakeDeductions).get(),
       diary: await _db.select(_db.diaryEntries).get(),
+      periodDays: await _db.select(_db.periodDays).get(),
       shopping: await _db.select(_db.shoppingItems).get(),
       // The device's own settings (which account, which revision) stay here.
       settings: [
@@ -50,6 +51,7 @@ class DriftBackupRepository {
         _db.appSettings,
       )..where((t) => t.key.like('$devicePrefix%').not())).go();
     }
+    if (data.hasCycle) await _db.delete(_db.periodDays).go();
     await _db.batch((b) {
       b.insertAll(_db.medicines, data.medicines);
       b.insertAll(_db.medicinePackages, data.packages);
@@ -57,6 +59,7 @@ class DriftBackupRepository {
       b.insertAll(_db.schedules, data.schedules);
       b.insertAll(_db.intakeLogs, data.intakeLogs);
       b.insertAll(_db.intakeDeductions, data.intakeDeductions);
+      if (data.hasCycle) b.insertAll(_db.periodDays, data.periodDays);
       if (data.hasExtras) {
         b.insertAll(_db.diaryEntries, data.diary);
         b.insertAll(_db.shoppingItems, data.shopping);

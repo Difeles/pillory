@@ -19,6 +19,7 @@ part 'app_database.g.dart';
     ShoppingItems,
     AppSettings,
     DiaryEntries,
+    PeriodDays,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -26,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pillory'));
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -114,6 +115,14 @@ class AppDatabase extends _$AppDatabase {
         for (final c in ['temperature', 'systolic', 'diastolic', 'pulse']) {
           await customStatement('ALTER TABLE diary_entries DROP COLUMN $c');
         }
+      }
+      if (from >= 8 && from < 12) {
+        // v12: a migraine level on diary entries.
+        await m.addColumn(diaryEntries, diaryEntries.migraine);
+      }
+      if (from < 12) {
+        // v12: the period calendar.
+        await m.createTable(periodDays);
       }
       if (from == 10) {
         // v10 had a flag "important medicine"; v11 has none.

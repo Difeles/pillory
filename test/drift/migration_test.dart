@@ -10,11 +10,11 @@ void main() {
   setUpAll(() => verifier = SchemaVerifier(GeneratedHelper()));
 
   // Old phones keep their data through every step of the schema.
-  for (final from in [1, 3, 7, 8, 9, 10]) {
+  for (final from in [1, 3, 7, 8, 9, 10, 11]) {
     test('v$from upgrades to the current schema', () async {
       final schema = await verifier.schemaAt(from);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 11);
+      await verifier.migrateAndValidate(db, 12);
       await db.close();
     });
   }

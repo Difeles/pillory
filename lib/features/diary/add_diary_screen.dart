@@ -7,6 +7,7 @@ import '../../design_system/pickers.dart';
 import '../../design_system/tokens.dart';
 import '../../design_system/widgets/date_field.dart';
 import '../../design_system/widgets/form_save_bar.dart';
+import '../../design_system/widgets/pill_widgets.dart';
 import '../../domain/diary.dart';
 import '../../l10n/l10n.dart';
 import '../../l10n/labels.dart';
@@ -14,7 +15,10 @@ import '../today/today_screen.dart' show formatMinute;
 import 'diary_screen.dart';
 
 class AddDiaryScreen extends ConsumerStatefulWidget {
-  const AddDiaryScreen({super.key});
+  /// [day] is the day to write the entry for (now, if null).
+  const AddDiaryScreen({super.key, this.day});
+
+  final DateTime? day;
 
   @override
   ConsumerState<AddDiaryScreen> createState() => _AddDiaryScreenState();
@@ -24,7 +28,14 @@ class _AddDiaryScreenState extends ConsumerState<AddDiaryScreen> {
   final _note = TextEditingController();
   int? _mood;
   final _symptoms = <String>{};
-  DateTime _at = DateTime.now();
+  late DateTime _at = () {
+    final now = DateTime.now();
+    final d = widget.day;
+    return d == null
+        ? now
+        : DateTime(d.year, d.month, d.day, now.hour, now.minute);
+  }();
+  int _migraine = 0;
 
   @override
   void dispose() {
@@ -39,6 +50,10 @@ class _AddDiaryScreenState extends ConsumerState<AddDiaryScreen> {
       at: _at,
       mood: _mood,
       symptoms: _symptoms.toList(),
+      // Only a headache can be a migraine.
+      migraine: _migraine == 0 || !_symptoms.contains('headache')
+          ? null
+          : _migraine,
       note: _note.text,
     );
     final problem = validateDiaryEntry(entry);
@@ -168,6 +183,19 @@ class _AddDiaryScreenState extends ConsumerState<AddDiaryScreen> {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
+        if (_symptoms.contains('headache')) ...[
+          Text(context.l10n.migraineTitle, style: AppType.cardTitle),
+          const SizedBox(height: AppSpacing.sm),
+          SegmentedPills<int>(
+            options: {
+              0: context.l10n.migraineNone,
+              for (var i = 1; i <= 3; i++) i: context.l10n.migraine(i),
+            },
+            selected: _migraine,
+            onChanged: (v) => setState(() => _migraine = v),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
         TextField(
           controller: _note,
           maxLines: 3,

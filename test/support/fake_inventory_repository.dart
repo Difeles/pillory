@@ -219,6 +219,7 @@ class FakeInventoryRepository implements InventoryRepository {
     await addPackage(
       medicineId: id,
       quantity: d.initialQuantity,
+      packSize: d.packSize,
       unit: d.unit,
       expiresOn: d.expiresOn,
     );
@@ -231,13 +232,19 @@ class FakeInventoryRepository implements InventoryRepository {
     required double quantity,
     required String unit,
     DateTime? expiresOn,
+    double? packSize,
   }) async {
+    if (packSize != null && packSize < quantity) {
+      throw const InvalidMedicineException(
+        'В упаковке не могло быть меньше, чем осталось сейчас',
+      );
+    }
     final id = generateId();
     _packages.add(
       MedicinePackage(
         id: id,
         medicineId: medicineId,
-        initialQuantity: quantity,
+        initialQuantity: packSize ?? quantity,
         quantity: quantity,
         unit: unit,
         expiresOn: expiresOn,

@@ -1,3 +1,4 @@
+import 'inventory_rules.dart' show inUseOrder;
 import 'medicine_form.dart';
 import 'pill_look.dart';
 
@@ -96,10 +97,10 @@ class MedicineStock {
   /// Oldest first.
   final List<MedicinePackage> packages;
 
-  /// The package the +/- buttons act on and the grid shows: the first one
-  /// that still has something, so a used-up package does not hide the next.
+  /// The package the +/- buttons act on: the one taken from now (see
+  /// [inUseOrder]), so a used-up package does not hide the next.
   MedicinePackage get primaryPackage =>
-      counted.where((p) => p.quantity > 0).firstOrNull ??
+      inUseOrder(counted, DateTime.now()).firstOrNull ??
       counted.firstOrNull ??
       packages.first;
 
@@ -147,9 +148,14 @@ class NewMedicine {
     this.category,
     this.storage,
     this.look,
+    this.packSize,
   });
 
   final PillLook? look;
+
+  /// How much a new package held; null means as much as [initialQuantity],
+  /// which is what is left now (an opened package holds less).
+  final double? packSize;
   final double? lowStockThreshold;
   final MedicineCategory? category;
   final StorageSpot? storage;

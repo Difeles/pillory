@@ -24,6 +24,7 @@ class FakeDiaryRepository implements DiaryRepository {
         at: e.at,
         mood: e.mood,
         symptoms: e.symptoms,
+        migraine: e.migraine,
       ),
     );
     _changes.add(null);

@@ -391,6 +391,39 @@ void main() {
       );
     });
 
+    test('an opened package keeps what it held new', () async {
+      final id = await medicineId();
+      final opened = await repo.addPackage(
+        medicineId: id,
+        quantity: 25,
+        packSize: 28,
+        unit: 'шт.',
+      );
+      final p = (await only()).packages.firstWhere((x) => x.id == opened);
+      expect(p.quantity, 25);
+      expect(p.initialQuantity, 28);
+      await expectLater(
+        repo.addPackage(
+          medicineId: id,
+          quantity: 30,
+          packSize: 28,
+          unit: 'шт.',
+        ),
+        throwsA(isA<InvalidMedicineException>()),
+      );
+      await expectLater(
+        repo.createMedicine(
+          const NewMedicine(
+            name: 'Б',
+            initialQuantity: 10,
+            packSize: 5,
+            unit: 'шт.',
+          ),
+        ),
+        throwsA(isA<InvalidMedicineException>()),
+      );
+    });
+
     test('a package can be deleted unless it is the only one', () async {
       final id = await medicineId();
       final first = await packageId();

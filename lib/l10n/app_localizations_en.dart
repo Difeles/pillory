@@ -1746,4 +1746,136 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get deleteScheduleAskText =>
       'The schedule and all its marks will disappear, and the pills it took go back to stock. If you simply stopped taking it, end the schedule instead.';
+
+  @override
+  String get migraineTitle => 'Migraine';
+
+  @override
+  String get migraineNone => 'None';
+
+  @override
+  String get migraineMild => 'Mild';
+
+  @override
+  String get migraineModerate => 'Moderate';
+
+  @override
+  String get migraineSevere => 'Severe';
+
+  @override
+  String migraineDays(int n) {
+    return 'Migraine days this month: $n';
+  }
+
+  @override
+  String migraineLevel(String level) {
+    return 'Migraine: $level';
+  }
+
+  @override
+  String get csvMigraine => 'Migraine';
+
+  @override
+  String entriesOfDay(String date) {
+    return 'Entries on $date';
+  }
+
+  @override
+  String get noEntriesThatDay => 'No entries that day';
+
+  @override
+  String get showAllEntries => 'Show all';
+
+  @override
+  String get cycleTitle => 'Cycle calendar';
+
+  @override
+  String get cycleSubtitle => 'Periods, forecast, fertile window';
+
+  @override
+  String cycleDayN(int n) {
+    return 'Cycle day $n';
+  }
+
+  @override
+  String cycleNextIn(String date, int n) {
+    return 'Next period: $date, in $n days';
+  }
+
+  @override
+  String get cycleNextToday => 'The next period is due today';
+
+  @override
+  String cycleLate(String date, int n) {
+    return 'Period is $n days late (expected $date)';
+  }
+
+  @override
+  String get cycleEmpty =>
+      'Mark your period days in the calendar: the app works out your cycle and forecasts the next ones';
+
+  @override
+  String get cyclePeriod => 'Period';
+
+  @override
+  String get cyclePredicted => 'Expected';
+
+  @override
+  String get cycleFertile => 'Fertile window';
+
+  @override
+  String get cycleOvulation => 'Ovulation';
+
+  @override
+  String get cycleMarkToday => 'Period today';
+
+  @override
+  String get cycleUnmarkToday => 'Remove today\'s mark';
+
+  @override
+  String get cycleYours => 'Your cycle';
+
+  @override
+  String cycleAverage(int n) {
+    return 'Average cycle: $n days';
+  }
+
+  @override
+  String cycleAveragePeriod(int n) {
+    return 'Average period: $n days';
+  }
+
+  @override
+  String get cycleDefaults =>
+      'Typical values are used for now: mark the start of two or three periods and the forecast becomes yours.';
+
+  @override
+  String get cycleHistory => 'Latest cycles';
+
+  @override
+  String cycleLengthDays(int n) {
+    return '$n days';
+  }
+
+  @override
+  String get cycleDisclaimer =>
+      'The forecast is an average of your marks, not medical advice and not contraception. See a doctor for an irregular cycle or late periods.';
+
+  @override
+  String packageOrdinal(int n) {
+    return 'Package $n';
+  }
+
+  @override
+  String get packageInUse => 'You take from this one now';
+
+  @override
+  String get packSizeLabel => 'How much the package held';
+
+  @override
+  String get packLeftLabel => 'How much is left now';
+
+  @override
+  String get pPackSmaller =>
+      'The package cannot have held less than what is left';
 }

@@ -98,7 +98,10 @@ StockAssessment assess(MedicineStock stock, DateTime today) {
   var biggest = 0.0;
   DateTime? expired, soon;
   for (final p in stock.counted) {
-    if (p.initialQuantity > biggest) biggest = p.initialQuantity;
+    // A used-up package says nothing about what a full one is.
+    if (p.quantity > 0 && p.initialQuantity > biggest) {
+      biggest = p.initialQuantity;
+    }
     switch (packageStatus(p, today)) {
       case PackageStatus.ok:
         usable += p.quantity;

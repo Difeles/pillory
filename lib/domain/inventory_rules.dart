@@ -33,6 +33,14 @@ NewMedicine validateNewMedicine(NewMedicine draft) {
       'Количество не может быть отрицательным',
     );
   }
+  final size = draft.packSize;
+  if (size != null &&
+      (!size.isFinite ||
+          normalizeQuantity(size) < normalizeQuantity(draft.initialQuantity))) {
+    throw const InvalidMedicineException(
+      'В упаковке не могло быть меньше, чем осталось сейчас',
+    );
+  }
   final unit = draft.unit.trim();
   if (unit.isEmpty) {
     throw const InvalidMedicineException('Укажите единицу учёта');
@@ -48,6 +56,7 @@ NewMedicine validateNewMedicine(NewMedicine draft) {
     form: draft.form,
     strength: (strength == null || strength.isEmpty) ? null : strength,
     initialQuantity: normalizeQuantity(draft.initialQuantity),
+    packSize: size == null ? null : normalizeQuantity(size),
     unit: unit,
     expiresOn: draft.expiresOn == null ? null : dateOnly(draft.expiresOn!),
   );
@@ -61,3 +70,22 @@ double? validateThreshold(double? value) {
   }
   return normalizeQuantity(value);
 }
+
+/// The packages with something left, in the order they are used up: in date
+/// before expired, earliest expiry first, then the oldest.
+List<MedicinePackage> inUseOrder(
+  Iterable<MedicinePackage> packages,
+  DateTime today,
+) => packages.where((p) => p.quantity > 0).toList()
+  ..sort((a, b) {
+    final ea = isExpired(a.expiresOn, today),
+        eb = isExpired(b.expiresOn, today);
+    if (ea != eb) return ea ? 1 : -1;
+    final xa = a.expiresOn, xb = b.expiresOn;
+    if (xa != xb) {
+      if (xa == null) return 1;
+      if (xb == null) return -1;
+      return xa.compareTo(xb);
+    }
+    return a.createdAt.compareTo(b.createdAt);
+  });

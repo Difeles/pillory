@@ -120,6 +120,10 @@ extension EnumLabels on AppLocalizations {
 
   /// The text of a validation or state error thrown with a Russian
   /// `message`; an unknown message is shown as it is.
+  /// The name of migraine level 1..3.
+  String migraine(int level) =>
+      [migraineMild, migraineModerate, migraineSevere][level - 1];
+
   /// A diary trouble: a known name in this language, else as typed.
   String symptom(String key) => switch (key) {
     'headache' => symptomHeadache,
@@ -144,6 +148,7 @@ extension EnumLabels on AppLocalizations {
       'Количество не может быть отрицательным' => pQuantityNegative,
       'Остаток не может быть отрицательным' => negativeStock,
       'Лекарство в архиве' => pMedicineArchived,
+      'В упаковке не могло быть меньше, чем осталось сейчас' => pPackSmaller,
       'Единственную упаковку удалить нельзя: удалите лекарство' => pLastPackage,
       'Название обязательно' => pNameRequired,
       'Укажите единицу учёта' => pUnitRequired,

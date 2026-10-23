@@ -82,7 +82,7 @@ void main() {
       'Аспирин',
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Начальное количество'),
+      find.widgetWithText(TextFormField, 'Сколько было в упаковке'),
       '20',
     );
     await save(tester);

@@ -21,6 +21,7 @@ class DriftDiaryRepository implements DiaryRepository {
               at: r.at,
               mood: r.mood,
               symptoms: decodeSymptoms(r.symptoms),
+              migraine: r.migraine,
               note: r.note,
             ),
         ],
@@ -41,6 +42,7 @@ class DriftDiaryRepository implements DiaryRepository {
             symptoms: Value(
               e.symptoms.isEmpty ? null : encodeSymptoms(e.symptoms),
             ),
+            migraine: Value(e.migraine),
             note: Value(note == null || note.isEmpty ? null : note),
           ),
         );

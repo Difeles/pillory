@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../cloud/cloud_service.dart';
 import '../data/app_database.dart';
 import '../data/drift_backup_repository.dart';
+import '../data/drift_cycle_repository.dart';
 import '../data/drift_diary_repository.dart';
 import '../data/drift_extras_repository.dart';
 import '../data/drift_inventory_repository.dart';
 import '../data/drift_schedule_repository.dart';
+import '../domain/cycle.dart';
 import '../domain/diary.dart';
 import '../domain/extras.dart';
 import '../domain/inventory_repository.dart';
@@ -81,6 +83,15 @@ final diaryRepositoryProvider = Provider<DiaryRepository>(
 
 final diaryProvider = StreamProvider<List<DiaryEntry>>(
   (ref) => ref.watch(diaryRepositoryProvider).watchEntries(),
+);
+
+final cycleRepositoryProvider = Provider<CycleRepository>(
+  (ref) => DriftCycleRepository(ref.watch(appDatabaseProvider)),
+);
+
+/// The logged period days.
+final periodDaysProvider = StreamProvider<Set<DateTime>>(
+  (ref) => ref.watch(cycleRepositoryProvider).watchDays(),
 );
 
 /// Replaced in `main` with Firebase once it is configured.

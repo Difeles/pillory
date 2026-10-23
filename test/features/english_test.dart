@@ -8,6 +8,7 @@ import 'package:pillory/domain/extras.dart';
 import 'package:pillory/domain/medicine_form.dart';
 import 'package:pillory/domain/models.dart';
 
+import '../support/fake_cycle_repository.dart';
 import '../support/fake_diary_repository.dart';
 import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
@@ -47,6 +48,7 @@ void main() {
           inventoryRepositoryProvider.overrideWithValue(inventory),
           extrasRepositoryProvider.overrideWithValue(extras),
           diaryRepositoryProvider.overrideWithValue(FakeDiaryRepository()),
+          cycleRepositoryProvider.overrideWithValue(FakeCycleRepository()),
           scheduleRepositoryProvider.overrideWithValue(
             FakeScheduleRepository(inventory),
           ),
@@ -102,6 +104,7 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     await visit('diary', find.text('Wellbeing diary'));
+    await visit('cycle', find.text('Cycle calendar'));
     await visit('report', find.text("Doctor's report"));
 
     Future<void> tab(String name) async {
