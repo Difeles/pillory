@@ -402,6 +402,39 @@ class DriftScheduleRepository implements ScheduleRepository {
   }
 
   @override
+  Future<void> deleteSchedule(String scheduleId) {
+    return _db.transaction(() async {
+      final row = await (_db.select(
+        _db.schedules,
+      )..where((s) => s.id.equals(scheduleId))).getSingleOrNull();
+      if (row == null) throw ScheduleNotFoundException(scheduleId);
+      // Give back what its taken intakes deducted that is still deducted.
+      final open =
+          await (_db.select(_db.intakeDeductions).join([
+                innerJoin(
+                  _db.intakeLogs,
+                  _db.intakeLogs.id.equalsExp(_db.intakeDeductions.intakeLogId),
+                ),
+              ])..where(
+                _db.intakeLogs.scheduleId.equals(scheduleId) &
+                    _db.intakeDeductions.restoredAt.isNull(),
+              ))
+              .map((r) => r.readTable(_db.intakeDeductions))
+              .get();
+      for (final x in open) {
+        await _inventory.adjustQuantity(
+          packageId: x.packageId,
+          delta: x.amount,
+        );
+      }
+      // The marks and their deductions follow by cascade.
+      await (_db.delete(
+        _db.schedules,
+      )..where((s) => s.id.equals(scheduleId))).go();
+    });
+  }
+
+  @override
   Future<void> resetMark({
     required String scheduleId,
     required DateTime day,

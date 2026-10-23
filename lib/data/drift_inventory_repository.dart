@@ -193,6 +193,36 @@ class DriftInventoryRepository implements InventoryRepository {
   }
 
   @override
+  Future<void> deleteMedicine(String medicineId) async {
+    await _medicine(medicineId);
+    // Packages, schedules, marks and history follow by cascade.
+    await (_db.delete(
+      _db.medicines,
+    )..where((m) => m.id.equals(medicineId))).go();
+  }
+
+  @override
+  Future<void> deletePackage(String packageId) {
+    return _db.transaction(() async {
+      final p = await (_db.select(
+        _db.medicinePackages,
+      )..where((x) => x.id.equals(packageId))).getSingleOrNull();
+      if (p == null) throw PackageNotFoundException(packageId);
+      final all = await (_db.select(
+        _db.medicinePackages,
+      )..where((x) => x.medicineId.equals(p.medicineId))).get();
+      if (all.length < 2) {
+        throw const InvalidMedicineException(
+          'Единственную упаковку удалить нельзя: удалите лекарство',
+        );
+      }
+      await (_db.delete(
+        _db.medicinePackages,
+      )..where((x) => x.id.equals(packageId))).go();
+    });
+  }
+
+  @override
   Future<void> restoreMedicine(String medicineId) async {
     await _medicine(medicineId);
     await (_db.update(_db.medicines)..where((m) => m.id.equals(medicineId)))

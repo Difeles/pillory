@@ -140,6 +140,34 @@ void main() {
     expect(await total(), 18);
   });
 
+  test('deleting a schedule removes its marks and returns the pills', () async {
+    final id = await medicine(20);
+    final sid = await repo.createSchedule(daily(id));
+    await repo.markTaken(scheduleId: sid, day: day);
+    expect(await total(), 19);
+
+    await repo.deleteSchedule(sid);
+    expect(await total(), 20);
+    expect(await db.select(db.schedules).get(), isEmpty);
+    expect(await db.select(db.intakeLogs).get(), isEmpty);
+    await expectLater(
+      repo.deleteSchedule(sid),
+      throwsA(isA<ScheduleNotFoundException>()),
+    );
+  });
+
+  test('deleting a medicine takes its schedules and marks along', () async {
+    final id = await medicine(20);
+    final sid = await repo.createSchedule(daily(id));
+    await repo.markTaken(scheduleId: sid, day: day);
+
+    await inventory.deleteMedicine(id);
+    expect(await db.select(db.medicines).get(), isEmpty);
+    expect(await db.select(db.medicinePackages).get(), isEmpty);
+    expect(await db.select(db.schedules).get(), isEmpty);
+    expect(await db.select(db.intakeLogs).get(), isEmpty);
+  });
+
   test('insufficient stock writes nothing and never goes negative', () async {
     final id = await medicine(1);
     await inventory.addPackage(medicineId: id, quantity: 1, unit: 'шт.');

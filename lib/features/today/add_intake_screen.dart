@@ -513,6 +513,27 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                   child: Text(l.endScheduleItem),
                 ),
               ),
+              const SizedBox(height: AppSpacing.sm),
+              Pressable(
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.colors.danger,
+                  ),
+                  onPressed: _saving
+                      ? null
+                      : () async {
+                          final navigator = Navigator.of(context);
+                          if (await confirmDeleteSchedule(
+                            context,
+                            ref,
+                            _editing!,
+                          )) {
+                            navigator.pop();
+                          }
+                        },
+                  child: Text(l.deleteScheduleItem),
+                ),
+              ),
             ],
           ],
         ),

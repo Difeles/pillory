@@ -880,5 +880,30 @@
   },
   "settingsSub": "Вид, язык, уведомления, копия данных",
   "takeOutsideSchedule": "Принять вне расписания",
-  "nothingToTake": "В аптечке нет лекарств с остатком"
+  "nothingToTake": "В аптечке нет лекарств с остатком",
+  "deleteForever": "Удалить навсегда",
+  "deleteConfirm": "Удалить",
+  "deleteMedicineAskTitle": "Удалить лекарство?",
+  "deleteMedicineAskText": "«{name}» исчезнет вместе с упаковками, расписаниями и историей приёмов. Это нельзя отменить. Если лекарство просто больше не нужно, уберите его в архив.",
+  "@deleteMedicineAskText": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePackage": "Удалить упаковку",
+  "deletePackageAskTitle": "Удалить упаковку?",
+  "deletePackageAskText": "Упаковка и её история исчезнут, остаток лекарства уменьшится на {qty}.",
+  "@deletePackageAskText": {
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "pLastPackage": "Единственную упаковку удалить нельзя: удалите лекарство",
+  "deleteScheduleItem": "Удалить расписание",
+  "deleteScheduleAskTitle": "Удалить расписание?",
+  "deleteScheduleAskText": "Расписание и все его отметки исчезнут, принятые таблетки вернутся в аптечку. Если лекарство просто больше не принимаете, лучше завершите расписание."
 }

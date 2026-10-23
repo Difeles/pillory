@@ -1707,4 +1707,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nothingToTake => 'No medicine with stock in the cabinet';
+
+  @override
+  String get deleteForever => 'Delete for good';
+
+  @override
+  String get deleteConfirm => 'Delete';
+
+  @override
+  String get deleteMedicineAskTitle => 'Delete the medicine?';
+
+  @override
+  String deleteMedicineAskText(String name) {
+    return '\"$name\" will disappear with its packages, schedules and intake history. This cannot be undone. If you just no longer need it, archive it instead.';
+  }
+
+  @override
+  String get deletePackage => 'Delete the package';
+
+  @override
+  String get deletePackageAskTitle => 'Delete the package?';
+
+  @override
+  String deletePackageAskText(String qty) {
+    return 'The package and its history will disappear; the stock goes down by $qty.';
+  }
+
+  @override
+  String get pLastPackage =>
+      'The only package cannot be deleted: delete the medicine instead';
+
+  @override
+  String get deleteScheduleItem => 'Delete the schedule';
+
+  @override
+  String get deleteScheduleAskTitle => 'Delete the schedule?';
+
+  @override
+  String get deleteScheduleAskText =>
+      'The schedule and all its marks will disappear, and the pills it took go back to stock. If you simply stopped taking it, end the schedule instead.';
 }

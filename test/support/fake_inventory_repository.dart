@@ -123,6 +123,29 @@ class FakeInventoryRepository implements InventoryRepository {
   );
 
   @override
+  Future<void> deleteMedicine(String medicineId) async {
+    final i = _medicines.indexWhere((m) => m.id == medicineId);
+    if (i < 0) throw MedicineNotFoundException(medicineId);
+    _medicines.removeAt(i);
+    _packages.removeWhere((p) => p.medicineId == medicineId);
+    _changes.add(null);
+  }
+
+  @override
+  Future<void> deletePackage(String packageId) async {
+    final i = _packages.indexWhere((p) => p.id == packageId);
+    if (i < 0) throw PackageNotFoundException(packageId);
+    final medicineId = _packages[i].medicineId;
+    if (_packages.where((p) => p.medicineId == medicineId).length < 2) {
+      throw const InvalidMedicineException(
+        'Единственную упаковку удалить нельзя: удалите лекарство',
+      );
+    }
+    _packages.removeAt(i);
+    _changes.add(null);
+  }
+
+  @override
   Future<void> restoreMedicine(String medicineId) async =>
       _replaceMedicine(medicineId, (m) => _copy(m, setArchived: true));
 
@@ -416,6 +439,28 @@ class FakeScheduleRepository implements ScheduleRepository {
         await createSchedule(draft);
     }
     return from;
+  }
+
+  @override
+  Future<void> deleteSchedule(String scheduleId) async {
+    if (!_schedules.any((s) => s.id == scheduleId)) {
+      throw ScheduleNotFoundException(scheduleId);
+    }
+    final prefix = '$scheduleId|';
+    for (final e in _deductions.entries.where(
+      (e) => e.key.startsWith(prefix),
+    )) {
+      for (final d in e.value) {
+        await _inventory.adjustQuantity(
+          packageId: d.packageId,
+          delta: d.amount,
+        );
+      }
+    }
+    _deductions.removeWhere((k, _) => k.startsWith(prefix));
+    _marks.removeWhere((k, _) => k.startsWith(prefix));
+    _schedules.removeWhere((s) => s.id == scheduleId);
+    _changes.add(null);
   }
 
   @override

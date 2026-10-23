@@ -363,6 +363,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
           ),
         ),
         onEnd: () => confirmEndSchedule(context, ref, i.schedule),
+        onDelete: () => confirmDeleteSchedule(context, ref, i.schedule),
         onTake: () => _take(i),
         onSkip: () => _skip(i),
         onReset: () => _reset(i),
@@ -549,6 +550,7 @@ class _IntakeCard extends StatelessWidget {
     required this.manageable,
     required this.onEdit,
     required this.onEnd,
+    required this.onDelete,
     required this.onTake,
     required this.onSkip,
     required this.onReset,
@@ -561,6 +563,7 @@ class _IntakeCard extends StatelessWidget {
   final bool manageable;
   final VoidCallback onEdit;
   final VoidCallback onEnd;
+  final VoidCallback onDelete;
   final VoidCallback onTake;
   final VoidCallback onSkip;
   final VoidCallback onReset;
@@ -585,6 +588,13 @@ class _IntakeCard extends StatelessWidget {
               PopupMenuItem(
                 value: onEnd,
                 child: Text(context.l10n.endScheduleItem),
+              ),
+              PopupMenuItem(
+                value: onDelete,
+                child: Text(
+                  context.l10n.deleteScheduleItem,
+                  style: TextStyle(color: context.colors.danger),
+                ),
               ),
             ]
           : [
@@ -749,6 +759,25 @@ Future<bool> confirmEndSchedule(
   if (from.isAfter(dateOnly(DateTime.now()))) {
     messenger.showSnackBar(SnackBar(content: Text(ends)));
   }
+  return true;
+}
+
+/// Asks, then deletes [s] with its marks; returns whether it was deleted.
+Future<bool> confirmDeleteSchedule(
+  BuildContext context,
+  WidgetRef ref,
+  Schedule s,
+) async {
+  final l = context.l10n;
+  final ok = await showConfirmDialog(
+    context,
+    title: l.deleteScheduleAskTitle,
+    message: l.deleteScheduleAskText,
+    confirmLabel: l.deleteConfirm,
+    danger: true,
+  );
+  if (!ok) return false;
+  await ref.read(scheduleRepositoryProvider).deleteSchedule(s.id);
   return true;
 }
 

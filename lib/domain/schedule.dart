@@ -381,6 +381,11 @@ abstract class ScheduleRepository {
   /// statuses are kept. Ending an ended schedule does nothing.
   Future<DateTime> endSchedule(String scheduleId);
 
+  /// Deletes a schedule for good with its marks (for one made by mistake;
+  /// ending keeps the past). What its taken intakes deducted goes back to
+  /// stock. Throws [ScheduleNotFoundException].
+  Future<void> deleteSchedule(String scheduleId);
+
   /// Marks the intake of [scheduleId] at [minuteOfDay] (null if untimed) on
   /// [day] as taken and deducts one dose from stock, recording inventory
   /// transactions and the exact deductions, atomically. Already taken: does

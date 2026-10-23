@@ -26,6 +26,16 @@ abstract class InventoryRepository {
   /// Returns a medicine to the cabinet. Its ended schedules do not resume.
   Future<void> restoreMedicine(String medicineId);
 
+  /// Deletes a medicine for good with its packages, history, schedules and
+  /// marks (for one made by mistake; archiving keeps them). Throws
+  /// [MedicineNotFoundException].
+  Future<void> deleteMedicine(String medicineId);
+
+  /// Deletes a package with its history. A medicine keeps at least one
+  /// package: deleting the last throws [InvalidMedicineException]. Throws
+  /// [PackageNotFoundException].
+  Future<void> deletePackage(String packageId);
+
   /// Adds another package (e.g. a different expiry date) to a medicine. The
   /// unit must be the medicine's own; throws [InvalidMedicineException]
   /// otherwise, for a negative quantity and for an archived medicine.

@@ -35,4 +35,23 @@ void main() {
     expect(stock.nearestExpiry, DateTime(2027, 5));
     expect(stock.primaryPackage.id, 'a');
   });
+
+  test('a used-up package does not hide the next one', () {
+    final medicine = Medicine(
+      id: 'm',
+      name: 'X',
+      unit: 'шт.',
+      createdAt: DateTime(2026),
+    );
+    final stock = MedicineStock(
+      medicine: medicine,
+      packages: [pkg('a', 0, 'шт.'), pkg('b', 10, 'шт.')],
+    );
+    expect(stock.primaryPackage.id, 'b');
+    final empty = MedicineStock(
+      medicine: medicine,
+      packages: [pkg('a', 0, 'шт.')],
+    );
+    expect(empty.primaryPackage.id, 'a');
+  });
 }

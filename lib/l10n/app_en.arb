@@ -880,5 +880,30 @@
   },
   "settingsSub": "Look, language, notifications, data copy",
   "takeOutsideSchedule": "Take outside the schedule",
-  "nothingToTake": "No medicine with stock in the cabinet"
+  "nothingToTake": "No medicine with stock in the cabinet",
+  "deleteForever": "Delete for good",
+  "deleteConfirm": "Delete",
+  "deleteMedicineAskTitle": "Delete the medicine?",
+  "deleteMedicineAskText": "\"{name}\" will disappear with its packages, schedules and intake history. This cannot be undone. If you just no longer need it, archive it instead.",
+  "@deleteMedicineAskText": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePackage": "Delete the package",
+  "deletePackageAskTitle": "Delete the package?",
+  "deletePackageAskText": "The package and its history will disappear; the stock goes down by {qty}.",
+  "@deletePackageAskText": {
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "pLastPackage": "The only package cannot be deleted: delete the medicine instead",
+  "deleteScheduleItem": "Delete the schedule",
+  "deleteScheduleAskTitle": "Delete the schedule?",
+  "deleteScheduleAskText": "The schedule and all its marks will disappear, and the pills it took go back to stock. If you simply stopped taking it, end the schedule instead."
 }

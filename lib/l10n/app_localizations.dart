@@ -3193,6 +3193,72 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'В аптечке нет лекарств с остатком'**
   String get nothingToTake;
+
+  /// No description provided for @deleteForever.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить навсегда'**
+  String get deleteForever;
+
+  /// No description provided for @deleteConfirm.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить'**
+  String get deleteConfirm;
+
+  /// No description provided for @deleteMedicineAskTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить лекарство?'**
+  String get deleteMedicineAskTitle;
+
+  /// No description provided for @deleteMedicineAskText.
+  ///
+  /// In ru, this message translates to:
+  /// **'«{name}» исчезнет вместе с упаковками, расписаниями и историей приёмов. Это нельзя отменить. Если лекарство просто больше не нужно, уберите его в архив.'**
+  String deleteMedicineAskText(String name);
+
+  /// No description provided for @deletePackage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить упаковку'**
+  String get deletePackage;
+
+  /// No description provided for @deletePackageAskTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить упаковку?'**
+  String get deletePackageAskTitle;
+
+  /// No description provided for @deletePackageAskText.
+  ///
+  /// In ru, this message translates to:
+  /// **'Упаковка и её история исчезнут, остаток лекарства уменьшится на {qty}.'**
+  String deletePackageAskText(String qty);
+
+  /// No description provided for @pLastPackage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Единственную упаковку удалить нельзя: удалите лекарство'**
+  String get pLastPackage;
+
+  /// No description provided for @deleteScheduleItem.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить расписание'**
+  String get deleteScheduleItem;
+
+  /// No description provided for @deleteScheduleAskTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить расписание?'**
+  String get deleteScheduleAskTitle;
+
+  /// No description provided for @deleteScheduleAskText.
+  ///
+  /// In ru, this message translates to:
+  /// **'Расписание и все его отметки исчезнут, принятые таблетки вернутся в аптечку. Если лекарство просто больше не принимаете, лучше завершите расписание.'**
+  String get deleteScheduleAskText;
 }
 
 class _AppLocalizationsDelegate

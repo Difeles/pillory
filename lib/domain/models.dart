@@ -96,9 +96,12 @@ class MedicineStock {
   /// Oldest first.
   final List<MedicinePackage> packages;
 
-  /// The package the +/- buttons act on. With one package that is the only
-  /// one; managing several is a later screen.
-  MedicinePackage get primaryPackage => counted.firstOrNull ?? packages.first;
+  /// The package the +/- buttons act on and the grid shows: the first one
+  /// that still has something, so a used-up package does not hide the next.
+  MedicinePackage get primaryPackage =>
+      counted.where((p) => p.quantity > 0).firstOrNull ??
+      counted.firstOrNull ??
+      packages.first;
 
   /// The medicine's unit (a package's own unit only for a row that predates
   /// the unit column).

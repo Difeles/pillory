@@ -144,6 +144,7 @@ extension EnumLabels on AppLocalizations {
       'Количество не может быть отрицательным' => pQuantityNegative,
       'Остаток не может быть отрицательным' => negativeStock,
       'Лекарство в архиве' => pMedicineArchived,
+      'Единственную упаковку удалить нельзя: удалите лекарство' => pLastPackage,
       'Название обязательно' => pNameRequired,
       'Укажите единицу учёта' => pUnitRequired,
       'Порог не может быть отрицательным' => pThresholdNegative,

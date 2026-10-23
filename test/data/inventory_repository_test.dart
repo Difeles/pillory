@@ -391,6 +391,26 @@ void main() {
       );
     });
 
+    test('a package can be deleted unless it is the only one', () async {
+      final id = await medicineId();
+      final first = await packageId();
+      await expectLater(
+        repo.deletePackage(first),
+        throwsA(isA<InvalidMedicineException>()),
+      );
+      final second = await repo.addPackage(
+        medicineId: id,
+        quantity: 4,
+        unit: 'шт.',
+      );
+      await repo.deletePackage(second);
+      expect((await only()).packages.map((p) => p.id), [first]);
+      await expectLater(
+        repo.deletePackage(second),
+        throwsA(isA<PackageNotFoundException>()),
+      );
+    });
+
     test('an archived medicine takes no new packages', () async {
       final id = await medicineId();
       await repo.archiveMedicine(id);

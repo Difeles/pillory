@@ -93,6 +93,13 @@ class MedicineScreen extends ConsumerWidget {
                         : context.l10n.toArchive,
                   ),
                 ),
+                PopupMenuItem(
+                  value: () => _delete(context, ref),
+                  child: Text(
+                    context.l10n.deleteForever,
+                    style: TextStyle(color: context.colors.danger),
+                  ),
+                ),
               ],
             ),
           ),
@@ -213,6 +220,7 @@ class MedicineScreen extends ConsumerWidget {
                 package: p,
                 counted: p.unit == stock.unit,
                 unit: stock.unit,
+                canDelete: stock.packages.length > 1,
               ),
             ),
           if (!archived) ...[
@@ -266,6 +274,27 @@ class MedicineScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final navigator = Navigator.of(context);
+    final name = ref
+        .read(medicineStockProvider)
+        .value
+        ?.followedBy(ref.read(archivedStockProvider).value ?? const [])
+        .where((s) => s.medicine.id == medicineId)
+        .map((s) => s.medicine.name)
+        .firstOrNull;
+    final ok = await showConfirmDialog(
+      context,
+      title: context.l10n.deleteMedicineAskTitle,
+      message: context.l10n.deleteMedicineAskText(name ?? ''),
+      confirmLabel: context.l10n.deleteConfirm,
+      danger: true,
+    );
+    if (!ok) return;
+    await ref.read(inventoryRepositoryProvider).deleteMedicine(medicineId);
+    navigator.pop();
+  }
+
   Future<void> _restore(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
     final message = context.l10n.medicineRestored;
@@ -305,11 +334,13 @@ class _PackageTile extends ConsumerWidget {
     required this.package,
     required this.counted,
     required this.unit,
+    required this.canDelete,
   });
 
   final MedicinePackage package;
   final bool counted;
   final String unit;
+  final bool canDelete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -403,12 +434,36 @@ class _PackageTile extends ConsumerWidget {
                   value: () => _history(context, ref),
                   child: Text(context.l10n.movementHistory),
                 ),
+                if (canDelete)
+                  PopupMenuItem(
+                    value: () => _delete(context, ref),
+                    child: Text(
+                      context.l10n.deletePackage,
+                      style: TextStyle(color: context.colors.danger),
+                    ),
+                  ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final l = context.l10n;
+    final ok = await showConfirmDialog(
+      context,
+      title: l.deletePackageAskTitle,
+      message: l.deletePackageAskText(
+        l.quantity(package.quantity, package.unit),
+      ),
+      confirmLabel: l.deleteConfirm,
+      danger: true,
+    );
+    if (ok) {
+      await ref.read(inventoryRepositoryProvider).deletePackage(package.id);
+    }
   }
 
   Future<void> _pickExpiry(BuildContext context, WidgetRef ref) async {

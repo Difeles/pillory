@@ -1715,4 +1715,43 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get nothingToTake => 'В аптечке нет лекарств с остатком';
+
+  @override
+  String get deleteForever => 'Удалить навсегда';
+
+  @override
+  String get deleteConfirm => 'Удалить';
+
+  @override
+  String get deleteMedicineAskTitle => 'Удалить лекарство?';
+
+  @override
+  String deleteMedicineAskText(String name) {
+    return '«$name» исчезнет вместе с упаковками, расписаниями и историей приёмов. Это нельзя отменить. Если лекарство просто больше не нужно, уберите его в архив.';
+  }
+
+  @override
+  String get deletePackage => 'Удалить упаковку';
+
+  @override
+  String get deletePackageAskTitle => 'Удалить упаковку?';
+
+  @override
+  String deletePackageAskText(String qty) {
+    return 'Упаковка и её история исчезнут, остаток лекарства уменьшится на $qty.';
+  }
+
+  @override
+  String get pLastPackage =>
+      'Единственную упаковку удалить нельзя: удалите лекарство';
+
+  @override
+  String get deleteScheduleItem => 'Удалить расписание';
+
+  @override
+  String get deleteScheduleAskTitle => 'Удалить расписание?';
+
+  @override
+  String get deleteScheduleAskText =>
+      'Расписание и все его отметки исчезнут, принятые таблетки вернутся в аптечку. Если лекарство просто больше не принимаете, лучше завершите расписание.';
 }
