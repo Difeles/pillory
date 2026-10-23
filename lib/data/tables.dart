@@ -43,6 +43,9 @@ class Medicines extends Table {
   TextColumn get category => textEnum<MedicineCategory>().nullable()();
   TextColumn get storage => textEnum<StorageSpot>().nullable()();
 
+  /// How the pill is drawn (see PillLook.encode); null: the form's icon.
+  TextColumn get look => text().nullable()();
+
   /// Set when the medicine is archived: hidden from the cabinet, nothing is
   /// deleted.
   DateTimeColumn get archivedAt => dateTime().nullable()();
@@ -200,4 +203,26 @@ class AppSettings extends Table {
 
   @override
   Set<Column> get primaryKey => {key};
+}
+
+/// One entry of the wellbeing diary: a mood, what the trouble was and a note;
+/// an entry has at least one of them.
+@DataClassName('DiaryEntryRow')
+@TableIndex(name: 'idx_diary_at', columns: {#at})
+class DiaryEntries extends Table {
+  TextColumn get id => text()();
+
+  /// When it was measured or felt.
+  DateTimeColumn get at => dateTime()();
+
+  /// 1 (bad) to 5 (great).
+  IntColumn get mood =>
+      integer().nullable().check(mood.isNull() | mood.isBetweenValues(1, 5))();
+
+  /// What the trouble was: a JSON list of names (see lib/domain/diary.dart).
+  TextColumn get symptoms => text().nullable()();
+  TextColumn get note => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

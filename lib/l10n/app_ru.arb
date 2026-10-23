@@ -1,0 +1,884 @@
+{
+  "@@locale": "ru",
+  "appName": "PillPal",
+  "cancel": "Отмена",
+  "save": "Сохранить",
+  "retry": "Повторить",
+  "loading": "Загрузка",
+  "notSpecifiedM": "Не указан",
+  "decreaseStock": "Уменьшить остаток",
+  "increaseStock": "Увеличить остаток",
+  "streakTitle": "Огненный страйк!",
+  "streakHint": "Дни без пропусков подряд. Так держать!",
+  "daysCount": "{n, plural, one{{n} день} few{{n} дня} many{{n} дней} other{{n} дней}}",
+  "@daysCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "monShort": "Пн",
+  "tueShort": "Вт",
+  "wedShort": "Ср",
+  "thuShort": "Чт",
+  "friShort": "Пт",
+  "satShort": "Сб",
+  "sunShort": "Вс",
+  "tabToday": "Приём",
+  "tabCabinet": "Аптечка",
+  "tabShopping": "Покупки",
+  "tabProfile": "Профиль",
+  "date": "Дата",
+  "time": "Время",
+  "close": "Закрыть",
+  "done": "Готово",
+  "chooseDate": "Выберите дату",
+  "chooseTime": "Выберите время",
+  "previousMonth": "Предыдущий месяц",
+  "nextMonth": "Следующий месяц",
+  "hours": "Часы",
+  "minutes": "Минуты",
+  "formTablet": "Таблетки",
+  "formCapsule": "Капсулы",
+  "formSyrup": "Сироп",
+  "formSolution": "Раствор",
+  "formOintment": "Мазь",
+  "formCream": "Крем",
+  "formSpray": "Спрей",
+  "formDrops": "Капли",
+  "formPowder": "Порошок",
+  "formSuppository": "Суппозитории",
+  "formOther": "Другая",
+  "catPainkiller": "Обезболивающие и жаропонижающие",
+  "catAntipyretic": "Жаропонижающие",
+  "catDigestive": "ЖКТ и пищеварение",
+  "catAllergy": "Антигистаминные",
+  "catWounds": "Раны и перевязки",
+  "catCold": "Лекарства от простуды",
+  "catSedative": "Успокоительные",
+  "catCardio": "Сердечные",
+  "catAntidepressant": "Антидепрессанты",
+  "catHormonal": "КОК и гормональные",
+  "catAntibiotic": "Антибиотики",
+  "catVitamins": "Витамины и БАДы",
+  "catOther": "Другое",
+  "storageHome": "Домашняя аптечка",
+  "storageFridge": "Холодильник",
+  "storageBag": "С собой",
+  "mealBefore": "До еды",
+  "mealDuring": "Во время",
+  "mealAfter": "После еды",
+  "filterAll": "Все",
+  "filterLowOrOut": "Мало или нет",
+  "filterExpiringSoon": "Скоро истекает",
+  "filterExpired": "Просрочено",
+  "badgeFirstWeekTitle": "Первая неделя",
+  "badgeFirstWeekHint": "7 дней подряд без пропусков",
+  "badgeCabinetKeeperTitle": "Хозяин аптечки",
+  "badgeCabinetKeeperHint": "3 лекарства в аптечке",
+  "badgeNoExpiredTitle": "Без просрочки",
+  "badgeNoExpiredHint": "Аптечка без просроченных",
+  "badgeMonthTitle": "Месяц без пропусков",
+  "badgeMonthHint": "30 дней подряд",
+  "badgeBigCabinetTitle": "Большая аптечка",
+  "badgeBigCabinetHint": "10 лекарств в аптечке",
+  "badgeFiftyTitle": "50 приёмов",
+  "badgeFiftyHint": "50 отметок «принял» за 60 дней",
+  "badgePerfectWeekTitle": "Идеальная неделя",
+  "badgePerfectWeekHint": "Все приёмы за 7 дней отмечены",
+  "badgeDiaryTitle": "Дневник начат",
+  "badgeDiaryHint": "3 записи о самочувствии",
+  "unitPcs": "шт.",
+  "unitMl": "мл",
+  "unitG": "г",
+  "unitDoses": "доз",
+  "negativeStock": "Остаток не может быть отрицательным",
+  "disposalHint": "Проверьте инструкцию и местные правила утилизации",
+  "stockLabel": "Остаток",
+  "expiredSince": "Просрочено с {date}",
+  "@expiredSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "expiringBadge": "Скоро истекает: до {date} ({when})",
+  "@expiringBadge": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "whenToday": "сегодня",
+  "whenInDays": "через {n} дн.",
+  "@whenInDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "outBadge": "Закончилось",
+  "lowBadge": "Мало: осталось {qty}",
+  "@lowBadge": {
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "goodUntil": "Годен до {date}",
+  "@goodUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "searchMedicines": "Поиск по {count, plural, one{{count} лекарству} few{{count} лекарствам} many{{count} лекарствам} other{{count} лекарствам}}",
+  "@searchMedicines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backToCabinet": "Вернуться в аптечку",
+  "archive": "Архив",
+  "titleCabinet": "Аптечка",
+  "addMedicine": "Добавить лекарство",
+  "cabinetLoadFailed": "Не удалось загрузить аптечку",
+  "archiveEmptyTitle": "Архив пуст",
+  "archiveEmptyText": "Сюда попадают лекарства, убранные из аптечки.",
+  "cabinetEmptyTitle": "В аптечке пока пусто",
+  "cabinetEmptyText": "Добавьте первое лекарство, чтобы следить за остатком и сроком годности.",
+  "noMedicinesWithStatus": "Нет лекарств с таким статусом",
+  "showAll": "Показать все",
+  "readinessOverline": "ГОТОВНОСТЬ АПТЕЧКИ",
+  "okPercent": "В порядке: {percent}%",
+  "@okPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "tileTotal": "Всего",
+  "tileExpiring": "Истекают",
+  "tileLow": "Мало",
+  "timeToBuy": "Пора докупить: {count} — загляните во вкладку «Покупки»",
+  "@timeToBuy": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allCategories": "Все категории",
+  "pQuantityNegative": "Количество не может быть отрицательным",
+  "pMedicineArchived": "Лекарство в архиве",
+  "pUnitMustBe": "Единица должна быть «{unit}»",
+  "@pUnitMustBe": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "pNameRequired": "Название обязательно",
+  "pUnitRequired": "Укажите единицу учёта",
+  "pThresholdNegative": "Порог не может быть отрицательным",
+  "pDosePositive": "Дозировка должна быть больше нуля",
+  "pDoseUnitRequired": "Укажите единицу дозировки",
+  "pPickWeekdays": "Выберите дни недели",
+  "pPickDates": "Выберите даты",
+  "pEndBeforeStart": "Дата окончания раньше даты начала",
+  "pBadTime": "Некорректное время",
+  "pAlreadyTaken": "Приём уже отмечен как принятый",
+  "pNoDeductions": "Списания для этой отметки не сохранены",
+  "newMedicine": "Новое лекарство",
+  "medicineTitle": "Лекарство",
+  "addToCabinet": "Добавить в аптечку",
+  "secBasic": "Основное",
+  "nameLabel": "Название *",
+  "nameHint": "Например, Ибупрофен Форте",
+  "enterName": "Введите название",
+  "secCategory": "Категория действия",
+  "secForm": "Форма выпуска",
+  "strengthLabel": "Дозировка или концентрация",
+  "strengthHint": "Например, 500 мг",
+  "secStorage": "Где хранить?",
+  "secStock": "Запас",
+  "initialQuantity": "Начальное количество",
+  "enterNumberZero": "Введите число 0 или больше",
+  "unitLabel": "Единица",
+  "expiryLabel": "Срок годности",
+  "clearExpiry": "Убрать срок годности",
+  "thresholdLabel": "Порог низкого остатка (необязательно)",
+  "thresholdHelper": "По умолчанию: 20% от самой большой упаковки",
+  "secLook": "Внешний вид",
+  "drawPill": "Как выглядит",
+  "pillShape": "Форма",
+  "pillColor": "Цвет",
+  "pillColor2": "Цвет второй половины",
+  "pillScore": "Разрез",
+  "shapeRound": "Круглая",
+  "shapeOval": "Овальная",
+  "shapeCaplet": "Продолговатая",
+  "shapeCapsule": "Капсула",
+  "shapeSquare": "Квадратная",
+  "scoreNone": "Без разреза",
+  "scoreLine": "Одна линия",
+  "scoreCross": "Крест",
+  "colorSwatch": "Цвет {n}",
+  "@colorSwatch": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "edit": "Изменить",
+  "toArchive": "В архив",
+  "restoreFromArchive": "Вернуть из архива",
+  "inArchiveBadge": "В архиве",
+  "stockSemantics": "Остаток: {quantity}",
+  "@stockSemantics": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStock": "Общий остаток",
+  "stockInPackage": "Остаток в упаковке",
+  "secPackages": "Упаковки",
+  "takeNow": "Принять сейчас",
+  "addPackage": "Добавить упаковку",
+  "addedToShopping": "Добавлено в список покупок",
+  "toShoppingList": "В список покупок",
+  "archiveAskTitle": "Убрать в архив?",
+  "archiveAskText": "Действующие расписания этого лекарства будут завершены, напоминания отключены. Прошлые приёмы и история остатков сохранятся.",
+  "medicineRestored": "Лекарство возвращено. Завершённые расписания нужно создать заново",
+  "takenRecorded": "Записано: {qty}",
+  "@takenRecorded": {
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "expiryPassed": "Срок годности истёк {date}",
+  "@expiryPassed": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "packageOut": "Закончилась",
+  "expiringSoonShort": "Скоро истекает",
+  "otherUnitNote": "Другая единица: не входит в остаток и не расходуется приёмами",
+  "packageTooltip": "Упаковка",
+  "correctStock": "Скорректировать остаток",
+  "expiryTitle": "Срок годности",
+  "movementHistory": "История движения",
+  "staleQuantity": "Остаток изменился. Откройте корректировку заново",
+  "noMovements": "Движений нет",
+  "stockAfter": "Остаток {qty} · {when}",
+  "@stockAfter": {
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "txInitial": "Начальный остаток",
+  "txIncrease": "Приход",
+  "txDecrease": "Расход",
+  "txCorrection": "Коррекция",
+  "newPackage": "Новая упаковка",
+  "quantityLabel": "Количество",
+  "add": "Добавить",
+  "actualStock": "Фактический остаток",
+  "leftOfTotal": "Осталось {left} из {total}",
+  "@leftOfTotal": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "howManyTaken": "Сколько приняли",
+  "enterPositive": "Введите число больше нуля",
+  "record": "Записать",
+  "tip1": "Не забудь выпить стакан воды: таблетки лучше усваиваются.",
+  "tip2": "Поставь аптечку на видное место: так проще не пропускать приём.",
+  "tip3": "Каждая отметка — маленькая победа. Серия растёт!",
+  "tip4": "Проверь сроки годности раз в месяц: я подскажу, что скоро истечёт.",
+  "notEnoughStock": "В аптечке не хватает лекарства",
+  "addIntake": "Добавить приём",
+  "historyTooltip": "История",
+  "wholeMonth": "Весь месяц",
+  "loadIntakesFailed": "Не удалось загрузить приёмы",
+  "noIntakesTitle": "На этот день приёмов нет",
+  "noIntakesText": "Нажмите «+», чтобы добавить приём",
+  "courseLastDay": "Сегодня последний день курса: {name}",
+  "@courseLastDay": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "courseEnds": "Курс {name} заканчивается {date}",
+  "@courseEnds": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "periodMorning": "Утро",
+  "periodDay": "День",
+  "periodEvening": "Вечер",
+  "periodAnytime": "В течение дня",
+  "periodDone": "Выполнено",
+  "periodWaiting": "Ожидает",
+  "planOverline": "ПЛАН ДНЯ",
+  "takenOfTotal": "{done} из {total} принято",
+  "@takenOfTotal": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "allTaken": "Всё принято — отличный день!",
+  "leftToTake": "Осталось принять: {left}",
+  "@leftToTake": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "whisper": "Пилюлькин шепчет:",
+  "manageSchedule": "Управление расписанием",
+  "editSchedule": "Изменить расписание",
+  "endScheduleItem": "Завершить расписание",
+  "scheduleAlreadyChanged": "Расписание уже изменено или завершено",
+  "cancelMark": "Отменить отметку",
+  "statusTaken": "Принято",
+  "statusSkipped": "Пропущено",
+  "statusUnmarked": "Не отмечено",
+  "skip": "Пропустить",
+  "take": "Принять",
+  "endAskTitle": "Завершить расписание?",
+  "endAskText": "Прошлые приёмы сохранятся, будущие исчезнут.",
+  "endConfirm": "Завершить",
+  "endsTomorrow": "Расписание завершится со следующего дня: сегодня уже есть отметка",
+  "supplyCoversCourse": "Хватит на весь курс",
+  "supplyOverYear": "Хватит больше чем на год",
+  "supplyNotToday": "Не хватит даже на сегодня",
+  "supplyUntil": "Хватит до {date}",
+  "@supplyUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "createMedicineFirst": "Сначала создайте лекарство",
+  "chooseMedicine": "Выберите лекарство",
+  "changesFromTomorrow": "Изменения вступят в силу с завтрашнего дня: сегодня уже есть отметка",
+  "notificationsOffHint": "Уведомления выключены. Включите их в настройках, чтобы получать напоминания",
+  "timesPerDay": "{n, plural, one{{n} раз в день} few{{n} раза в день} many{{n} раз в день} other{{n} раза в день}}",
+  "@timesPerDay": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "daysShort": "{n} дн.",
+  "@daysShort": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "coursePreview": "ПРЕДПРОСМОТР КУРСА",
+  "newIntake": "Новый приём",
+  "scheduleTitle": "Расписание",
+  "saveIntake": "Сохранить приём",
+  "secMedicineDose": "Лекарство и дозировка",
+  "cabinetEmptyCreate": "В аптечке пока нет лекарств. Создайте первое.",
+  "doseLabel": "Дозировка за один приём",
+  "secRepeat": "Повторение",
+  "repeatDaily": "Каждый день",
+  "repeatWeekdays": "По дням",
+  "repeatDates": "По датам",
+  "secWeekdays": "Дни недели",
+  "secDates": "Даты",
+  "addDate": "Добавить дату",
+  "intakeDate": "Дата приёма",
+  "secTimes": "Время приёма",
+  "addTimeOptional": "Добавить время (необязательно)",
+  "addTime": "Добавить время",
+  "secMeal": "Связь с приёмом пищи",
+  "mealAny": "Не важно",
+  "secPeriod": "Период",
+  "startLabel": "Начало",
+  "startHelp": "Дата начала",
+  "endOptional": "Окончание (необязательно)",
+  "endHelp": "Дата окончания",
+  "notSpecifiedN": "Не указано",
+  "clear": "Очистить",
+  "historyTitle": "История",
+  "historyLoadFailed": "Не удалось загрузить историю",
+  "historyEmpty": "История пуста",
+  "all": "Все",
+  "historySummary": "За {days} дн.: принято {taken}",
+  "@historySummary": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "taken": {
+        "type": "int"
+      }
+    }
+  },
+  "historyMissed": ", пропущено {n}",
+  "@historyMissed": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "kitFever": "Жаропонижающие и обезболивающие",
+  "kitFeverItems": "Парацетамол|Ибупрофен",
+  "kitAntiseptic": "Антисептики для ран",
+  "kitAntisepticItems": "Хлоргексидин|Мирамистин",
+  "kitDressings": "Перевязочные материалы",
+  "kitDressingsItems": "Пластырь|Бинт",
+  "kitStomach": "Желудок и кишечник",
+  "kitStomachItems": "Активированный уголь|Смекта",
+  "kitAllergy": "Аллергия",
+  "kitAllergyItems": "Супрастин|Цетиризин",
+  "reasonExpired": "Просрочено",
+  "reasonExpiringSoon": "Скоро срок",
+  "reasonOut": "Закончилось",
+  "reasonLow": "Мало",
+  "boughtAsk": "Купили {name}?",
+  "@boughtAsk": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "toCabinet": "В аптечку",
+  "listCopied": "Список скопирован",
+  "titleShopping": "Покупки",
+  "secUrgent": "Срочно докупить",
+  "allFine": "Всё в порядке: ничего не заканчивается и не истекает.",
+  "toList": "В список",
+  "secMyList": "Мой список",
+  "whatToBuy": "Что купить?",
+  "addToList": "Добавить в список",
+  "listEmpty": "Список пуст",
+  "removeFromList": "Убрать из списка",
+  "copyList": "Скопировать список",
+  "secIdealKit": "Собери идеальную аптечку",
+  "inStock": "В наличии",
+  "inList": "В списке",
+  "titleProfile": "Профиль",
+  "yourName": "Ваше имя",
+  "streakDaysInRow": "{n} дн. подряд",
+  "@streakDaysInRow": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "editName": "Изменить имя",
+  "secWeek": "Итоги недели",
+  "secHealth": "Здоровье",
+  "diaryTitle": "Дневник самочувствия",
+  "diarySubtitle": "Настроение, с чем была проблема",
+  "reportTitle": "Отчёт для врача",
+  "reportSubtitle": "PDF или таблица за период",
+  "weekSummary": "За 7 дней принято {taken} из {planned} ({percent}%)",
+  "@weekSummary": {
+    "placeholders": {
+      "taken": {
+        "type": "int"
+      },
+      "planned": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "goalText": "Цель: {goal} дней подряд, осталось {left}",
+  "@goalText": {
+    "placeholders": {
+      "goal": {
+        "type": "int"
+      },
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "secBadges": "Достижения",
+  "secSettings": "Настройки",
+  "themeTitle": "Тема",
+  "themeSystem": "Как в системе",
+  "themeLight": "Светлая",
+  "themeDark": "Тёмная",
+  "languageTitle": "Язык",
+  "langSystem": "Как в системе",
+  "hapticsTitle": "Тактильный отклик",
+  "hapticsSub": "Приятная отдача при приёме",
+  "confettiTitle": "Конфетти при приёме",
+  "confettiSub": "Анимация победы над рутиной",
+  "hintsTitle": "Подсказки о сроках",
+  "hintsSub": "Напоминать в аптечке, что пора докупить",
+  "notificationsTitle": "Уведомления",
+  "notificationsSub": "Разрешения, проверка, если не приходят",
+  "secData": "Данные",
+  "dataNote": "Данные хранятся на этом устройстве. Если войти в аккаунт, их копия есть и в облаке. Файл резервной копии вы сохраняете сами, он не зашифрован: храните его там, где доверяете.",
+  "saveBackup": "Сохранить резервную копию",
+  "restoreBackup": "Восстановить из копии",
+  "whatsYourName": "Как вас зовут?",
+  "weekdayDone": "без пропусков",
+  "weekdayMissed": "есть пропуски",
+  "weekdayNoData": "нет данных",
+  "badgeEarned": "получено",
+  "badgeLocked": "не получено",
+  "backupFailedTitle": "Не удалось",
+  "somethingWrong": "Что-то пошло не так. Данные не изменены.",
+  "backupTooLarge": "Файл слишком большой для резервной копии PillPal",
+  "backupNotBackup": "Это не резервная копия PillPal",
+  "backupNewer": "Копия создана более новой версией PillPal или зашифрована. Обновите приложение",
+  "backupCorrupt": "Файл повреждён или не является резервной копией",
+  "backupInconsistent": "Резервная копия противоречива и не может быть восстановлена",
+  "backupSaved": "Копия сохранена",
+  "backupDescribe": "{medicines} лекарств{archived}, {schedules} расписаний, {logs} отметок{last}",
+  "@backupDescribe": {
+    "placeholders": {
+      "medicines": {
+        "type": "int"
+      },
+      "archived": {
+        "type": "String"
+      },
+      "schedules": {
+        "type": "int"
+      },
+      "logs": {
+        "type": "int"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "backupArchivedPart": " (в архиве: {n})",
+  "@backupArchivedPart": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "backupLastPart": ", последняя {date}",
+  "@backupLastPart": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "replaceTitle": "Заменить данные?",
+  "replaceText": "В копии: {backup}.\n\nСейчас на устройстве: {current}.\n\nВсе текущие данные будут заменены полностью. Это нельзя отменить.",
+  "@replaceText": {
+    "placeholders": {
+      "backup": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "saveCurrentFirst": "Сначала сохранить текущие",
+  "replace": "Заменить",
+  "dataRestored": "Данные восстановлены",
+  "ok": "OK",
+  "notificationsOn": "Напоминания включены",
+  "notificationsOff": "Напоминания выключены",
+  "notifDeniedText": "Без разрешения приложение не сможет напомнить о приёме. Если окно с запросом не появляется, включите уведомления для PillPal в настройках телефона.",
+  "notifOnText": "Если приём не отмечен, через 15 минут придёт второе напоминание. В уведомлении есть кнопки «Принял», «Через 10 мин» и «Через 30 мин».",
+  "allowNotifications": "Разрешить уведомления",
+  "exactAlarms": "Напоминать точно по времени",
+  "exactAlarmsSub": "Без этого Android может задержать уведомление",
+  "testNotification": "Проверить уведомление",
+  "soundTitle": "Звук",
+  "soundSub": "Сигнал при напоминании",
+  "vibrationTitle": "Вибрация",
+  "vibrationIos": "На iPhone вибрацией управляет система",
+  "vibrationSub": "Вибрировать при напоминании",
+  "quietTitle": "Тихие часы",
+  "quietSub": "В это время напоминания приходят без звука",
+  "quietFromLabel": "С",
+  "quietToLabel": "До",
+  "quietFromTitle": "Тихие часы с",
+  "quietToTitle": "Тихие часы до",
+  "batteryNote": "Не приходят? На некоторых телефонах экономия заряда останавливает напоминания: в настройках телефона разрешите PillPal работать без ограничений.",
+  "moodBad": "Плохо",
+  "moodSoSo": "Так себе",
+  "moodOk": "Нормально",
+  "moodGood": "Хорошо",
+  "moodGreat": "Отлично",
+  "diaryEntry": "Запись",
+  "diaryEmpty": "Отмечайте самочувствие и с чем была проблема: записи попадут в отчёт для врача",
+  "deleteEntry": "Удалить запись",
+  "newEntry": "Новая запись",
+  "howDoYouFeel": "Самочувствие",
+  "noteLabel": "Заметка",
+  "reportSaved": "Отчёт сохранён",
+  "days7": "7 дней",
+  "days30": "30 дней",
+  "days90": "90 дней",
+  "noIntakesInPeriod": "За этот период приёмов не было",
+  "medicineTakenOf": "{name}: принято {taken} из {planned}",
+  "@medicineTakenOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "taken": {
+        "type": "int"
+      },
+      "planned": {
+        "type": "int"
+      }
+    }
+  },
+  "notMarkedPart": ", не отмечено {n}",
+  "@notMarkedPart": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "diaryCount": "Записей в дневнике: {n}",
+  "@diaryCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "savePdf": "Сохранить PDF",
+  "saveCsv": "Сохранить таблицу (CSV)",
+  "welcomeTitle": "Привет! Я PillPal",
+  "welcomeText": "Помогу не забывать про лекарства и следить за аптечкой.",
+  "welcomeP1": "Напоминания о приёме",
+  "welcomeP1t": "Уведомление в нужное время и кнопка «Принял».",
+  "welcomeP2": "Аптечка под контролем",
+  "welcomeP2t": "Остатки, сроки годности и подсказка, что пора докупить.",
+  "welcomeP3": "Всё хранится у вас",
+  "welcomeP3t": "Данные остаются на этом устройстве. Облако — только если вы войдёте в аккаунт.",
+  "nameOptional": "Как вас зовут? (необязательно)",
+  "enableReminders": "Включить напоминания",
+  "skipReminders": "Пока без напоминаний",
+  "followUpTitle": "Не забыли? {name}",
+  "@followUpTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "actionTaken": "Принял",
+  "actionSnooze": "Через 10 мин",
+  "channelName": "Напоминания о приёме",
+  "channelDescription": "Напоминания о запланированных приёмах",
+  "testNotificationBody": "Так будут выглядеть напоминания",
+  "csvTitle": "Отчёт PillPal",
+  "csvMedicine": "Лекарство",
+  "csvPlanned": "Запланировано",
+  "csvTaken": "Принято",
+  "csvSkipped": "Пропущено",
+  "csvMissed": "Не отмечено",
+  "csvDate": "Дата",
+  "csvTime": "Время",
+  "csvMood": "Самочувствие (1-5)",
+  "csvNote": "Заметка",
+  "pdfTitle": "Отчёт о приёме лекарств",
+  "pdfMedicines": "Лекарства",
+  "pdfNoIntakes": "За этот период приёмов не было.",
+  "pdfPlanned": "По плану",
+  "pdfNoEntries": "Записей нет.",
+  "pdfWhen": "Когда",
+  "pdfValues": "Показатели",
+  "pdfFooter": "Сформировано в PillPal {stamp}. Справочные данные, не медицинский документ.",
+  "@pdfFooter": {
+    "placeholders": {
+      "stamp": {
+        "type": "String"
+      }
+    }
+  },
+  "moodText": "самочувствие {n}/5",
+  "@moodText": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "validatorFillOne": "Заполните хотя бы одно поле",
+  "accountTitle": "Аккаунт и облако",
+  "accountSubSignedOut": "Не выполнен вход",
+  "accountNotAvailable": "Облако пока не подключено к этой сборке приложения. Данные хранятся на этом устройстве.",
+  "accountIntro": "Войдите, чтобы хранить копию данных (лекарства, расписания, дневник) в облачном аккаунте и открывать её на других телефонах.",
+  "emailLabel": "Электронная почта",
+  "passwordLabel": "Пароль",
+  "signIn": "Войти",
+  "createAccount": "Создать аккаунт",
+  "forgotPassword": "Забыли пароль?",
+  "resetSent": "Письмо для сброса пароля отправлено",
+  "enterEmail": "Введите почту",
+  "enterEmailPassword": "Введите почту и пароль",
+  "signedInAs": "Вы вошли как {email}",
+  "@signedInAs": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "syncedAt": "Синхронизировано {when}",
+  "@syncedAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "syncing": "Синхронизация…",
+  "syncedJustNow": "Синхронизировано",
+  "syncNow": "Синхронизировать сейчас",
+  "signOut": "Выйти",
+  "signOutNote": "Данные останутся на этом телефоне, но перестанут отправляться в облако.",
+  "deleteAccount": "Удалить аккаунт",
+  "deleteAccountTitle": "Удалить аккаунт?",
+  "deleteAccountText": "Аккаунт и копия данных в облаке будут удалены. Данные на этом телефоне останутся. Введите пароль, чтобы подтвердить.",
+  "accountDeleted": "Аккаунт удалён",
+  "conflictTitle": "Данные есть и здесь, и в облаке",
+  "conflictText": "Выберите, какие оставить. Вторые будут заменены полностью.",
+  "useCloudData": "Взять данные из облака",
+  "useDeviceData": "Оставить данные с этого телефона",
+  "authInvalidEmail": "Проверьте адрес почты",
+  "authWrongCredentials": "Неверная почта или пароль",
+  "authEmailInUse": "Эта почта уже зарегистрирована",
+  "authWeakPassword": "Пароль слишком простой: нужно хотя бы 6 символов",
+  "authNetwork": "Нет связи с сервером. Проверьте интернет",
+  "authTooMany": "Слишком много попыток. Попробуйте позже",
+  "authOther": "Не получилось. Попробуйте ещё раз",
+  "syncProblemNetwork": "Не удалось связаться с облаком. Попробуем снова позже.",
+  "syncProblemTooLarge": "Данных слишком много для облачной копии.",
+  "syncProblemOther": "Облачная копия не подошла. Данные на телефоне не изменены.",
+  "extendCourse": "Продлить",
+  "extendCourseTitle": "Продлить курс: {name}",
+  "@extendCourseTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "extendDays": "Ещё {n} дн.",
+  "@extendDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "actionSnooze30": "Через 30 мин",
+  "secRepeatYearly": "Повторять курс каждый год",
+  "repeatYearlyHint": "Для сезонных курсов, например витамина D осенью и зимой",
+  "repeatNone": "Нет",
+  "repeatYears": "{n, plural, one{ещё {n} год} few{ещё {n} года} many{ещё {n} лет} other{ещё {n} года}}",
+  "@repeatYears": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "symptomHeadache": "Головная боль",
+  "symptomNausea": "Тошнота",
+  "symptomDizziness": "Головокружение",
+  "symptomWeakness": "Слабость",
+  "symptomFever": "Температура",
+  "symptomStomachache": "Боль в животе",
+  "symptomHeartburn": "Изжога",
+  "symptomCough": "Кашель",
+  "symptomInsomnia": "Плохой сон",
+  "symptomRash": "Сыпь",
+  "symptomAnxiety": "Тревога",
+  "symptomPain": "Боль",
+  "symptomsTitle": "С чем была проблема",
+  "symptomOther": "Другое",
+  "symptomOwnTitle": "Своё",
+  "symptomOwnLabel": "Что беспокоило",
+  "csvSymptoms": "Проблема",
+  "validatorMaxSymptoms": "Не больше 12 пунктов в записи",
+  "achievementsTitle": "Достижения",
+  "badgesCount": "Получено {n} из {total}",
+  "@badgesCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSub": "Вид, язык, уведомления, копия данных",
+  "takeOutsideSchedule": "Принять вне расписания",
+  "nothingToTake": "В аптечке нет лекарств с остатком"
+}

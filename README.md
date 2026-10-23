@@ -1,17 +1,37 @@
-# pillory
+# PillPal
 
-A new Flutter project.
+Приложение для напоминаний о лекарствах и учёта домашней аптечки (Flutter, Drift, Riverpod). Русский и английский язык.
 
-## Getting Started
+- **Приём** — расписания (в том числе ступенчатые схемы со снижением дозы), напоминания с кнопками «Принял» и «Через 10 мин», повтор через 15 минут, приём вне расписания, серия дней.
+- **Аптечка** — упаковки, остатки, сроки годности, свой рисунок таблетки или капсулы (форма, цвет, разрез), прогноз «хватит до …».
+- **Покупки** — список и подсказки по аптечке.
+- **Профиль** — тема и язык, звук и тихие часы, дневник самочувствия, отчёт для врача (PDF/CSV), достижения, резервная копия в файл, аккаунт с облачной копией.
 
-This project is a starting point for a Flutter application.
+Без аккаунта данные хранятся только на устройстве.
 
-A few resources to get you started if this is your first Flutter project:
+## Разработка
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```
+flutter pub get
+flutter analyze
+flutter test
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Строки интерфейса: `lib/l10n/app_ru.arb` (шаблон) и `app_en.arb`; после правки `flutter gen-l10n`.
+- После изменения таблиц Drift: `dart run build_runner build`, затем
+  `dart run drift_dev schema dump lib/data/app_database.dart drift_schemas/pillory` и
+  `dart run drift_dev schema generate drift_schemas/pillory test/drift/pillory/generated`;
+  добавьте в `test/drift/migration_test.dart` проверку обновления с предыдущей версии.
+
+## Облако (аккаунт и копия данных)
+
+Вход по почте и паролю (Firebase Auth), копия данных — один документ на пользователя в Firestore (`users/{uid}`, сжатый файл резервной копии). Пока Firebase не подключён, приложение работает полностью офлайн, а экран «Аккаунт и облако» сообщает, что облако не подключено.
+
+Подключение:
+
+1. Создайте проект в [Firebase](https://console.firebase.google.com), включите Authentication → «Электронная почта/пароль» и создайте базу Firestore.
+2. В корне проекта выполните `flutterfire configure`: он заменит заглушку `lib/firebase_options.dart` настройками вашего проекта (и добавит `google-services.json` / `GoogleService-Info.plist`).
+3. Опубликуйте правила из `firestore.rules` (`firebase deploy --only firestore:rules`): каждый читает и пишет только свой документ.
+
+Ограничения: документ Firestore до 1 МиБ (копия сжимается; если данных больше, приложение сообщит об этом), копия в облаке не шифруется самим приложением.

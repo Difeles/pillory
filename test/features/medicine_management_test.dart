@@ -257,4 +257,34 @@ void main() {
     expect(find.text('Изменить'), findsOneWidget);
     expect(find.text('В архив'), findsOneWidget);
   });
+
+  testWidgets('an intake outside the schedule takes from the stock', (
+    tester,
+  ) async {
+    await openMedicine(tester);
+    await tester.ensureVisible(find.text('Принять сейчас'));
+    await tester.tap(find.text('Принять сейчас'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '2');
+    await tester.tap(find.text('Записать'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Записано: 2 шт.'), findsOneWidget);
+    expect(find.text('8 шт.'), findsWidgets);
+  });
+
+  testWidgets('more than the stock is refused without leaving a schedule', (
+    tester,
+  ) async {
+    await openMedicine(tester);
+    await tester.ensureVisible(find.text('Принять сейчас'));
+    await tester.tap(find.text('Принять сейчас'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '11');
+    await tester.tap(find.text('Записать'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Остаток не может быть отрицательным'), findsOneWidget);
+    expect(find.text('10 шт.'), findsWidgets);
+  });
 }

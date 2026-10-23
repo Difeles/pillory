@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/l10n/l10n.dart';
 import 'package:pillory/design_system/theme.dart';
 import 'package:pillory/design_system/tokens.dart';
 import 'package:pillory/design_system/widgets/app_card.dart';
@@ -12,6 +13,9 @@ import 'package:pillory/design_system/widgets/status_badge.dart';
 
 Future<void> _pump(WidgetTester tester, Widget child) => tester.pumpWidget(
   MaterialApp(
+    locale: const Locale('ru'),
+    supportedLocales: supportedAppLocales,
+    localizationsDelegates: appLocalizationsDelegates,
     theme: buildAppTheme(),
     home: Scaffold(body: child),
   ),
@@ -152,6 +156,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: supportedAppLocales,
+        localizationsDelegates: appLocalizationsDelegates,
         theme: buildAppTheme(),
         home: const MediaQuery(
           data: MediaQueryData(disableAnimations: true),

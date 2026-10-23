@@ -5,6 +5,7 @@ import '../../domain/inventory_rules.dart';
 import '../../domain/reminders.dart';
 import '../../domain/schedule.dart';
 import '../../domain/streak.dart';
+import '../../domain/supply.dart';
 
 /// Intakes for one calendar day (date-only key), live from the database.
 final dayIntakesProvider = StreamProvider.family<List<DayIntake>, DateTime>(
@@ -41,4 +42,13 @@ final openIntakeProvider =
 final streakProvider = Provider<int>((ref) {
   final history = ref.watch(historyProvider).value;
   return history == null ? 0 : currentStreak(history, dateOnly(DateTime.now()));
+});
+
+/// Courses that end today or in the next two days.
+final endingCoursesProvider = StreamProvider<List<EndingCourse>>((ref) {
+  final today = dateOnly(DateTime.now());
+  return ref
+      .watch(scheduleRepositoryProvider)
+      .watchReminderSource(today)
+      .map((s) => endingCourses(s.schedules, today));
 });

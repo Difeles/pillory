@@ -6,6 +6,7 @@ import 'package:pillory/app/home_shell.dart';
 import 'package:pillory/app/providers.dart';
 import 'package:pillory/design_system/tokens.dart';
 
+import '../support/fake_diary_repository.dart';
 import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
 
@@ -22,6 +23,7 @@ void main() {
         overrides: [
           inventoryRepositoryProvider.overrideWithValue(inventory),
           extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
+          diaryRepositoryProvider.overrideWithValue(FakeDiaryRepository()),
           scheduleRepositoryProvider.overrideWithValue(
             FakeScheduleRepository(inventory),
           ),
@@ -30,10 +32,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final shell = find.byType(HomeShell);
+    final shell = find.byType(HomeShell, skipOffstage: false);
     expect(Theme.of(tester.element(shell)).brightness, Brightness.light);
 
     await tester.tap(find.text('Профиль'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Настройки'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Тёмная'));
     await tester.tap(find.text('Тёмная'));

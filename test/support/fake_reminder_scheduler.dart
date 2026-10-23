@@ -8,7 +8,13 @@ class FakeReminderScheduler implements ReminderScheduler {
   String zone = 'Europe/Moscow';
   int scheduleCalls = 0;
   int requests = 0;
+
+  /// The reminders themselves; the "didn't you forget" repeats are in
+  /// [followUps].
   final scheduled =
+      <int, ({DateTime at, String title, String body, String payload})>{};
+  final styles = <int, ReminderStyle>{};
+  final followUps =
       <int, ({DateTime at, String title, String body, String payload})>{};
 
   @override
@@ -21,11 +27,21 @@ class FakeReminderScheduler implements ReminderScheduler {
   }
 
   @override
+  Future<bool> exactAllowed() async => false;
+
+  @override
+  Future<void> requestExact() async {}
+
+  @override
+  Future<void> showTest() async {}
+
+  @override
   Future<String> timeZone() async => zone;
 
   @override
   Future<List<PendingReminder>> pending() async => [
-    for (final e in scheduled.entries) PendingReminder(e.key, e.value.payload),
+    for (final e in [...scheduled.entries, ...followUps.entries])
+      PendingReminder(e.key, e.value.payload),
   ];
 
   @override
@@ -35,11 +51,21 @@ class FakeReminderScheduler implements ReminderScheduler {
     required String title,
     required String body,
     required String payload,
+    ReminderStyle style = const ReminderStyle(),
   }) async {
     scheduleCalls++;
-    scheduled[id] = (at: at, title: title, body: body, payload: payload);
+    styles[id] = style;
+    (title.startsWith('Не забыли?') ? followUps : scheduled)[id] = (
+      at: at,
+      title: title,
+      body: body,
+      payload: payload,
+    );
   }
 
   @override
-  Future<void> cancel(int id) async => scheduled.remove(id);
+  Future<void> cancel(int id) async {
+    scheduled.remove(id);
+    followUps.remove(id);
+  }
 }

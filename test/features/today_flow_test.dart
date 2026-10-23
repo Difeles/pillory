@@ -145,6 +145,77 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Принять'), findsOneWidget);
   });
 
+  testWidgets('a course can be repeated in the following years', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await inventory.createMedicine(
+      const NewMedicine(name: 'Витамин D', initialQuantity: 200, unit: 'шт.'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Добавить приём'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Витамин D'));
+    await tester.pumpAndSettle();
+    // No end date yet: no repeat option.
+    expect(find.text('Повторять курс каждый год'), findsNothing);
+    await tester.ensureVisible(find.text('90 дн.'));
+    await tester.tap(find.text('90 дн.'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('ещё 2 года'));
+    await tester.tap(find.text('ещё 2 года'));
+    await tester.pumpAndSettle();
+    await save(tester);
+
+    final all = await schedules
+        .watchReminderSource(DateTime(2000))
+        .first
+        .then((s) => [for (final r in s.schedules) r.schedule]);
+    all.sort((a, b) => a.startDate.compareTo(b.startDate));
+    expect(all, hasLength(3));
+    final first = all.first;
+    expect(all[1].startDate.year, first.startDate.year + 1);
+    expect(all[2].endDate!.year, first.endDate!.year + 2);
+    expect(all[2].endDate!.month, first.endDate!.month);
+  });
+
+  testWidgets('a course that ends today can be extended', (tester) async {
+    await pumpApp(tester);
+    final medicine = await inventory.createMedicine(
+      const NewMedicine(name: 'Нурофен', initialQuantity: 80, unit: 'шт.'),
+    );
+    final today = DateTime.now();
+    final day = DateTime(today.year, today.month, today.day);
+    await schedules.createSchedule(
+      NewSchedule(
+        medicineId: medicine,
+        kind: ScheduleKind.daily,
+        dose: 1,
+        doseUnit: 'шт.',
+        startDate: DateTime(day.year, day.month, day.day - 3),
+        endDate: day,
+        times: const [8 * 60],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Сегодня последний день курса: Нурофен'), findsOneWidget);
+
+    await tester.tap(find.text('Продлить'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ещё 7 дн.'));
+    await tester.pumpAndSettle();
+
+    final all = await schedules
+        .watchReminderSource(DateTime(2000))
+        .first
+        .then((s) => [for (final r in s.schedules) r.schedule]);
+    final ends = all.map((s) => s.endDate).whereType<DateTime>().toList()
+      ..sort();
+    expect(ends.last, DateTime(day.year, day.month, day.day + 7));
+    // The old and the new schedule are one course now, so no card is left.
+    expect(find.textContaining('последний день курса'), findsNothing);
+  });
+
   testWidgets('cancelling new medicine keeps the typed schedule', (
     tester,
   ) async {

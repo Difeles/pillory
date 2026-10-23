@@ -1,3 +1,7 @@
+import 'package:drift/drift.dart'
+    show BooleanExpressionOperators, StringExpressionOperators;
+
+import '../domain/extras.dart' show devicePrefix;
 import 'app_database.dart';
 import 'backup_format.dart';
 
@@ -19,6 +23,13 @@ class DriftBackupRepository {
       schedules: await _db.select(_db.schedules).get(),
       intakeLogs: await _db.select(_db.intakeLogs).get(),
       intakeDeductions: await _db.select(_db.intakeDeductions).get(),
+      diary: await _db.select(_db.diaryEntries).get(),
+      shopping: await _db.select(_db.shoppingItems).get(),
+      // The device's own settings (which account, which revision) stay here.
+      settings: [
+        for (final s in await _db.select(_db.appSettings).get())
+          if (!s.key.startsWith(devicePrefix)) s,
+      ],
     ),
   );
 
@@ -32,6 +43,13 @@ class DriftBackupRepository {
     await _db.delete(_db.schedules).go();
     await _db.delete(_db.medicinePackages).go();
     await _db.delete(_db.medicines).go();
+    if (data.hasExtras) {
+      await _db.delete(_db.diaryEntries).go();
+      await _db.delete(_db.shoppingItems).go();
+      await (_db.delete(
+        _db.appSettings,
+      )..where((t) => t.key.like('$devicePrefix%').not())).go();
+    }
     await _db.batch((b) {
       b.insertAll(_db.medicines, data.medicines);
       b.insertAll(_db.medicinePackages, data.packages);
@@ -39,6 +57,11 @@ class DriftBackupRepository {
       b.insertAll(_db.schedules, data.schedules);
       b.insertAll(_db.intakeLogs, data.intakeLogs);
       b.insertAll(_db.intakeDeductions, data.intakeDeductions);
+      if (data.hasExtras) {
+        b.insertAll(_db.diaryEntries, data.diary);
+        b.insertAll(_db.shoppingItems, data.shopping);
+        b.insertAll(_db.appSettings, data.settings);
+      }
     });
   });
 }

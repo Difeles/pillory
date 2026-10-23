@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../motion.dart';
 import '../tokens.dart';
-
-const _short = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 /// The seven days (Mon..Sun) around [selected]; [done] days get a mint dot.
 class WeekStrip extends StatelessWidget {
@@ -89,7 +88,7 @@ class WeekStrip extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    _short[i],
+                    context.l10n.weekdayShort(i + 1),
                     style: AppType.captionStrong.copyWith(
                       color: active
                           ? context.colors.onPrimary.withValues(alpha: .85)

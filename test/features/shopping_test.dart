@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/l10n/l10n.dart';
 import 'package:pillory/app/providers.dart';
 import 'package:pillory/design_system/theme.dart';
 import 'package:pillory/domain/models.dart';
@@ -31,6 +32,9 @@ void main() {
           extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
         ],
         child: MaterialApp(
+          locale: const Locale('ru'),
+          supportedLocales: supportedAppLocales,
+          localizationsDelegates: appLocalizationsDelegates,
           theme: buildAppTheme(),
           home: const ShoppingScreen(),
         ),

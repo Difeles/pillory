@@ -1,32 +1,29 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
+
+import 'settings_screen.dart';
+import 'achievements_screen.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
-import '../../data/backup_format.dart';
 import '../../design_system/tokens.dart';
 import '../../design_system/widgets/app_card.dart';
 import '../../design_system/widgets/app_top_bar.dart';
 import '../../design_system/widgets/mascot_pill.dart';
-import '../../design_system/widgets/pill_widgets.dart';
 import '../../design_system/widgets/section_header.dart';
 import '../../design_system/widgets/status_badge.dart';
 import '../../domain/achievements.dart';
 import '../../domain/extras.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/schedule.dart';
-import '../../domain/stock_status.dart';
 import '../../domain/streak.dart';
-import '../inventory/inventory_providers.dart';
 import '../today/today_providers.dart';
-import '../inventory/format.dart';
-import 'backup_files.dart';
+import '../../l10n/l10n.dart';
+import '../account/account_screen.dart';
+import '../diary/diary_screen.dart';
+import 'report_screen.dart';
 import '../../design_system/motion.dart';
-
-const _dayLetters = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -36,22 +33,17 @@ class ProfileScreen extends ConsumerWidget {
     final prefs = ref.watch(prefsProvider).value ?? const AppPrefs();
     final streak = ref.watch(streakProvider);
     final history = ref.watch(historyProvider).value ?? const {};
-    final stock = ref.watch(medicineStockProvider).value ?? const [];
+    final badges = ref.watch(earnedBadgesProvider);
     final now = DateTime.now();
-    final today = dateOnly(now);
-    final badges = earnedBadges(
-      streak: streak,
-      medicines: stock.length,
-      expired: stock.where((s) => assess(s, now).hasExpired).length,
-    );
     final extras = ref.read(extrasRepositoryProvider);
+    final today = dateOnly(now);
     final monday = DateTime(
       today.year,
       today.month,
       today.day - (today.weekday - 1),
     );
     return Scaffold(
-      appBar: const AppTopBar(title: 'Профиль'),
+      appBar: AppTopBar(title: context.l10n.titleProfile),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.md,
@@ -74,14 +66,14 @@ class ProfileScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        prefs.name.isEmpty ? 'Ваше имя' : prefs.name,
+                        prefs.name.isEmpty ? context.l10n.yourName : prefs.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppType.title,
                       ),
                       if (streak > 0)
                         StatusBadge(
-                          label: '$streak дн. подряд',
+                          label: context.l10n.streakDaysInRow(streak),
                           icon: Icons.local_fire_department,
                           tone: StatusTone.warning,
                         ),
@@ -91,7 +83,19 @@ class ProfileScreen extends ConsumerWidget {
                 Pressable(
                   scale: .88,
                   child: IconButton(
-                    tooltip: 'Изменить имя',
+                    tooltip: context.l10n.accountTitle,
+                    icon: const Icon(Icons.cloud_outlined),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const AccountScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                Pressable(
+                  scale: .88,
+                  child: IconButton(
+                    tooltip: context.l10n.editName,
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: () => _editName(context, extras, prefs.name),
                   ),
@@ -99,14 +103,14 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SectionHeader(title: 'Итоги недели'),
+          SectionHeader(title: context.l10n.secWeek),
           AppCard(
             child: Row(
               children: [
                 for (var i = 0; i < 7; i++)
                   Expanded(
                     child: _WeekDay(
-                      label: _dayLetters[i],
+                      label: context.l10n.weekdayShort(i + 1),
                       day: DateTime(monday.year, monday.month, monday.day + i),
                       today: today,
                       history: history,
@@ -115,77 +119,57 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SectionHeader(title: 'Достижения'),
-          Row(
-            spacing: AppSpacing.sm,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final b in AppBadge.values)
-                Expanded(
-                  child: _BadgeTile(badge: b, earned: badges.contains(b)),
+          SectionHeader(title: context.l10n.secHealth),
+          Pressable(
+            scale: .98,
+            child: ListTile(
+              leading: const Icon(Icons.monitor_heart_outlined),
+              title: Text(context.l10n.diaryTitle),
+              subtitle: Text(context.l10n.diarySubtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const DiaryScreen()),
+              ),
+            ),
+          ),
+          Pressable(
+            scale: .98,
+            child: ListTile(
+              leading: const Icon(Icons.description_outlined),
+              title: Text(context.l10n.reportTitle),
+              subtitle: Text(context.l10n.reportSubtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const ReportScreen()),
+              ),
+            ),
+          ),
+          Pressable(
+            scale: .98,
+            child: ListTile(
+              leading: const Icon(Icons.emoji_events_outlined),
+              title: Text(context.l10n.achievementsTitle),
+              subtitle: Text(
+                context.l10n.badgesCount(badges.length, AppBadge.values.length),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const AchievementsScreen(),
                 ),
-            ],
-          ),
-          const SectionHeader(title: 'Настройки'),
-          SettingChoiceRow<Appearance>(
-            icon: Icons.contrast,
-            title: 'Тема',
-            options: const {
-              Appearance.system: 'Как в системе',
-              Appearance.light: 'Светлая',
-              Appearance.dark: 'Тёмная',
-            },
-            selected: prefs.appearance,
-            onChanged: (v) => extras.setPref(PrefKey.appearance, v.name),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SettingToggleRow(
-            icon: Icons.vibration,
-            title: 'Тактильный отклик',
-            subtitle: 'Приятная отдача при приёме',
-            value: prefs.haptics,
-            onChanged: (v) => extras.setPref(PrefKey.haptics, '$v'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SettingToggleRow(
-            icon: Icons.celebration_outlined,
-            title: 'Конфетти при приёме',
-            subtitle: 'Анимация победы над рутиной',
-            value: prefs.confetti,
-            onChanged: (v) => extras.setPref(PrefKey.confetti, '$v'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SettingToggleRow(
-            icon: Icons.notifications_active_outlined,
-            title: 'Подсказки о сроках',
-            subtitle: 'Напоминать в аптечке, что пора докупить',
-            value: prefs.hints,
-            onChanged: (v) => extras.setPref(PrefKey.hints, '$v'),
-          ),
-          const SectionHeader(title: 'Данные'),
-          const Padding(
-            padding: EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Text(
-              'Данные хранятся только на этом устройстве. Резервная копия — '
-              'файл, который вы сохраняете сами. Он не зашифрован: храните его '
-              'там, где доверяете.',
-              style: AppType.caption,
+              ),
             ),
           ),
           Pressable(
             scale: .98,
             child: ListTile(
-              leading: const Icon(Icons.upload_file_outlined),
-              title: const Text('Сохранить резервную копию'),
-              onTap: () => _guard(context, () => _export(context, ref)),
-            ),
-          ),
-          Pressable(
-            scale: .98,
-            child: ListTile(
-              leading: const Icon(Icons.restore_outlined),
-              title: const Text('Восстановить из копии'),
-              onTap: () => _guard(context, () => _import(context, ref)),
+              leading: const Icon(Icons.settings_outlined),
+              title: Text(context.l10n.secSettings),
+              subtitle: Text(context.l10n.settingsSub),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+              ),
             ),
           ),
         ],
@@ -228,7 +212,7 @@ class _NameDialogState extends State<_NameDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Как вас зовут?'),
+    title: Text(context.l10n.whatsYourName),
     content: TextField(
       controller: _c,
       autofocus: true,
@@ -239,13 +223,13 @@ class _NameDialogState extends State<_NameDialog> {
       Pressable(
         child: TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
+          child: Text(context.l10n.cancel),
         ),
       ),
       Pressable(
         child: FilledButton(
           onPressed: () => Navigator.pop(context, _c.text.trim()),
-          child: const Text('Сохранить'),
+          child: Text(context.l10n.save),
         ),
       ),
     ],
@@ -284,10 +268,10 @@ class _WeekDay extends StatelessWidget {
     return Semantics(
       label:
           '$label: ${complete
-              ? 'без пропусков'
+              ? context.l10n.weekdayDone
               : missed
-              ? 'есть пропуски'
-              : 'нет данных'}',
+              ? context.l10n.weekdayMissed
+              : context.l10n.weekdayNoData}',
       excludeSemantics: true,
       child: Column(
         children: [
@@ -310,191 +294,4 @@ class _WeekDay extends StatelessWidget {
       ),
     );
   }
-}
-
-class _BadgeTile extends StatelessWidget {
-  const _BadgeTile({required this.badge, required this.earned});
-
-  final AppBadge badge;
-  final bool earned;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    label:
-        '${badge.title}: ${earned ? 'получено' : 'не получено'}. ${badge.hint}',
-    excludeSemantics: true,
-    child: Material(
-      color: earned ? context.colors.tint : context.colors.surfaceLow,
-      shape: RoundedSuperellipseBorder(
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.ms),
-        child: Column(
-          children: [
-            CircleAvatar(
-              backgroundColor: earned
-                  ? AppColors.peach
-                  : context.colors.surfaceMid,
-              child: Icon(
-                earned ? Icons.emoji_events : Icons.lock_outline,
-                color: earned
-                    ? AppColors.primaryDeep
-                    : context.colors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              badge.title,
-              textAlign: TextAlign.center,
-              style: AppType.label,
-            ),
-            Text(
-              badge.hint,
-              textAlign: TextAlign.center,
-              style: AppType.micro.copyWith(fontWeight: FontWeight.w400),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-void _say(BuildContext context, String text) =>
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-
-Future<void> _alert(BuildContext context, String title, String text) =>
-    showDialog<void>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text(title),
-        content: Text(text),
-        actions: [
-          Pressable(
-            child: TextButton(
-              onPressed: () => Navigator.pop(c),
-              child: const Text('OK'),
-            ),
-          ),
-        ],
-      ),
-    );
-
-/// Turns any failure into a message; the screen never leaves it unreported.
-Future<void> _guard(BuildContext context, Future<void> Function() run) async {
-  try {
-    await run();
-  } on BackupException catch (e) {
-    if (context.mounted) await _alert(context, 'Не удалось', e.message);
-  } on Object {
-    if (context.mounted) {
-      await _alert(
-        context,
-        'Не удалось',
-        'Что-то пошло не так. Данные не изменены.',
-      );
-    }
-  }
-}
-
-/// Returns whether a file was written.
-Future<bool> _export(BuildContext context, WidgetRef ref) async {
-  final data = await ref.read(backupRepositoryProvider).read();
-  final d = data.createdAt!.toLocal();
-  final name =
-      'pillory-${d.year}-${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}.pillory-backup';
-  final saved = await ref
-      .read(backupFilesProvider)
-      .save(name, Uint8List.fromList(utf8.encode(encodeBackup(data))));
-  if (saved && context.mounted) _say(context, 'Копия сохранена');
-  return saved;
-}
-
-String _describe(BackupData d) {
-  final archived = d.archivedMedicines;
-  final last = d.lastMarkDay;
-  return '${d.medicines.length} лекарств'
-      '${archived > 0 ? ' (в архиве: $archived)' : ''}, '
-      '${d.schedules.length} расписаний, ${d.intakeLogs.length} отметок'
-      '${last == null ? '' : ', последняя ${formatDate(last)}'}';
-}
-
-Future<void> _import(BuildContext context, WidgetRef ref) async {
-  final bytes = await ref.read(backupFilesProvider).pick();
-  if (bytes == null) return;
-  final backup = parseBackup(bytes); // nothing is touched if this throws
-  final repo = ref.read(backupRepositoryProvider);
-  final current = await repo.read();
-  if (!context.mounted) return;
-
-  if (!current.isEmpty) {
-    while (true) {
-      final choice = await showDialog<String>(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: const Text('Заменить данные?'),
-          content: Text(
-            'В копии: ${_describe(backup)}.\n\n'
-            'Сейчас на устройстве: ${_describe(current)}.\n\n'
-            'Все текущие данные будут заменены полностью. '
-            'Это нельзя отменить.',
-          ),
-          actions: [
-            Pressable(
-              child: TextButton(
-                onPressed: () => Navigator.pop(c, 'save'),
-                child: const Text('Сначала сохранить текущие'),
-              ),
-            ),
-            Pressable(
-              child: TextButton(
-                onPressed: () => Navigator.pop(c),
-                child: const Text('Отмена'),
-              ),
-            ),
-            Pressable(
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: context.colors.danger,
-                ),
-                onPressed: () => Navigator.pop(c, 'replace'),
-                child: const Text('Заменить'),
-              ),
-            ),
-          ],
-        ),
-      );
-      if (choice == 'save') {
-        if (context.mounted) await _export(context, ref);
-        if (!context.mounted) return;
-        continue;
-      }
-      if (choice != 'replace') return;
-      break;
-    }
-  }
-  if (!context.mounted) return;
-
-  unawaited(
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const PopScope(
-        canPop: false,
-        child: Center(child: CircularProgressIndicator()),
-      ),
-    ),
-  );
-  final navigator = Navigator.of(context, rootNavigator: true);
-  try {
-    await repo.restore(backup);
-  } finally {
-    navigator.pop();
-  }
-  // The notifications follow the restored schedules; a failure to plan them
-  // does not undo the restore.
-  await ref.read(reminderSyncProvider).resync();
-  if (context.mounted) _say(context, 'Данные восстановлены');
 }

@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../tokens.dart';
-
-String _days(int n) {
-  final m10 = n % 10, m100 = n % 100;
-  if (m10 == 1 && m100 != 11) return '$n день';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return '$n дня';
-  return '$n дней';
-}
 
 const _flame = Color(0xFFF0845C);
 const _onPeach = Color(0xFF79422C);
@@ -58,7 +52,7 @@ class StreakBanner extends StatelessWidget {
                     spacing: AppSpacing.sm,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text('Огненный страйк!', style: AppType.label),
+                      Text(context.l10n.streakTitle, style: AppType.label),
                       DecoratedBox(
                         decoration: ShapeDecoration(
                           shape: StadiumBorder(),
@@ -70,7 +64,7 @@ class StreakBanner extends StatelessWidget {
                             vertical: 2,
                           ),
                           child: Text(
-                            _days(days),
+                            context.l10n.daysCount(days),
                             // Dark on the peach pill in both appearances.
                             style: AppType.captionStrong.copyWith(
                               color: _onPeach,
@@ -80,10 +74,7 @@ class StreakBanner extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Text(
-                    'Дни без пропусков подряд. Так держать!',
-                    style: AppType.caption,
-                  ),
+                  Text(context.l10n.streakHint, style: AppType.caption),
                 ],
               ),
             ),

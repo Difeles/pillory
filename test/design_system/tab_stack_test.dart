@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/l10n/l10n.dart';
 import 'package:pillory/design_system/motion.dart';
 
 class _Counter extends StatefulWidget {
@@ -20,6 +21,9 @@ void main() {
     'TabStack keeps a tab\'s state across a glide and shows one tab',
     (tester) async {
       Widget app(int i) => MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: supportedAppLocales,
+        localizationsDelegates: appLocalizationsDelegates,
         home: TabStack(index: i, children: const [_Counter(), Text('other')]),
       );
       await tester.pumpWidget(app(0));

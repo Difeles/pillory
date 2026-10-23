@@ -8,7 +8,11 @@ import '../../data/backup_format.dart';
 /// Where backup files come from and go to: the system's file dialogs.
 abstract class BackupFiles {
   /// False if the user cancelled.
-  Future<bool> save(String fileName, Uint8List bytes);
+  Future<bool> save(
+    String fileName,
+    Uint8List bytes, {
+    String mimeType = 'application/json',
+  });
 
   /// Null if the user cancelled. Throws [BackupException] for a file over
   /// [maxBackupBytes], before it is read.
@@ -19,11 +23,15 @@ class FilePickerBackupFiles implements BackupFiles {
   const FilePickerBackupFiles();
 
   @override
-  Future<bool> save(String fileName, Uint8List bytes) async =>
+  Future<bool> save(
+    String fileName,
+    Uint8List bytes, {
+    String mimeType = 'application/json',
+  }) async =>
       await FilePicker.saveFile(
         fileName: fileName,
         bytes: bytes,
-        mimeType: 'application/json',
+        mimeType: mimeType,
       ) !=
       null;
 

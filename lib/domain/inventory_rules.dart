@@ -40,6 +40,7 @@ NewMedicine validateNewMedicine(NewMedicine draft) {
   final strength = draft.strength?.trim();
   final threshold = validateThreshold(draft.lowStockThreshold);
   return NewMedicine(
+    look: draft.look,
     lowStockThreshold: threshold,
     category: draft.category,
     storage: draft.storage,

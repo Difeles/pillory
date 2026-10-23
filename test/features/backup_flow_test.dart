@@ -6,6 +6,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/l10n/l10n.dart';
 import 'package:pillory/app/providers.dart';
 import 'package:pillory/data/app_database.dart';
 import 'package:pillory/data/backup_format.dart';
@@ -13,8 +14,9 @@ import 'package:pillory/data/drift_backup_repository.dart';
 import 'package:pillory/data/drift_inventory_repository.dart';
 import 'package:pillory/domain/models.dart';
 import 'package:pillory/features/profile/backup_files.dart';
-import 'package:pillory/features/profile/profile_screen.dart';
+import 'package:pillory/features/profile/settings_screen.dart';
 
+import '../support/fake_diary_repository.dart';
 import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
 
@@ -23,7 +25,11 @@ class _Files implements BackupFiles {
   final saved = <Uint8List>[];
 
   @override
-  Future<bool> save(String fileName, Uint8List bytes) async {
+  Future<bool> save(
+    String fileName,
+    Uint8List bytes, {
+    String mimeType = 'application/json',
+  }) async {
     expect(fileName, endsWith('.pillory-backup'));
     saved.add(bytes);
     return true;
@@ -61,13 +67,19 @@ void main() {
           // The screen's other data comes from fakes: a real database stream
           // does not complete under the widget tester's clock.
           extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
+          diaryRepositoryProvider.overrideWithValue(FakeDiaryRepository()),
           inventoryRepositoryProvider.overrideWithValue(inventory),
           scheduleRepositoryProvider.overrideWithValue(
             FakeScheduleRepository(inventory),
           ),
           backupFilesProvider.overrideWithValue(files),
         ],
-        child: const MaterialApp(home: ProfileScreen()),
+        child: MaterialApp(
+          locale: const Locale('ru'),
+          supportedLocales: supportedAppLocales,
+          localizationsDelegates: appLocalizationsDelegates,
+          home: const SettingsScreen(),
+        ),
       ),
     );
   }
@@ -200,16 +212,5 @@ void main() {
 
     expect(find.text('Заменить данные?'), findsNothing);
     expect(await tester.runAsync(names), ['Новое']);
-  });
-
-  testWidgets('the name can be set without errors', (tester) async {
-    await open(tester);
-    await tester.tap(find.byTooltip('Изменить имя'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Аня');
-    await tester.tap(find.text('Сохранить'));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    expect(find.text('Аня'), findsOneWidget);
   });
 }

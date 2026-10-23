@@ -5,6 +5,7 @@ import '../domain/errors.dart';
 import '../domain/inventory_repository.dart';
 import '../domain/inventory_rules.dart';
 import '../domain/models.dart';
+import '../domain/pill_look.dart';
 import '../domain/schedule.dart';
 import 'app_database.dart';
 import 'schedule_rows.dart';
@@ -88,6 +89,7 @@ class DriftInventoryRepository implements InventoryRepository {
               lowStockThreshold: Value(d.lowStockThreshold),
               category: Value(d.category),
               storage: Value(d.storage),
+              look: Value(d.look?.encode()),
               createdAt: now,
             ),
           );
@@ -161,6 +163,7 @@ class DriftInventoryRepository implements InventoryRepository {
         lowStockThreshold: Value(threshold),
         category: Value(edit.category),
         storage: Value(edit.storage),
+        look: Value(edit.look?.encode()),
       ),
     );
   }
@@ -361,6 +364,7 @@ class DriftInventoryRepository implements InventoryRepository {
     lowStockThreshold: m.lowStockThreshold,
     category: m.category,
     storage: m.storage,
+    look: PillLook.tryParse(m.look),
     createdAt: m.createdAt,
   );
 

@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' show Value;
 
 import '../domain/medicine_form.dart';
 import '../domain/models.dart';
+import '../domain/pill_look.dart';
 import '../domain/schedule.dart';
 import 'app_database.dart';
 import 'tables.dart';
@@ -46,6 +47,9 @@ class BackupData {
     required this.schedules,
     required this.intakeLogs,
     required this.intakeDeductions,
+    this.diary = const [],
+    this.shopping = const [],
+    this.settings = const [],
     this.createdAt,
   });
 
@@ -60,6 +64,14 @@ class BackupData {
   final List<IntakeLogRow> intakeLogs;
   final List<IntakeDeductionRow> intakeDeductions;
 
+  /// Since schema 8; a file written before it has none of these, and
+  /// restoring it leaves the diary, shopping list and settings alone.
+  final List<DiaryEntryRow> diary;
+  final List<ShoppingItemRow> shopping;
+  final List<AppSettingRow> settings;
+
+  bool get hasExtras => schemaVersion >= 8;
+
   Map<String, int> get counts => {
     'medicines': medicines.length,
     'packages': packages.length,
@@ -67,6 +79,9 @@ class BackupData {
     'schedules': schedules.length,
     'intakeLogs': intakeLogs.length,
     'intakeDeductions': intakeDeductions.length,
+    'diary': diary.length,
+    'shopping': shopping.length,
+    'settings': settings.length,
   };
 
   bool get isEmpty => counts.values.every((n) => n == 0);
@@ -113,6 +128,7 @@ String encodeBackup(BackupData d) {
             'lowStockThreshold': m.lowStockThreshold,
             'category': m.category?.name,
             'storage': m.storage?.name,
+            'look': m.look,
             'archivedAt': m.archivedAt == null ? null : _ts(m.archivedAt!),
             'createdAt': _ts(m.createdAt),
           },
@@ -181,6 +197,30 @@ String encodeBackup(BackupData d) {
             'amount': x.amount,
             'restoredAt': x.restoredAt == null ? null : _ts(x.restoredAt!),
           },
+      ],
+      'diary': [
+        for (final e in byId(d.diary, (r) => r.id))
+          {
+            'id': e.id,
+            'at': _ts(e.at),
+            'mood': e.mood,
+            'symptoms': e.symptoms,
+            'note': e.note,
+          },
+      ],
+      'shopping': [
+        for (final i in byId(d.shopping, (r) => r.id))
+          {
+            'id': i.id,
+            'name': i.name,
+            'medicineId': i.medicineId,
+            'checked': i.checked,
+            'createdAt': _ts(i.createdAt),
+          },
+      ],
+      'settings': [
+        for (final x in byId(d.settings, (r) => r.key))
+          {'key': x.key, 'value': x.value},
       ],
     },
   });
@@ -264,6 +304,7 @@ BackupData parseBackup(Uint8List bytes) {
         lowStockThreshold: r.numOrNull('lowStockThreshold'),
         category: r.enumOrNull('category', MedicineCategory.values),
         storage: r.enumOrNull('storage', StorageSpot.values),
+        look: r.lookOrNull('look'),
         archivedAt: r.tsOrNull('archivedAt'),
         createdAt: r.ts('createdAt'),
       ),
@@ -334,6 +375,31 @@ BackupData parseBackup(Uint8List bytes) {
       ),
   ];
 
+  final diary = [
+    for (final r in rows('diary', since: 8))
+      DiaryEntryRow(
+        id: r.str('id'),
+        at: r.ts('at'),
+        mood: r.intOrNull('mood', min: 1, max: 5),
+        symptoms: r.strOrNull('symptoms'),
+        note: r.strOrNull('note'),
+      ),
+  ];
+  final shopping = [
+    for (final r in rows('shopping', since: 8))
+      ShoppingItemRow(
+        id: r.str('id'),
+        name: r.str('name', nonEmpty: true),
+        medicineId: r.strOrNull('medicineId'),
+        checked: r.boolOr('checked', false, since: 8),
+        createdAt: r.ts('createdAt'),
+      ),
+  ];
+  final settings = [
+    for (final r in rows('settings', since: 8))
+      AppSettingRow(key: r.str('key', nonEmpty: true), value: r.str('value')),
+  ];
+
   // Same unit rule as the v5 migration: that of the oldest package.
   final normalized = [
     for (final m in medicines)
@@ -358,6 +424,9 @@ BackupData parseBackup(Uint8List bytes) {
     schedules: schedules,
     intakeLogs: logs,
     intakeDeductions: deductions,
+    diary: diary,
+    shopping: shopping,
+    settings: settings,
   );
   _checkConsistency(backup, counts);
   return backup;
@@ -413,6 +482,9 @@ void _checkConsistency(BackupData d, _Obj counts) {
   final scheduleIds = ids('schedules', d.schedules.map((r) => r.id));
   final logIds = ids('intakeLogs', d.intakeLogs.map((r) => r.id));
   ids('intakeDeductions', d.intakeDeductions.map((r) => r.id));
+  ids('diary', d.diary.map((r) => r.id));
+  ids('shopping', d.shopping.map((r) => r.id));
+  ids('settings', d.settings.map((r) => r.key));
 
   void ref(Set<String> parents, String id, String what) {
     if (!parents.contains(id)) {
@@ -473,6 +545,12 @@ class _Obj {
 
   String? strOrNull(String k) => _getOrNull<String>(k);
 
+  /// A pill look as stored; text that is not one is refused.
+  String? lookOrNull(String k) {
+    final v = _getOrNull<String>(k);
+    return v == null || PillLook.tryParse(v) != null ? v : _bad(where, k);
+  }
+
   int int_(String k) => _get<int>(k);
 
   int intOr(
@@ -488,6 +566,14 @@ class _Obj {
 
   bool boolOr(String k, bool def, {required int since}) =>
       _absent(k, since) ? def : _get<bool>(k);
+
+  int? intOrNull(String k, {int? min, int? max}) {
+    final v = _getOrNull<int>(k);
+    if (v != null && ((min != null && v < min) || (max != null && v > max))) {
+      _bad(where, k);
+    }
+    return v;
+  }
 
   double num_(String k, {double? min, bool exclusive = false}) {
     final v = _get<num>(k).toDouble();

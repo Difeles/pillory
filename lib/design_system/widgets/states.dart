@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../tokens.dart';
 import '../motion.dart';
 
@@ -84,7 +85,7 @@ class ErrorState extends StatelessWidget {
       child: FilledButton.tonalIcon(
         onPressed: onRetry,
         icon: const Icon(Icons.refresh),
-        label: const Text('Повторить'),
+        label: Text(context.l10n.retry),
       ),
     ),
   );
@@ -139,7 +140,7 @@ class _LoadingStateState extends State<LoadingState>
       ),
     );
     return Semantics(
-      label: 'Загрузка',
+      label: context.l10n.loading,
       child: ExcludeSemantics(
         child: FadeTransition(
           opacity: _pulse,

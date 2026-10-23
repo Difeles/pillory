@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../tokens.dart';
 import '../motion.dart';
 
@@ -10,16 +11,12 @@ class QuantityStepper extends StatelessWidget {
     required this.value,
     required this.onDecrement,
     required this.onIncrement,
-    this.decrementTooltip = 'Уменьшить остаток',
-    this.incrementTooltip = 'Увеличить остаток',
   });
 
   /// Already formatted, with the unit: "12 шт.".
   final String value;
   final VoidCallback? onDecrement;
   final VoidCallback? onIncrement;
-  final String decrementTooltip;
-  final String incrementTooltip;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -28,7 +25,7 @@ class QuantityStepper extends StatelessWidget {
       Pressable(
         scale: .88,
         child: IconButton.filledTonal(
-          tooltip: decrementTooltip,
+          tooltip: context.l10n.decreaseStock,
           onPressed: onDecrement,
           icon: const Icon(Icons.remove),
         ),
@@ -46,7 +43,7 @@ class QuantityStepper extends StatelessWidget {
       Pressable(
         scale: .88,
         child: IconButton.filledTonal(
-          tooltip: incrementTooltip,
+          tooltip: context.l10n.increaseStock,
           onPressed: onIncrement,
           icon: const Icon(Icons.add),
         ),

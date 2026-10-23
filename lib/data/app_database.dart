@@ -18,6 +18,7 @@ part 'app_database.g.dart';
     IntakeDeductions,
     ShoppingItems,
     AppSettings,
+    DiaryEntries,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -25,7 +26,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pillory'));
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -98,6 +99,26 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(shoppingItems);
         await m.createTable(appSettings);
       }
+      if (from < 8) {
+        // v8: the wellbeing diary.
+        await m.createTable(diaryEntries);
+        await m.createIndex(idxDiaryAt);
+      }
+      if (from < 9) {
+        // v9: how a medicine's pill looks (optional).
+        await m.addColumn(medicines, medicines.look);
+      }
+      if (from >= 8 && from < 11) {
+        // v11: the diary keeps what the trouble was, not measurements.
+        await m.addColumn(diaryEntries, diaryEntries.symptoms);
+        for (final c in ['temperature', 'systolic', 'diastolic', 'pulse']) {
+          await customStatement('ALTER TABLE diary_entries DROP COLUMN $c');
+        }
+      }
+      if (from == 10) {
+        // v10 had a flag "important medicine"; v11 has none.
+        await customStatement('ALTER TABLE medicines DROP COLUMN important');
+      }
       if (from < 5) {
         // medicines is never rebuilt above, so it lacks both columns here.
         await m.addColumn(medicines, medicines.archivedAt);
@@ -115,6 +136,12 @@ class AppDatabase extends _$AppDatabase {
     beforeOpen: (details) async {
       // SQLite ignores REFERENCES unless this is switched on per connection.
       await customStatement('PRAGMA foreign_keys = ON');
+      // Phones upgraded from before v4 never got this index: createTable above
+      // does not create the table's indexes. Harmless where it exists.
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_deductions_log '
+        'ON intake_deductions (intake_log_id)',
+      );
     },
   );
 

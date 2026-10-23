@@ -15,13 +15,13 @@ import '../../domain/medicine_form.dart';
 import '../../domain/models.dart';
 import '../../domain/schedule.dart';
 import '../inventory/add_medicine_screen.dart';
+import '../../l10n/l10n.dart';
+import '../../l10n/labels.dart';
 import '../inventory/format.dart';
 import '../inventory/inventory_providers.dart';
 import 'today_screen.dart';
 import '../../design_system/pickers.dart';
 import '../../design_system/motion.dart';
-
-const _weekdayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 /// Creates a schedule, or changes [editing] (a live schedule: its medicine
 /// stays, and so does everything before the change).
@@ -46,6 +46,9 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
   DateTime? _end;
   MealRelation? _meal;
   bool _saving = false;
+
+  // How many more years the course is repeated.
+  int _repeatYears = 0;
 
   Schedule? get _editing => widget.editing;
 
@@ -101,6 +104,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
   Future<void> _save(List<MedicineStock> stock) async {
     final valid = _formKey.currentState!.validate();
     final messenger = ScaffoldMessenger.of(context);
+    final l = context.l10n;
     // With an empty cabinet there is no medicine field to validate.
     if (_medicineId == null) {
       messenger
@@ -108,9 +112,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
         ..showSnackBar(
           SnackBar(
             content: Text(
-              stock.isEmpty
-                  ? 'Сначала создайте лекарство'
-                  : 'Выберите лекарство',
+              stock.isEmpty ? l.createMedicineFirst : l.chooseMedicine,
             ),
           ),
         );
@@ -136,7 +138,17 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
     );
     setState(() => _saving = true);
     try {
-      if (_editing == null) validateNewSchedule(draft(_medicineId!));
+      final drafts = [draft(_medicineId!)];
+      if (_editing == null) drafts.forEach(validateNewSchedule);
+      // The same course again in the following years.
+      if (_editing == null &&
+          _repeatYears > 0 &&
+          drafts.every((d) => d.endDate != null)) {
+        final first = [...drafts];
+        for (var y = 1; y <= _repeatYears; y++) {
+          drafts.addAll([for (final d in first) shiftedByYears(d, y)]);
+        }
+      }
       // Asked before saving, so the schedule is planned with the answer.
       var muted = false;
       if (_times.isNotEmpty) {
@@ -147,9 +159,9 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
       }
       var from = _today;
       if (_editing == null) {
-        await ref
-            .read(scheduleRepositoryProvider)
-            .createSchedule(draft(_medicineId!));
+        for (final d in drafts) {
+          await ref.read(scheduleRepositoryProvider).createSchedule(d);
+        }
       } else {
         from = await ref
             .read(scheduleRepositoryProvider)
@@ -169,31 +181,16 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
       }
       navigator.pop();
       if (from.isAfter(_today)) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Изменения вступят в силу с завтрашнего дня: сегодня уже есть отметка',
-            ),
-          ),
-        );
+        messenger.showSnackBar(SnackBar(content: Text(l.changesFromTomorrow)));
       }
       if (muted) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Уведомления выключены. Включите их в настройках, чтобы '
-              'получать напоминания',
-            ),
-          ),
-        );
+        messenger.showSnackBar(SnackBar(content: Text(l.notificationsOffHint)));
       }
     } on InvalidScheduleException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      messenger.showSnackBar(SnackBar(content: Text(l.problem(e.message))));
       if (mounted) setState(() => _saving = false);
     } on ScheduleEndedException {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Расписание уже изменено или завершено')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.scheduleAlreadyChanged)));
       navigator.pop();
     }
   }
@@ -204,6 +201,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
         .where((s) => s.medicine.id == _medicineId)
         .map((s) => s.medicine.name)
         .firstOrNull;
+    final l = context.l10n;
     final perDay = _times.isEmpty ? 1 : _times.length;
     final end = _end;
     final days = _kind == ScheduleKind.dates
@@ -212,9 +210,9 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
         ? null
         : end.difference(_start).inDays.abs() + 1;
     final parts = [
-      '$perDay ${perDay == 1 ? 'раз' : 'раза'} в день',
-      if (_meal != null) _meal!.label.toLowerCase(),
-      if (days != null) '$days дн.',
+      l.timesPerDay(perDay),
+      if (_meal != null) l.meal(_meal!).toLowerCase(),
+      if (days != null) l.daysShort(days),
     ];
     return AppCard(
       child: Row(
@@ -223,8 +221,8 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('ПРЕДПРОСМОТР КУРСА', style: AppType.caption),
-                Text(name ?? 'Выберите лекарство', style: AppType.title),
+                Text(l.coursePreview, style: AppType.caption),
+                Text(name ?? l.chooseMedicine, style: AppType.title),
                 Text(parts.join(' • '), style: AppType.caption),
               ],
             ),
@@ -238,33 +236,33 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
   @override
   Widget build(BuildContext context) {
     final stock = ref.watch(medicineStockProvider).value ?? const [];
+    final l = context.l10n;
     const gap = SizedBox(height: AppSpacing.md);
     const chipGap = AppSpacing.sm;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_editing == null ? 'Новый приём' : 'Расписание'),
+        title: Text(_editing == null ? l.newIntake : l.scheduleTitle),
       ),
       bottomNavigationBar: FormSaveBar(
         saving: _saving,
         onSave: () => _save(stock),
-        label: 'Сохранить приём',
+        label: l.saveIntake,
       ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: formPadding,
           children: [
-            const SectionHeader(title: 'Лекарство и дозировка'),
+            SectionHeader(title: l.secMedicineDose),
             if (stock.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                child: Text('В аптечке пока нет лекарств. Создайте первое.'),
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Text(l.cabinetEmptyCreate),
               )
             else
               FormField<String>(
                 initialValue: _medicineId,
-                validator: (_) =>
-                    _medicineId == null ? 'Выберите лекарство' : null,
+                validator: (_) => _medicineId == null ? l.chooseMedicine : null,
                 builder: (f) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -309,7 +307,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                   child: TextButton.icon(
                     onPressed: _newMedicine,
                     icon: const Icon(Icons.add),
-                    label: const Text('Новое лекарство'),
+                    label: Text(l.newMedicine),
                   ),
                 ),
               )
@@ -322,31 +320,31 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 decimal: true,
               ),
               decoration: InputDecoration(
-                labelText: 'Дозировка за один приём',
+                labelText: l.doseLabel,
                 suffixText: stock
                     .where((s) => s.medicine.id == _medicineId)
-                    .map((s) => s.unit)
+                    .map((s) => l.unit(s.unit))
                     .firstOrNull,
               ),
               validator: (v) {
                 final q = parseQuantity(v ?? '');
                 return (q == null || !q.isFinite || q <= 0)
-                    ? 'Введите число больше нуля'
+                    ? l.enterPositive
                     : null;
               },
             ),
-            const SectionHeader(title: 'Повторение'),
+            SectionHeader(title: l.secRepeat),
             SegmentedPills<ScheduleKind>(
-              options: const {
-                ScheduleKind.daily: 'Каждый день',
-                ScheduleKind.weekdays: 'По дням',
-                ScheduleKind.dates: 'По датам',
+              options: {
+                ScheduleKind.daily: l.repeatDaily,
+                ScheduleKind.weekdays: l.repeatWeekdays,
+                ScheduleKind.dates: l.repeatDates,
               },
               selected: _kind,
               onChanged: (v) => setState(() => _kind = v),
             ),
             if (_kind == ScheduleKind.weekdays) ...[
-              const SectionHeader(title: 'Дни недели'),
+              SectionHeader(title: l.secWeekdays),
               Wrap(
                 spacing: chipGap,
                 runSpacing: chipGap,
@@ -355,7 +353,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                     Pressable(
                       scale: .93,
                       child: FilterChip(
-                        label: Text(_weekdayLabels[i]),
+                        label: Text(l.weekdayShort(i + 1)),
                         selected: _weekdays.contains(i + 1),
                         onSelected: (on) => setState(
                           () => on
@@ -368,7 +366,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
               ),
             ],
             if (_kind == ScheduleKind.dates) ...[
-              const SectionHeader(title: 'Даты'),
+              SectionHeader(title: l.secDates),
               Wrap(
                 spacing: chipGap,
                 runSpacing: chipGap,
@@ -380,11 +378,11 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                     ),
                   ActionChip(
                     avatar: const Icon(Icons.add),
-                    label: const Text('Добавить дату'),
+                    label: Text(l.addDate),
                     onPressed: () async {
                       final p = await _pickDate(
                         DateTime.now(),
-                        'Дата приёма',
+                        l.intakeDate,
                         fromToday: _started,
                       );
                       if (p != null && !_dates.contains(dateOnly(p))) {
@@ -395,7 +393,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 ],
               ),
             ],
-            const SectionHeader(title: 'Время приёма'),
+            SectionHeader(title: l.secTimes),
             Wrap(
               spacing: chipGap,
               runSpacing: chipGap,
@@ -407,11 +405,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                   ),
                 ActionChip(
                   avatar: const Icon(Icons.schedule),
-                  label: Text(
-                    _times.isEmpty
-                        ? 'Добавить время (необязательно)'
-                        : 'Добавить время',
-                  ),
+                  label: Text(_times.isEmpty ? l.addTimeOptional : l.addTime),
                   onPressed: () async {
                     final t = await pickTime(
                       context,
@@ -424,20 +418,20 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 ),
               ],
             ),
-            const SectionHeader(title: 'Связь с приёмом пищи'),
+            SectionHeader(title: l.secMeal),
             SegmentedPills<MealRelation?>(
               options: {
-                for (final m in MealRelation.values) m: m.label,
-                null: 'Не важно',
+                for (final m in MealRelation.values) m: l.meal(m),
+                null: l.mealAny,
               },
               selected: _meal,
               onChanged: (v) => setState(() => _meal = v),
             ),
             if (_kind != ScheduleKind.dates) ...[
-              const SectionHeader(title: 'Период'),
+              SectionHeader(title: l.secPeriod),
               DateField(
-                label: 'Начало',
-                helpText: 'Дата начала',
+                label: l.startLabel,
+                helpText: l.startHelp,
                 value: _start,
                 // A started schedule keeps its start.
                 onChanged: _started
@@ -446,14 +440,14 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
               ),
               gap,
               DateField(
-                label: 'Окончание (необязательно)',
-                helpText: 'Дата окончания',
+                label: l.endOptional,
+                helpText: l.endHelp,
                 value: _end,
                 initialDate: _started ? _today : _start,
                 firstDate: _started ? _today : null,
                 icon: Icons.event_busy_outlined,
-                emptyText: 'Не указано',
-                clearTooltip: 'Очистить',
+                emptyText: l.notSpecifiedN,
+                clearTooltip: l.clear,
                 onChanged: (d) =>
                     setState(() => _end = d == null ? null : dateOnly(d)),
               ),
@@ -462,9 +456,9 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                 Wrap(
                   spacing: chipGap,
                   children: [
-                    for (final n in const [7, 14, 30])
+                    for (final n in const [7, 14, 30, 60, 90])
                       ActionChip(
-                        label: Text('$n дн.'),
+                        label: Text(l.daysShort(n)),
                         onPressed: () => setState(
                           () => _end = DateTime(
                             _start.year,
@@ -476,6 +470,23 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                   ],
                 ),
               ],
+            ],
+            if (_editing == null &&
+                _kind != ScheduleKind.dates &&
+                _end != null) ...[
+              SectionHeader(title: l.secRepeatYearly),
+              SegmentedPills<int>(
+                options: {
+                  0: l.repeatNone,
+                  for (final n in const [1, 2, 3]) n: l.repeatYears(n),
+                },
+                selected: _repeatYears,
+                onChanged: (v) => setState(() => _repeatYears = v),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(l.repeatYearlyHint, style: AppType.caption),
+              ),
             ],
             gap,
             _preview(stock),
@@ -499,7 +510,7 @@ class _AddIntakeScreenState extends ConsumerState<AddIntakeScreen> {
                             navigator.pop();
                           }
                         },
-                  child: const Text('Завершить расписание'),
+                  child: Text(l.endScheduleItem),
                 ),
               ),
             ],

@@ -66,7 +66,6 @@ abstract final class AppSizes {
   static const timelineRail = 24.0;
   static const timelineDot = 12.0;
   static const timelineLine = 1.0;
-  static const timelineTime = 56.0;
 }
 
 abstract final class AppShadows {
@@ -79,7 +78,6 @@ abstract final class AppShadows {
 }
 
 abstract final class AppMotion {
-  static const fast = Duration(milliseconds: 150);
   static const base = Duration(milliseconds: 250);
   static const slow = Duration(milliseconds: 400);
   static const curve = Curves.easeOutCubic;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 
 import '../core/ids.dart';
@@ -11,6 +13,10 @@ class DriftExtrasRepository implements ExtrasRepository {
 
   final AppDatabase _db;
   final DateTime Function() _now;
+  final _settingsChanged = StreamController<void>.broadcast(sync: true);
+
+  @override
+  Stream<void> get userSettingsChanged => _settingsChanged.stream;
 
   @override
   Stream<List<ShoppingItem>> watchShopping() =>
@@ -64,9 +70,17 @@ class DriftExtrasRepository implements ExtrasRepository {
       .map((rows) => AppPrefs.fromMap({for (final r in rows) r.key: r.value}));
 
   @override
-  Future<void> setPref(String key, String value) => _db
-      .into(_db.appSettings)
-      .insertOnConflictUpdate(
-        AppSettingsCompanion.insert(key: key, value: value),
-      );
+  Future<String?> getPref(String key) async => (await (_db.select(
+    _db.appSettings,
+  )..where((t) => t.key.equals(key))).getSingleOrNull())?.value;
+
+  @override
+  Future<void> setPref(String key, String value) async {
+    await _db
+        .into(_db.appSettings)
+        .insertOnConflictUpdate(
+          AppSettingsCompanion.insert(key: key, value: value),
+        );
+    if (!key.startsWith(devicePrefix)) _settingsChanged.add(null);
+  }
 }

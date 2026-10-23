@@ -6,17 +6,23 @@ import '../../design_system/tokens.dart';
 import '../../design_system/widgets/app_card.dart';
 import '../../design_system/widgets/confirm_dialog.dart';
 import '../../design_system/widgets/date_field.dart';
+import '../../design_system/widgets/pill_view.dart';
 import '../../design_system/widgets/section_header.dart';
 import '../../design_system/widgets/states.dart';
 import '../../design_system/widgets/status_badge.dart';
 import '../../domain/errors.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/models.dart';
+import '../../domain/pill_look.dart';
 import '../../domain/stock_status.dart';
+import '../../domain/supply.dart';
+import '../../l10n/l10n.dart';
+import '../../l10n/labels.dart';
 import 'add_medicine_screen.dart';
 import 'format.dart';
 import 'inventory_providers.dart';
 import 'medicine_card.dart';
+import 'take_now.dart';
 import '../../design_system/pickers.dart';
 import '../../design_system/motion.dart';
 
@@ -45,10 +51,20 @@ class MedicineScreen extends ConsumerWidget {
     final medicine = stock.medicine;
     final archived = medicine.archivedAt != null;
     final details = [
-      if (medicine.form != null) medicine.form!.label,
+      if (medicine.form != null) context.l10n.form(medicine.form!),
       if (medicine.strength != null) medicine.strength!,
     ].join(' · ');
-    final quantity = '${formatQuantity(stock.totalQuantity)} ${stock.unit}';
+    final quantity = context.l10n.quantity(stock.totalQuantity, stock.unit);
+    final supply = archived
+        ? null
+        : forecastSupply(
+            stock,
+            ref.watch(activeSchedulesProvider).value ?? const [],
+            DateTime.now(),
+          );
+    final supplyLine = supply == null
+        ? null
+        : supplyText(context, supply, DateTime.now());
     return Scaffold(
       // The name is the header below, so it is not repeated here.
       appBar: AppBar(
@@ -56,7 +72,7 @@ class MedicineScreen extends ConsumerWidget {
           Pressable(
             scale: .88,
             child: PopupMenuButton<VoidCallback>(
-              tooltip: 'Лекарство',
+              tooltip: context.l10n.medicineTitle,
               onSelected: (action) => action(),
               itemBuilder: (_) => [
                 PopupMenuItem(
@@ -65,13 +81,17 @@ class MedicineScreen extends ConsumerWidget {
                       builder: (_) => AddMedicineScreen(editing: medicine),
                     ),
                   ),
-                  child: const Text('Изменить'),
+                  child: Text(context.l10n.edit),
                 ),
                 PopupMenuItem(
                   value: () => archived
                       ? _restore(context, ref)
                       : _archive(context, ref),
-                  child: Text(archived ? 'Вернуть из архива' : 'В архив'),
+                  child: Text(
+                    archived
+                        ? context.l10n.restoreFromArchive
+                        : context.l10n.toArchive,
+                  ),
                 ),
               ],
             ),
@@ -94,7 +114,7 @@ class MedicineScreen extends ConsumerWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    MedicineAvatar(form: medicine.form),
+                    MedicineAvatar(form: medicine.form, look: medicine.look),
                     const SizedBox(width: AppSpacing.ms),
                     Expanded(
                       child: Column(
@@ -113,8 +133,8 @@ class MedicineScreen extends ConsumerWidget {
                             ),
                           if (archived) ...[
                             const SizedBox(height: AppSpacing.sm),
-                            const StatusBadge(
-                              label: 'В архиве',
+                            StatusBadge(
+                              label: context.l10n.inArchiveBadge,
                               icon: Icons.inventory_2_outlined,
                               tone: StatusTone.accent,
                             ),
@@ -132,13 +152,13 @@ class MedicineScreen extends ConsumerWidget {
                     children: [
                       if (medicine.category != null)
                         StatusBadge(
-                          label: medicine.category!.label,
+                          label: context.l10n.category(medicine.category!),
                           icon: Icons.label_outline,
                           tone: StatusTone.warning,
                         ),
                       if (medicine.storage != null)
                         StatusBadge(
-                          label: medicine.storage!.label,
+                          label: context.l10n.storage(medicine.storage!),
                           icon: Icons.place_outlined,
                           tone: StatusTone.accent,
                         ),
@@ -149,18 +169,26 @@ class MedicineScreen extends ConsumerWidget {
                 // One announcement for the caption and the number.
                 MergeSemantics(
                   child: Semantics(
-                    label: 'Остаток: $quantity',
+                    label:
+                        '${context.l10n.stockSemantics(quantity)}${supplyLine == null ? '' : '. $supplyLine'}',
                     excludeSemantics: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Общий остаток',
+                          context.l10n.totalStock,
                           style: AppType.caption.copyWith(
                             color: context.colors.textSecondary,
                           ),
                         ),
                         Text(quantity, style: AppType.numeric),
+                        if (supplyLine != null)
+                          Text(
+                            supplyLine,
+                            style: AppType.caption.copyWith(
+                              color: context.colors.textSecondary,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -169,10 +197,15 @@ class MedicineScreen extends ConsumerWidget {
             ),
           ),
           if (!archived && stock.primaryPackage.initialQuantity <= 30) ...[
-            const SectionHeader(title: 'Остаток в упаковке'),
-            AppCard(child: _PillGrid(package: stock.primaryPackage)),
+            SectionHeader(title: context.l10n.stockInPackage),
+            AppCard(
+              child: _PillGrid(
+                package: stock.primaryPackage,
+                look: medicine.look,
+              ),
+            ),
           ],
-          const SectionHeader(title: 'Упаковки'),
+          SectionHeader(title: context.l10n.secPackages),
           for (final p in stock.packages)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.ms),
@@ -184,10 +217,20 @@ class MedicineScreen extends ConsumerWidget {
             ),
           if (!archived) ...[
             Pressable(
+              child: FilledButton.icon(
+                onPressed: stock.totalQuantity > 0
+                    ? () => takeNow(context, ref, stock)
+                    : null,
+                icon: const Icon(Icons.check),
+                label: Text(context.l10n.takeNow),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Pressable(
               child: FilledButton.tonalIcon(
                 onPressed: () => _addPackage(context, ref, stock),
                 icon: const Icon(Icons.add),
-                label: const Text('Добавить упаковку'),
+                label: Text(context.l10n.addPackage),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -195,15 +238,14 @@ class MedicineScreen extends ConsumerWidget {
               child: OutlinedButton.icon(
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
+                  final added = context.l10n.addedToShopping;
                   await ref
                       .read(extrasRepositoryProvider)
                       .addShopping(medicine.name, medicineId: medicine.id);
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('Добавлено в список покупок')),
-                  );
+                  messenger.showSnackBar(SnackBar(content: Text(added)));
                 },
                 icon: const Icon(Icons.shopping_bag_outlined),
-                label: const Text('В список покупок'),
+                label: Text(context.l10n.toShoppingList),
               ),
             ),
           ],
@@ -215,12 +257,9 @@ class MedicineScreen extends ConsumerWidget {
   Future<void> _archive(BuildContext context, WidgetRef ref) async {
     final ok = await showConfirmDialog(
       context,
-      title: 'Убрать в архив?',
-      message:
-          'Действующие расписания этого лекарства будут завершены, '
-          'напоминания отключены. Прошлые приёмы и история остатков '
-          'сохранятся.',
-      confirmLabel: 'В архив',
+      title: context.l10n.archiveAskTitle,
+      message: context.l10n.archiveAskText,
+      confirmLabel: context.l10n.toArchive,
     );
     if (ok) {
       await ref.read(inventoryRepositoryProvider).archiveMedicine(medicineId);
@@ -229,14 +268,9 @@ class MedicineScreen extends ConsumerWidget {
 
   Future<void> _restore(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
+    final message = context.l10n.medicineRestored;
     await ref.read(inventoryRepositoryProvider).restoreMedicine(medicineId);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Лекарство возвращено. Завершённые расписания нужно создать заново',
-        ),
-      ),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _addPackage(
@@ -245,6 +279,7 @@ class MedicineScreen extends ConsumerWidget {
     MedicineStock stock,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    final problem = context.l10n.problem;
     final result = await showDialog<(double, DateTime?)>(
       context: context,
       builder: (_) => _AddPackageDialog(unit: stock.unit),
@@ -260,7 +295,7 @@ class MedicineScreen extends ConsumerWidget {
             expiresOn: result.$2,
           );
     } on InvalidMedicineException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      messenger.showSnackBar(SnackBar(content: Text(problem(e.message))));
     }
   }
 }
@@ -278,37 +313,37 @@ class _PackageTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
     final expiry = package.expiresOn;
     final today = DateTime.now();
     final badges = [
       if (expiry != null)
         isExpired(expiry, today)
             ? StatusBadge(
-                label: 'Срок годности истёк ${formatDate(expiry)}',
+                label: l.expiryPassed(formatDate(expiry)),
                 icon: Icons.error_outline,
                 tone: StatusTone.danger,
               )
             : StatusBadge(
-                label: 'Годен до ${formatDate(expiry)}',
+                label: l.goodUntil(formatDate(expiry)),
                 icon: Icons.event_outlined,
               ),
       if (counted && package.quantity <= 0)
-        const StatusBadge(
-          label: 'Закончилась',
+        StatusBadge(
+          label: l.packageOut,
           icon: Icons.remove_circle_outline,
           tone: StatusTone.danger,
         ),
       if (counted &&
           packageStatus(package, today) == PackageStatus.expiringSoon)
-        const StatusBadge(
-          label: 'Скоро истекает',
+        StatusBadge(
+          label: l.expiringSoonShort,
           icon: Icons.schedule,
           tone: StatusTone.warning,
         ),
       if (!counted)
-        const StatusBadge(
-          label:
-              'Другая единица: не входит в остаток и не расходуется приёмами',
+        StatusBadge(
+          label: l.otherUnitNote,
           icon: Icons.info_outline,
           tone: StatusTone.warning,
         ),
@@ -327,7 +362,7 @@ class _PackageTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${formatQuantity(package.quantity)} ${package.unit}',
+                  l.quantity(package.quantity, package.unit),
                   style: AppType.cardTitle.copyWith(
                     fontFeatures: AppType.numeric.fontFeatures,
                   ),
@@ -346,27 +381,27 @@ class _PackageTile extends ConsumerWidget {
           Pressable(
             scale: .88,
             child: PopupMenuButton<VoidCallback>(
-              tooltip: 'Упаковка',
+              tooltip: context.l10n.packageTooltip,
               onSelected: (action) => action(),
               itemBuilder: (_) => [
                 PopupMenuItem(
                   value: () => _correct(context, ref),
-                  child: const Text('Скорректировать остаток'),
+                  child: Text(context.l10n.correctStock),
                 ),
                 PopupMenuItem(
                   value: () => _pickExpiry(context, ref),
-                  child: const Text('Срок годности'),
+                  child: Text(context.l10n.expiryTitle),
                 ),
                 if (expiry != null)
                   PopupMenuItem(
                     value: () => ref
                         .read(inventoryRepositoryProvider)
                         .updatePackageExpiry(package.id, null),
-                    child: const Text('Убрать срок годности'),
+                    child: Text(context.l10n.clearExpiry),
                   ),
                 PopupMenuItem(
                   value: () => _history(context, ref),
-                  child: const Text('История движения'),
+                  child: Text(context.l10n.movementHistory),
                 ),
               ],
             ),
@@ -383,7 +418,7 @@ class _PackageTile extends ConsumerWidget {
       // Past dates stay selectable: people also record expired medicines.
       first: DateTime(2000),
       last: DateTime(2100),
-      title: 'Срок годности',
+      title: context.l10n.expiryTitle,
     );
     if (picked != null) {
       await ref
@@ -394,6 +429,8 @@ class _PackageTile extends ConsumerWidget {
 
   Future<void> _correct(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
+    final stale = context.l10n.staleQuantity;
+    final problem = context.l10n.problem;
     final to = await showDialog<double>(
       context: context,
       builder: (_) => _CorrectDialog(package: package),
@@ -408,13 +445,9 @@ class _PackageTile extends ConsumerWidget {
             to: to,
           );
     } on StaleQuantityException {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Остаток изменился. Откройте корректировку заново'),
-        ),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(stale)));
     } on InvalidMedicineException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      messenger.showSnackBar(SnackBar(content: Text(problem(e.message))));
     }
   }
 
@@ -423,7 +456,7 @@ class _PackageTile extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('История движения'),
+        title: Text(c.l10n.movementHistory),
         content: SizedBox(
           width: double.maxFinite,
           child: FutureBuilder<List<InventoryTransaction>>(
@@ -433,7 +466,7 @@ class _PackageTile extends ConsumerWidget {
               if (list == null) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (list.isEmpty) return const Text('Движений нет');
+              if (list.isEmpty) return Text(c.l10n.noMovements);
               return ListView(
                 shrinkWrap: true,
                 children: [
@@ -444,11 +477,14 @@ class _PackageTile extends ConsumerWidget {
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         title: Text(
-                          '${_kind(t.kind)}: ${_signed(t.delta)} ${package.unit}',
+                          '${_kind(c, t.kind)}: ${_signed(t.delta)} '
+                          '${c.l10n.unit(package.unit)}',
                         ),
                         subtitle: Text(
-                          'Остаток ${formatQuantity(t.quantityAfter)} '
-                          '${package.unit} · ${_when(t.createdAt)}',
+                          c.l10n.stockAfter(
+                            c.l10n.quantity(t.quantityAfter, package.unit),
+                            _when(t.createdAt),
+                          ),
                         ),
                       ),
                     ),
@@ -461,7 +497,7 @@ class _PackageTile extends ConsumerWidget {
           Pressable(
             child: TextButton(
               onPressed: () => Navigator.pop(c),
-              child: const Text('Закрыть'),
+              child: Text(c.l10n.close),
             ),
           ),
         ],
@@ -469,11 +505,11 @@ class _PackageTile extends ConsumerWidget {
     );
   }
 
-  static String _kind(TransactionKind k) => switch (k) {
-    TransactionKind.initial => 'Начальный остаток',
-    TransactionKind.increase => 'Приход',
-    TransactionKind.decrease => 'Расход',
-    TransactionKind.correction => 'Коррекция',
+  static String _kind(BuildContext c, TransactionKind k) => switch (k) {
+    TransactionKind.initial => c.l10n.txInitial,
+    TransactionKind.increase => c.l10n.txIncrease,
+    TransactionKind.decrease => c.l10n.txDecrease,
+    TransactionKind.correction => c.l10n.txCorrection,
   };
 
   static String _signed(double d) =>
@@ -508,7 +544,7 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
   Widget build(BuildContext context) => AlertDialog(
     // Scrolls rather than overflows at large text or with the keyboard up.
     scrollable: true,
-    title: const Text('Новая упаковка'),
+    title: Text(context.l10n.newPackage),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -516,16 +552,16 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
           controller: _quantity,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Количество',
-            suffixText: widget.unit,
+            labelText: context.l10n.quantityLabel,
+            suffixText: context.l10n.unit(widget.unit),
             errorText: _error,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         DateField(
-          label: 'Срок годности',
+          label: context.l10n.expiryTitle,
           value: _expiresOn,
-          clearTooltip: 'Убрать срок годности',
+          clearTooltip: context.l10n.clearExpiry,
           onChanged: (d) => setState(() => _expiresOn = d),
         ),
       ],
@@ -534,7 +570,7 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
       Pressable(
         child: TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
+          child: Text(context.l10n.cancel),
         ),
       ),
       Pressable(
@@ -542,12 +578,12 @@ class _AddPackageDialogState extends State<_AddPackageDialog> {
           onPressed: () {
             final q = parseQuantity(_quantity.text);
             if (q == null || !q.isFinite || q < 0) {
-              setState(() => _error = 'Введите число 0 или больше');
+              setState(() => _error = context.l10n.enterNumberZero);
               return;
             }
             Navigator.pop(context, (q, _expiresOn));
           },
-          child: const Text('Добавить'),
+          child: Text(context.l10n.add),
         ),
       ),
     ],
@@ -578,13 +614,13 @@ class _CorrectDialogState extends State<_CorrectDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     scrollable: true,
-    title: const Text('Скорректировать остаток'),
+    title: Text(context.l10n.correctStock),
     content: TextField(
       controller: _quantity,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
-        labelText: 'Фактический остаток',
-        suffixText: widget.package.unit,
+        labelText: context.l10n.actualStock,
+        suffixText: context.l10n.unit(widget.package.unit),
         errorText: _error,
       ),
     ),
@@ -592,7 +628,7 @@ class _CorrectDialogState extends State<_CorrectDialog> {
       Pressable(
         child: TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
+          child: Text(context.l10n.cancel),
         ),
       ),
       Pressable(
@@ -600,12 +636,12 @@ class _CorrectDialogState extends State<_CorrectDialog> {
           onPressed: () {
             final q = parseQuantity(_quantity.text);
             if (q == null || !q.isFinite || q < 0) {
-              setState(() => _error = 'Введите число 0 или больше');
+              setState(() => _error = context.l10n.enterNumberZero);
               return;
             }
             Navigator.pop(context, q);
           },
-          child: const Text('Сохранить'),
+          child: Text(context.l10n.save),
         ),
       ),
     ],
@@ -614,35 +650,45 @@ class _CorrectDialogState extends State<_CorrectDialog> {
 
 /// One icon per unit of the package: full ones left, used ones greyed.
 class _PillGrid extends StatelessWidget {
-  const _PillGrid({required this.package});
+  const _PillGrid({required this.package, this.look});
 
   final MedicinePackage package;
+
+  /// The user's pill drawing, used instead of the plain icons.
+  final PillLook? look;
 
   @override
   Widget build(BuildContext context) {
     final total = package.initialQuantity.ceil();
     final left = package.quantity.ceil().clamp(0, total);
     return Semantics(
-      label: 'Осталось $left из $total',
+      label: context.l10n.leftOfTotal(left, total),
       excludeSemantics: true,
       child: Wrap(
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
         children: [
           for (var i = 0; i < total; i++)
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: i < left
-                  ? AppColors.peach
-                  : context.colors.surfaceMid,
-              child: Icon(
-                i < left ? Icons.medication : Icons.check,
-                size: 18,
-                color: i < left
-                    ? AppColors.primaryDeep
-                    : context.colors.textSecondary,
+            if (look != null)
+              // Used ones fade out.
+              Opacity(
+                opacity: i < left ? 1 : .22,
+                child: PillView(look: look!, size: 36),
+              )
+            else
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: i < left
+                    ? AppColors.peach
+                    : context.colors.surfaceMid,
+                child: Icon(
+                  i < left ? Icons.medication : Icons.check,
+                  size: 18,
+                  color: i < left
+                      ? AppColors.primaryDeep
+                      : context.colors.textSecondary,
+                ),
               ),
-            ),
         ],
       ),
     );

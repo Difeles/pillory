@@ -1,0 +1,884 @@
+{
+  "@@locale": "en",
+  "appName": "PillPal",
+  "cancel": "Cancel",
+  "save": "Save",
+  "retry": "Retry",
+  "loading": "Loading",
+  "notSpecifiedM": "Not set",
+  "decreaseStock": "Decrease stock",
+  "increaseStock": "Increase stock",
+  "streakTitle": "On fire!",
+  "streakHint": "Days in a row without a miss. Keep it up!",
+  "daysCount": "{n, plural, one{{n} day} other{{n} days}}",
+  "@daysCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "monShort": "Mon",
+  "tueShort": "Tue",
+  "wedShort": "Wed",
+  "thuShort": "Thu",
+  "friShort": "Fri",
+  "satShort": "Sat",
+  "sunShort": "Sun",
+  "tabToday": "Today",
+  "tabCabinet": "Cabinet",
+  "tabShopping": "Shopping",
+  "tabProfile": "Profile",
+  "date": "Date",
+  "time": "Time",
+  "close": "Close",
+  "done": "Done",
+  "chooseDate": "Choose a date",
+  "chooseTime": "Choose a time",
+  "previousMonth": "Previous month",
+  "nextMonth": "Next month",
+  "hours": "Hours",
+  "minutes": "Minutes",
+  "formTablet": "Tablets",
+  "formCapsule": "Capsules",
+  "formSyrup": "Syrup",
+  "formSolution": "Solution",
+  "formOintment": "Ointment",
+  "formCream": "Cream",
+  "formSpray": "Spray",
+  "formDrops": "Drops",
+  "formPowder": "Powder",
+  "formSuppository": "Suppositories",
+  "formOther": "Other",
+  "catPainkiller": "Pain and fever relief",
+  "catAntipyretic": "Fever reducers",
+  "catDigestive": "Digestion",
+  "catAllergy": "Antihistamines",
+  "catWounds": "Wounds and dressings",
+  "catCold": "Cold remedies",
+  "catSedative": "Sedatives",
+  "catCardio": "Heart",
+  "catAntidepressant": "Antidepressants",
+  "catHormonal": "Hormonal",
+  "catAntibiotic": "Antibiotics",
+  "catVitamins": "Vitamins and supplements",
+  "catOther": "Other",
+  "storageHome": "Home cabinet",
+  "storageFridge": "Fridge",
+  "storageBag": "On me",
+  "mealBefore": "Before meals",
+  "mealDuring": "With meals",
+  "mealAfter": "After meals",
+  "filterAll": "All",
+  "filterLowOrOut": "Low or out",
+  "filterExpiringSoon": "Expiring soon",
+  "filterExpired": "Expired",
+  "badgeFirstWeekTitle": "First week",
+  "badgeFirstWeekHint": "7 days in a row without a miss",
+  "badgeCabinetKeeperTitle": "Cabinet keeper",
+  "badgeCabinetKeeperHint": "3 medicines in the cabinet",
+  "badgeNoExpiredTitle": "Nothing expired",
+  "badgeNoExpiredHint": "No expired medicines",
+  "badgeMonthTitle": "A month without a miss",
+  "badgeMonthHint": "30 days in a row",
+  "badgeBigCabinetTitle": "Big cabinet",
+  "badgeBigCabinetHint": "10 medicines in the cabinet",
+  "badgeFiftyTitle": "50 intakes",
+  "badgeFiftyHint": "50 \"taken\" marks in 60 days",
+  "badgePerfectWeekTitle": "Perfect week",
+  "badgePerfectWeekHint": "Every intake of the last 7 days is marked",
+  "badgeDiaryTitle": "Diary started",
+  "badgeDiaryHint": "3 wellbeing entries",
+  "unitPcs": "pcs",
+  "unitMl": "ml",
+  "unitG": "g",
+  "unitDoses": "doses",
+  "negativeStock": "Stock cannot go below zero",
+  "disposalHint": "Check the leaflet and local disposal rules",
+  "stockLabel": "Stock",
+  "expiredSince": "Expired on {date}",
+  "@expiredSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "expiringBadge": "Expiring soon: until {date} ({when})",
+  "@expiringBadge": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "whenToday": "today",
+  "whenInDays": "in {n} d",
+  "@whenInDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "outBadge": "Out of stock",
+  "lowBadge": "Low: {qty} left",
+  "@lowBadge": {
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "goodUntil": "Good until {date}",
+  "@goodUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "searchMedicines": "Search {count, plural, one{{count} medicine} other{{count} medicines}}",
+  "@searchMedicines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backToCabinet": "Back to the cabinet",
+  "archive": "Archive",
+  "titleCabinet": "Cabinet",
+  "addMedicine": "Add medicine",
+  "cabinetLoadFailed": "Could not load the cabinet",
+  "archiveEmptyTitle": "The archive is empty",
+  "archiveEmptyText": "Medicines you remove from the cabinet end up here.",
+  "cabinetEmptyTitle": "The cabinet is empty",
+  "cabinetEmptyText": "Add your first medicine to track its stock and expiry date.",
+  "noMedicinesWithStatus": "No medicines with this status",
+  "showAll": "Show all",
+  "readinessOverline": "CABINET READINESS",
+  "okPercent": "All good: {percent}%",
+  "@okPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "tileTotal": "Total",
+  "tileExpiring": "Expiring",
+  "tileLow": "Low",
+  "timeToBuy": "Time to restock: {count}. See the Shopping tab",
+  "@timeToBuy": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allCategories": "All categories",
+  "pQuantityNegative": "The quantity cannot be negative",
+  "pMedicineArchived": "The medicine is archived",
+  "pUnitMustBe": "The unit must be \"{unit}\"",
+  "@pUnitMustBe": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "pNameRequired": "The name is required",
+  "pUnitRequired": "Choose a unit",
+  "pThresholdNegative": "The threshold cannot be negative",
+  "pDosePositive": "The dose must be more than zero",
+  "pDoseUnitRequired": "Choose the dose unit",
+  "pPickWeekdays": "Choose the days of the week",
+  "pPickDates": "Choose the dates",
+  "pEndBeforeStart": "The end date is before the start date",
+  "pBadTime": "Invalid time",
+  "pAlreadyTaken": "This intake is already marked as taken",
+  "pNoDeductions": "The deductions for this mark were not saved",
+  "newMedicine": "New medicine",
+  "medicineTitle": "Medicine",
+  "addToCabinet": "Add to the cabinet",
+  "secBasic": "Basics",
+  "nameLabel": "Name *",
+  "nameHint": "E.g. Ibuprofen Forte",
+  "enterName": "Enter a name",
+  "secCategory": "Category",
+  "secForm": "Form",
+  "strengthLabel": "Strength or concentration",
+  "strengthHint": "E.g. 500 mg",
+  "secStorage": "Where is it kept?",
+  "secStock": "Stock",
+  "initialQuantity": "Initial quantity",
+  "enterNumberZero": "Enter a number, 0 or more",
+  "unitLabel": "Unit",
+  "expiryLabel": "Expiry date",
+  "clearExpiry": "Clear the expiry date",
+  "thresholdLabel": "Low-stock threshold (optional)",
+  "thresholdHelper": "Default: 20% of the biggest package",
+  "secLook": "Appearance",
+  "drawPill": "How it looks",
+  "pillShape": "Shape",
+  "pillColor": "Colour",
+  "pillColor2": "Colour of the other half",
+  "pillScore": "Score",
+  "shapeRound": "Round",
+  "shapeOval": "Oval",
+  "shapeCaplet": "Oblong",
+  "shapeCapsule": "Capsule",
+  "shapeSquare": "Square",
+  "scoreNone": "No score",
+  "scoreLine": "One line",
+  "scoreCross": "Cross",
+  "colorSwatch": "Colour {n}",
+  "@colorSwatch": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "edit": "Edit",
+  "toArchive": "Archive",
+  "restoreFromArchive": "Restore from the archive",
+  "inArchiveBadge": "Archived",
+  "stockSemantics": "Stock: {quantity}",
+  "@stockSemantics": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStock": "Total stock",
+  "stockInPackage": "Left in the package",
+  "secPackages": "Packages",
+  "takeNow": "Take now",
+  "addPackage": "Add a package",
+  "addedToShopping": "Added to the shopping list",
+  "toShoppingList": "Add to the shopping list",
+  "archiveAskTitle": "Move to the archive?",
+  "archiveAskText": "Running schedules of this medicine will end and reminders will stop. Past intakes and the stock history stay.",
+  "medicineRestored": "The medicine is back. Ended schedules need to be created again",
+  "takenRecorded": "Recorded: {qty}",
+  "@takenRecorded": {
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "expiryPassed": "Expired on {date}",
+  "@expiryPassed": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "packageOut": "Used up",
+  "expiringSoonShort": "Expiring soon",
+  "otherUnitNote": "Another unit: not counted in the stock and not used by intakes",
+  "packageTooltip": "Package",
+  "correctStock": "Correct the stock",
+  "expiryTitle": "Expiry date",
+  "movementHistory": "Stock history",
+  "staleQuantity": "The stock has changed. Open the correction again",
+  "noMovements": "No movements",
+  "stockAfter": "Stock {qty} · {when}",
+  "@stockAfter": {
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "txInitial": "Initial stock",
+  "txIncrease": "Added",
+  "txDecrease": "Used",
+  "txCorrection": "Correction",
+  "newPackage": "New package",
+  "quantityLabel": "Quantity",
+  "add": "Add",
+  "actualStock": "Actual stock",
+  "leftOfTotal": "{left} of {total} left",
+  "@leftOfTotal": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "howManyTaken": "How many did you take",
+  "enterPositive": "Enter a number above zero",
+  "record": "Record",
+  "tip1": "Remember a glass of water: pills absorb better.",
+  "tip2": "Keep the cabinet where you can see it: it is easier not to miss a dose.",
+  "tip3": "Every mark is a small win. The streak grows!",
+  "tip4": "Check expiry dates once a month: I will tell you what expires soon.",
+  "notEnoughStock": "Not enough of this medicine in the cabinet",
+  "addIntake": "Add an intake",
+  "historyTooltip": "History",
+  "wholeMonth": "Whole month",
+  "loadIntakesFailed": "Could not load the intakes",
+  "noIntakesTitle": "No intakes for this day",
+  "noIntakesText": "Tap \"+\" to add an intake",
+  "courseLastDay": "Last day of the course today: {name}",
+  "@courseLastDay": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "courseEnds": "The {name} course ends on {date}",
+  "@courseEnds": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "periodMorning": "Morning",
+  "periodDay": "Afternoon",
+  "periodEvening": "Evening",
+  "periodAnytime": "Any time",
+  "periodDone": "Done",
+  "periodWaiting": "Waiting",
+  "planOverline": "TODAY'S PLAN",
+  "takenOfTotal": "{done} of {total} taken",
+  "@takenOfTotal": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "allTaken": "All taken, a great day!",
+  "leftToTake": "Left to take: {left}",
+  "@leftToTake": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "whisper": "Pillulkin whispers:",
+  "manageSchedule": "Manage the schedule",
+  "editSchedule": "Edit the schedule",
+  "endScheduleItem": "End the schedule",
+  "scheduleAlreadyChanged": "The schedule has already been changed or ended",
+  "cancelMark": "Undo the mark",
+  "statusTaken": "Taken",
+  "statusSkipped": "Skipped",
+  "statusUnmarked": "Not marked",
+  "skip": "Skip",
+  "take": "Take",
+  "endAskTitle": "End the schedule?",
+  "endAskText": "Past intakes stay, future ones disappear.",
+  "endConfirm": "End",
+  "endsTomorrow": "The schedule will end from the next day: today already has a mark",
+  "supplyCoversCourse": "Enough for the whole course",
+  "supplyOverYear": "Enough for more than a year",
+  "supplyNotToday": "Not even enough for today",
+  "supplyUntil": "Enough until {date}",
+  "@supplyUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "createMedicineFirst": "Create a medicine first",
+  "chooseMedicine": "Choose a medicine",
+  "changesFromTomorrow": "Changes apply from tomorrow: today already has a mark",
+  "notificationsOffHint": "Notifications are off. Turn them on in settings to get reminders",
+  "timesPerDay": "{n, plural, one{once a day} other{{n} times a day}}",
+  "@timesPerDay": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "daysShort": "{n} d",
+  "@daysShort": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "coursePreview": "COURSE PREVIEW",
+  "newIntake": "New intake",
+  "scheduleTitle": "Schedule",
+  "saveIntake": "Save the intake",
+  "secMedicineDose": "Medicine and dose",
+  "cabinetEmptyCreate": "The cabinet has no medicines yet. Create the first one.",
+  "doseLabel": "Dose per intake",
+  "secRepeat": "Repeat",
+  "repeatDaily": "Every day",
+  "repeatWeekdays": "On weekdays",
+  "repeatDates": "On dates",
+  "secWeekdays": "Days of the week",
+  "secDates": "Dates",
+  "addDate": "Add a date",
+  "intakeDate": "Intake date",
+  "secTimes": "Times",
+  "addTimeOptional": "Add a time (optional)",
+  "addTime": "Add a time",
+  "secMeal": "Relation to meals",
+  "mealAny": "Any time",
+  "secPeriod": "Period",
+  "startLabel": "Start",
+  "startHelp": "Start date",
+  "endOptional": "End (optional)",
+  "endHelp": "End date",
+  "notSpecifiedN": "Not set",
+  "clear": "Clear",
+  "historyTitle": "History",
+  "historyLoadFailed": "Could not load the history",
+  "historyEmpty": "The history is empty",
+  "all": "All",
+  "historySummary": "Last {days} d: taken {taken}",
+  "@historySummary": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "taken": {
+        "type": "int"
+      }
+    }
+  },
+  "historyMissed": ", missed {n}",
+  "@historyMissed": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "kitFever": "Fever and pain relief",
+  "kitFeverItems": "Paracetamol|Ibuprofen",
+  "kitAntiseptic": "Wound antiseptics",
+  "kitAntisepticItems": "Chlorhexidine|Hydrogen peroxide",
+  "kitDressings": "Dressings",
+  "kitDressingsItems": "Plasters|Bandage",
+  "kitStomach": "Stomach and bowels",
+  "kitStomachItems": "Activated charcoal|Diosmectite",
+  "kitAllergy": "Allergy",
+  "kitAllergyItems": "Chlorphenamine|Cetirizine",
+  "reasonExpired": "Expired",
+  "reasonExpiringSoon": "Expires soon",
+  "reasonOut": "Out of stock",
+  "reasonLow": "Low",
+  "boughtAsk": "Did you buy {name}?",
+  "@boughtAsk": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "toCabinet": "To the cabinet",
+  "listCopied": "The list is copied",
+  "titleShopping": "Shopping",
+  "secUrgent": "Buy soon",
+  "allFine": "All good: nothing is running out or expiring.",
+  "toList": "To the list",
+  "secMyList": "My list",
+  "whatToBuy": "What to buy?",
+  "addToList": "Add to the list",
+  "listEmpty": "The list is empty",
+  "removeFromList": "Remove from the list",
+  "copyList": "Copy the list",
+  "secIdealKit": "Build the ideal cabinet",
+  "inStock": "In stock",
+  "inList": "On the list",
+  "titleProfile": "Profile",
+  "yourName": "Your name",
+  "streakDaysInRow": "{n} d in a row",
+  "@streakDaysInRow": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "editName": "Edit the name",
+  "secWeek": "This week",
+  "secHealth": "Health",
+  "diaryTitle": "Wellbeing diary",
+  "diarySubtitle": "Mood and what the trouble was",
+  "reportTitle": "Doctor's report",
+  "reportSubtitle": "PDF or a table for a period",
+  "weekSummary": "Last 7 days: {taken} of {planned} taken ({percent}%)",
+  "@weekSummary": {
+    "placeholders": {
+      "taken": {
+        "type": "int"
+      },
+      "planned": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "goalText": "Goal: {goal} days in a row, {left} to go",
+  "@goalText": {
+    "placeholders": {
+      "goal": {
+        "type": "int"
+      },
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "secBadges": "Achievements",
+  "secSettings": "Settings",
+  "themeTitle": "Theme",
+  "themeSystem": "Like the system",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "languageTitle": "Language",
+  "langSystem": "Like the system",
+  "hapticsTitle": "Haptics",
+  "hapticsSub": "A nice tap when you take a dose",
+  "confettiTitle": "Confetti on intake",
+  "confettiSub": "A victory over routine",
+  "hintsTitle": "Expiry hints",
+  "hintsSub": "Tell me in the cabinet when it is time to restock",
+  "notificationsTitle": "Notifications",
+  "notificationsSub": "Permissions, a check if they do not arrive",
+  "secData": "Data",
+  "dataNote": "Data is kept on this device. If you sign in, a copy is also in the cloud. A backup file is saved by you and is not encrypted: keep it somewhere you trust.",
+  "saveBackup": "Save a backup",
+  "restoreBackup": "Restore from a backup",
+  "whatsYourName": "What is your name?",
+  "weekdayDone": "no misses",
+  "weekdayMissed": "has misses",
+  "weekdayNoData": "no data",
+  "badgeEarned": "earned",
+  "badgeLocked": "not earned",
+  "backupFailedTitle": "Could not do it",
+  "somethingWrong": "Something went wrong. Your data is unchanged.",
+  "backupTooLarge": "The file is too large for a PillPal backup",
+  "backupNotBackup": "This is not a PillPal backup",
+  "backupNewer": "The backup was made by a newer PillPal or is encrypted. Update the app",
+  "backupCorrupt": "The file is damaged or is not a backup",
+  "backupInconsistent": "The backup is inconsistent and cannot be restored",
+  "backupSaved": "The backup is saved",
+  "backupDescribe": "{medicines} medicines{archived}, {schedules} schedules, {logs} marks{last}",
+  "@backupDescribe": {
+    "placeholders": {
+      "medicines": {
+        "type": "int"
+      },
+      "archived": {
+        "type": "String"
+      },
+      "schedules": {
+        "type": "int"
+      },
+      "logs": {
+        "type": "int"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "backupArchivedPart": " ({n} archived)",
+  "@backupArchivedPart": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "backupLastPart": ", latest {date}",
+  "@backupLastPart": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "replaceTitle": "Replace the data?",
+  "replaceText": "In the backup: {backup}.\n\nOn this device now: {current}.\n\nAll current data will be replaced completely. This cannot be undone.",
+  "@replaceText": {
+    "placeholders": {
+      "backup": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "saveCurrentFirst": "Save the current data first",
+  "replace": "Replace",
+  "dataRestored": "The data is restored",
+  "ok": "OK",
+  "notificationsOn": "Reminders are on",
+  "notificationsOff": "Reminders are off",
+  "notifDeniedText": "Without permission the app cannot remind you. If the prompt does not appear, turn notifications on for PillPal in the phone settings.",
+  "notifOnText": "If an intake is not marked, a second reminder comes after 15 minutes. The notification has \"Taken\", \"In 10 min\" and \"In 30 min\" buttons.",
+  "allowNotifications": "Allow notifications",
+  "exactAlarms": "Remind at the exact time",
+  "exactAlarmsSub": "Without it Android may delay the notification",
+  "testNotification": "Send a test notification",
+  "soundTitle": "Sound",
+  "soundSub": "A sound with the reminder",
+  "vibrationTitle": "Vibration",
+  "vibrationIos": "On iPhone the system controls vibration",
+  "vibrationSub": "Vibrate with the reminder",
+  "quietTitle": "Quiet hours",
+  "quietSub": "Reminders come without sound at this time",
+  "quietFromLabel": "From",
+  "quietToLabel": "To",
+  "quietFromTitle": "Quiet hours from",
+  "quietToTitle": "Quiet hours until",
+  "batteryNote": "Not arriving? On some phones battery saving stops reminders: in the phone settings let PillPal run without restrictions.",
+  "moodBad": "Bad",
+  "moodSoSo": "So-so",
+  "moodOk": "Okay",
+  "moodGood": "Good",
+  "moodGreat": "Great",
+  "diaryEntry": "Entry",
+  "diaryEmpty": "Note how you feel and what was wrong: the entries go into the doctor's report",
+  "deleteEntry": "Delete the entry",
+  "newEntry": "New entry",
+  "howDoYouFeel": "How do you feel",
+  "noteLabel": "Note",
+  "reportSaved": "The report is saved",
+  "days7": "7 days",
+  "days30": "30 days",
+  "days90": "90 days",
+  "noIntakesInPeriod": "No intakes in this period",
+  "medicineTakenOf": "{name}: {taken} of {planned} taken",
+  "@medicineTakenOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "taken": {
+        "type": "int"
+      },
+      "planned": {
+        "type": "int"
+      }
+    }
+  },
+  "notMarkedPart": ", not marked {n}",
+  "@notMarkedPart": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "diaryCount": "Diary entries: {n}",
+  "@diaryCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "savePdf": "Save PDF",
+  "saveCsv": "Save a table (CSV)",
+  "welcomeTitle": "Hi! I am PillPal",
+  "welcomeText": "I will help you remember your medicines and keep track of the cabinet.",
+  "welcomeP1": "Intake reminders",
+  "welcomeP1t": "A notification on time and a \"Taken\" button.",
+  "welcomeP2": "The cabinet under control",
+  "welcomeP2t": "Stock, expiry dates and a hint when it is time to restock.",
+  "welcomeP3": "Your data stays yours",
+  "welcomeP3t": "The data stays on this device. The cloud only if you sign in to an account.",
+  "nameOptional": "What is your name? (optional)",
+  "enableReminders": "Turn on reminders",
+  "skipReminders": "Not now",
+  "followUpTitle": "Forgot? {name}",
+  "@followUpTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "actionTaken": "Taken",
+  "actionSnooze": "In 10 min",
+  "channelName": "Intake reminders",
+  "channelDescription": "Reminders about scheduled intakes",
+  "testNotificationBody": "This is how reminders will look",
+  "csvTitle": "PillPal report",
+  "csvMedicine": "Medicine",
+  "csvPlanned": "Planned",
+  "csvTaken": "Taken",
+  "csvSkipped": "Skipped",
+  "csvMissed": "Not marked",
+  "csvDate": "Date",
+  "csvTime": "Time",
+  "csvMood": "Mood (1-5)",
+  "csvNote": "Note",
+  "pdfTitle": "Medication report",
+  "pdfMedicines": "Medicines",
+  "pdfNoIntakes": "No intakes in this period.",
+  "pdfPlanned": "Planned",
+  "pdfNoEntries": "No entries.",
+  "pdfWhen": "When",
+  "pdfValues": "Measurements",
+  "pdfFooter": "Made with PillPal on {stamp}. Reference data, not a medical document.",
+  "@pdfFooter": {
+    "placeholders": {
+      "stamp": {
+        "type": "String"
+      }
+    }
+  },
+  "moodText": "mood {n}/5",
+  "@moodText": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "validatorFillOne": "Fill in at least one field",
+  "accountTitle": "Account and cloud",
+  "accountSubSignedOut": "Not signed in",
+  "accountNotAvailable": "The cloud is not connected to this build of the app. Your data stays on this device.",
+  "accountIntro": "Sign in to keep a copy of your data (medicines, schedules, diary) in a cloud account and open it on other phones.",
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "signIn": "Sign in",
+  "createAccount": "Create an account",
+  "forgotPassword": "Forgot your password?",
+  "resetSent": "A password reset email has been sent",
+  "enterEmail": "Enter your email",
+  "enterEmailPassword": "Enter your email and password",
+  "signedInAs": "Signed in as {email}",
+  "@signedInAs": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "syncedAt": "Synced {when}",
+  "@syncedAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "syncing": "Syncing…",
+  "syncedJustNow": "Synced",
+  "syncNow": "Sync now",
+  "signOut": "Sign out",
+  "signOutNote": "Your data stays on this phone but stops going to the cloud.",
+  "deleteAccount": "Delete the account",
+  "deleteAccountTitle": "Delete the account?",
+  "deleteAccountText": "The account and the cloud copy will be deleted. The data on this phone stays. Enter your password to confirm.",
+  "accountDeleted": "The account is deleted",
+  "conflictTitle": "There is data here and in the cloud",
+  "conflictText": "Choose which to keep. The others will be replaced completely.",
+  "useCloudData": "Use the cloud data",
+  "useDeviceData": "Keep the data on this phone",
+  "authInvalidEmail": "Check the email address",
+  "authWrongCredentials": "Wrong email or password",
+  "authEmailInUse": "This email is already registered",
+  "authWeakPassword": "The password is too weak: use at least 6 characters",
+  "authNetwork": "Cannot reach the server. Check the internet connection",
+  "authTooMany": "Too many attempts. Try again later",
+  "authOther": "That did not work. Try again",
+  "syncProblemNetwork": "Could not reach the cloud. We will try again later.",
+  "syncProblemTooLarge": "There is too much data for a cloud copy.",
+  "syncProblemOther": "The cloud copy could not be used. The data on the phone is unchanged.",
+  "extendCourse": "Extend",
+  "extendCourseTitle": "Extend the course: {name}",
+  "@extendCourseTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "extendDays": "{n} more days",
+  "@extendDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "actionSnooze30": "In 30 min",
+  "secRepeatYearly": "Repeat the course every year",
+  "repeatYearlyHint": "For seasonal courses, such as vitamin D in autumn and winter",
+  "repeatNone": "No",
+  "repeatYears": "{n, plural, one{{n} more year} other{{n} more years}}",
+  "@repeatYears": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "symptomHeadache": "Headache",
+  "symptomNausea": "Nausea",
+  "symptomDizziness": "Dizziness",
+  "symptomWeakness": "Weakness",
+  "symptomFever": "Fever",
+  "symptomStomachache": "Stomach ache",
+  "symptomHeartburn": "Heartburn",
+  "symptomCough": "Cough",
+  "symptomInsomnia": "Poor sleep",
+  "symptomRash": "Rash",
+  "symptomAnxiety": "Anxiety",
+  "symptomPain": "Pain",
+  "symptomsTitle": "What was the trouble",
+  "symptomOther": "Other",
+  "symptomOwnTitle": "Your own",
+  "symptomOwnLabel": "What bothered you",
+  "csvSymptoms": "Trouble",
+  "validatorMaxSymptoms": "At most 12 items in an entry",
+  "achievementsTitle": "Achievements",
+  "badgesCount": "{n} of {total} earned",
+  "@badgesCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSub": "Look, language, notifications, data copy",
+  "takeOutsideSchedule": "Take outside the schedule",
+  "nothingToTake": "No medicine with stock in the cabinet"
+}

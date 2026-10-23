@@ -11,16 +11,20 @@ import '../../design_system/widgets/status_badge.dart';
 import '../../domain/extras.dart';
 import '../../domain/models.dart';
 import '../../domain/stock_status.dart';
+import '../../domain/supply.dart';
+import '../../l10n/l10n.dart';
+import '../inventory/format.dart';
+import '../inventory/medicine_screen.dart';
 import '../inventory/inventory_providers.dart';
 import '../../design_system/motion.dart';
 
 /// A basic home first-aid kit: group title and the items to have.
-const basicKit = <(String, List<String>)>[
-  ('Жаропонижающие и обезболивающие', ['Парацетамол', 'Ибупрофен']),
-  ('Антисептики для ран', ['Хлоргексидин', 'Мирамистин']),
-  ('Перевязочные материалы', ['Пластырь', 'Бинт']),
-  ('Желудок и кишечник', ['Активированный уголь', 'Смекта']),
-  ('Аллергия', ['Супрастин', 'Цетиризин']),
+List<(String, List<String>)> basicKit(AppLocalizations l) => [
+  (l.kitFever, l.kitFeverItems.split('|')),
+  (l.kitAntiseptic, l.kitAntisepticItems.split('|')),
+  (l.kitDressings, l.kitDressingsItems.split('|')),
+  (l.kitStomach, l.kitStomachItems.split('|')),
+  (l.kitAllergy, l.kitAllergyItems.split('|')),
 ];
 
 /// Whether some cabinet medicine is [item] (a name match, ignoring case).
@@ -29,11 +33,11 @@ bool inCabinet(String item, List<MedicineStock> stock) {
   return stock.any((s) => s.medicine.name.toLowerCase().contains(k));
 }
 
-String? _reason(StockAssessment a) => switch (a.problem) {
-  StockProblem.expired => 'Просрочено',
-  StockProblem.expiringSoon => 'Скоро срок',
-  StockProblem.out => 'Закончилось',
-  StockProblem.low => 'Мало',
+String? _reason(AppLocalizations l, StockAssessment a) => switch (a.problem) {
+  StockProblem.expired => l.reasonExpired,
+  StockProblem.expiringSoon => l.reasonExpiringSoon,
+  StockProblem.out => l.reasonOut,
+  StockProblem.low => l.reasonLow,
   null => null,
 };
 
@@ -63,14 +67,37 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
     await _add(text);
   }
 
+  /// A bought medicine can be put straight into the cabinet.
+  Future<void> _check(ShoppingItem item, bool checked) async {
+    await ref.read(extrasRepositoryProvider).setChecked(item.id, checked);
+    final medicineId = item.medicineId;
+    if (!checked || medicineId == null || !mounted) return;
+    final navigator = Navigator.of(context);
+    final l = context.l10n;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l.boughtAsk(item.name)),
+        action: SnackBarAction(
+          label: l.toCabinet,
+          onPressed: () => navigator.push(
+            MaterialPageRoute<void>(
+              builder: (_) => MedicineScreen(medicineId: medicineId),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _copy(List<ShoppingItem> items) async {
     final messenger = ScaffoldMessenger.of(context);
+    final copied = context.l10n.listCopied;
     final todo = [
       for (final i in items)
         if (!i.checked) '• ${i.name}',
     ];
     await Clipboard.setData(ClipboardData(text: todo.join('\n')));
-    messenger.showSnackBar(const SnackBar(content: Text('Список скопирован')));
+    messenger.showSnackBar(SnackBar(content: Text(copied)));
   }
 
   @override
@@ -79,13 +106,25 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
     final stock = ref.watch(medicineStockProvider).value ?? const [];
     final now = DateTime.now();
     final listed = {for (final i in items) i.name.toLowerCase()};
-    final urgent = [
-      for (final s in stock)
-        if (assess(s, now) case final a when a.problem != null) a,
-    ];
+    final schedules = ref.watch(activeSchedulesProvider).value ?? const [];
+    // Medicines with a problem, and those that will run out within a week.
+    final urgent = <(MedicineStock, String)>[];
+    for (final s in stock) {
+      final a = assess(s, now);
+      final supply = forecastSupply(s, schedules, now);
+      final reason =
+          _reason(context.l10n, a) ??
+          (supply != null &&
+                  !supply.coversPlan &&
+                  !supply.beyondHorizon &&
+                  supply.days <= supplyWarnDays
+              ? supplyText(context, supply, now)
+              : null);
+      if (reason != null) urgent.add((s, reason));
+    }
     final extras = ref.read(extrasRepositoryProvider);
     return Scaffold(
-      appBar: const AppTopBar(title: 'Покупки'),
+      appBar: AppTopBar(title: context.l10n.titleShopping),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.md,
@@ -94,16 +133,14 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
           AppSpacing.xxl + AppSpacing.xl,
         ),
         children: [
-          const SectionHeader(title: 'Срочно докупить'),
+          SectionHeader(title: context.l10n.secUrgent),
           if (urgent.isEmpty)
-            const AppCard(
+            AppCard(
               variant: AppCardVariant.done,
-              child: Text(
-                'Всё в порядке: ничего не заканчивается и не истекает.',
-              ),
+              child: Text(context.l10n.allFine),
             )
           else
-            for (final a in urgent)
+            for (final (item, reason) in urgent)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: AppCard(
@@ -113,20 +150,17 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              a.stock.medicine.name,
-                              style: AppType.cardTitle,
-                            ),
+                            Text(item.medicine.name, style: AppType.cardTitle),
                             const SizedBox(height: AppSpacing.xs),
                             StatusBadge(
-                              label: _reason(a)!,
+                              label: reason,
                               icon: Icons.warning_amber_rounded,
                               tone: StatusTone.warning,
                             ),
                           ],
                         ),
                       ),
-                      listed.contains(a.stock.medicine.name.toLowerCase())
+                      listed.contains(item.medicine.name.toLowerCase())
                           ? Icon(
                               Icons.check_circle,
                               color: context.colors.success,
@@ -134,18 +168,18 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                           : Pressable(
                               child: FilledButton.icon(
                                 onPressed: () => _add(
-                                  a.stock.medicine.name,
-                                  medicineId: a.stock.medicine.id,
+                                  item.medicine.name,
+                                  medicineId: item.medicine.id,
                                 ),
                                 icon: const Icon(Icons.add_shopping_cart),
-                                label: const Text('В список'),
+                                label: Text(context.l10n.toList),
                               ),
                             ),
                     ],
                   ),
                 ),
               ),
-          const SectionHeader(title: 'Мой список'),
+          SectionHeader(title: context.l10n.secMyList),
           Row(
             children: [
               Expanded(
@@ -154,9 +188,9 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                   textCapitalization: TextCapitalization.sentences,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(
-                    hintText: 'Что купить?',
-                    prefixIcon: Icon(Icons.shopping_bag_outlined),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.whatToBuy,
+                    prefixIcon: const Icon(Icons.shopping_bag_outlined),
                   ),
                 ),
               ),
@@ -164,7 +198,7 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
               Pressable(
                 scale: .88,
                 child: IconButton.filled(
-                  tooltip: 'Добавить в список',
+                  tooltip: context.l10n.addToList,
                   onPressed: _submit,
                   icon: const Icon(Icons.add),
                 ),
@@ -173,9 +207,9 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           if (items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: Text('Список пуст', style: AppType.caption),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Text(context.l10n.listEmpty, style: AppType.caption),
             )
           else ...[
             for (final i in items)
@@ -183,7 +217,7 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                 scale: .98,
                 child: CheckboxListTile(
                   value: i.checked,
-                  onChanged: (v) => extras.setChecked(i.id, v ?? false),
+                  onChanged: (v) => _check(i, v ?? false),
                   controlAffinity: ListTileControlAffinity.leading,
                   title: Text(
                     i.name,
@@ -192,7 +226,7 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                     ),
                   ),
                   secondary: IconButton(
-                    tooltip: 'Убрать из списка',
+                    tooltip: context.l10n.removeFromList,
                     icon: const Icon(Icons.close),
                     onPressed: () => extras.removeShopping(i.id),
                   ),
@@ -204,13 +238,13 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                 child: TextButton.icon(
                   onPressed: () => _copy(items),
                   icon: const Icon(Icons.copy_outlined),
-                  label: const Text('Скопировать список'),
+                  label: Text(context.l10n.copyList),
                 ),
               ),
             ),
           ],
-          const SectionHeader(title: 'Собери идеальную аптечку'),
-          for (final (title, kit) in basicKit)
+          SectionHeader(title: context.l10n.secIdealKit),
+          for (final (title, kit) in basicKit(context.l10n))
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: AppCard(
@@ -223,14 +257,14 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                         children: [
                           Expanded(child: Text(item)),
                           if (inCabinet(item, stock))
-                            const StatusBadge(
-                              label: 'В наличии',
+                            StatusBadge(
+                              label: context.l10n.inStock,
                               icon: Icons.check_circle,
                               tone: StatusTone.success,
                             )
                           else if (listed.contains(item.toLowerCase()))
-                            const StatusBadge(
-                              label: 'В списке',
+                            StatusBadge(
+                              label: context.l10n.inList,
                               icon: Icons.shopping_bag_outlined,
                               tone: StatusTone.accent,
                             )
@@ -239,7 +273,7 @@ class _ShoppingScreenState extends ConsumerState<ShoppingScreen> {
                               child: TextButton.icon(
                                 onPressed: () => _add(item),
                                 icon: const Icon(Icons.add),
-                                label: const Text('Добавить'),
+                                label: Text(context.l10n.add),
                               ),
                             ),
                         ],

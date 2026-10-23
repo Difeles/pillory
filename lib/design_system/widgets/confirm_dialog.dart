@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../tokens.dart';
 import '../motion.dart';
 
@@ -10,7 +11,7 @@ Future<bool> showConfirmDialog(
   required String title,
   required String message,
   required String confirmLabel,
-  String cancelLabel = 'Отмена',
+  String? cancelLabel,
   bool danger = false,
 }) async {
   final ok = await showDialog<bool>(
@@ -22,7 +23,7 @@ Future<bool> showConfirmDialog(
         Pressable(
           child: TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: Text(cancelLabel),
+            child: Text(cancelLabel ?? context.l10n.cancel),
           ),
         ),
         Pressable(

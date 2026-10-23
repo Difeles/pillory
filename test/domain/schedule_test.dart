@@ -138,4 +138,25 @@ void main() {
       ..sort(compareIntakes);
     expect(l.map((e) => e.medicineName), ['Г', 'В', 'А', 'Б']);
   });
+
+  test('a course shifted by years keeps its shape', () {
+    final shifted = shiftedByYears(
+      NewSchedule(
+        medicineId: 'm',
+        kind: ScheduleKind.weekdays,
+        dose: 2,
+        doseUnit: 'шт.',
+        weekdays: const {1, 3},
+        startDate: DateTime(2026, 10, 1),
+        endDate: DateTime(2027, 3, 31),
+        times: const [480],
+      ),
+      2,
+    );
+    expect(shifted.startDate, DateTime(2028, 10, 1));
+    expect(shifted.endDate, DateTime(2029, 3, 31));
+    expect(shifted.weekdays, {1, 3});
+    expect(shifted.dose, 2);
+    expect(shifted.times, [480]);
+  });
 }

@@ -6,6 +6,7 @@ import 'package:pillory/domain/inventory_repository.dart';
 import 'package:pillory/domain/inventory_rules.dart';
 import 'package:pillory/domain/medicine_form.dart';
 import 'package:pillory/domain/models.dart';
+import 'package:pillory/domain/pill_look.dart';
 import 'package:pillory/domain/reminders.dart';
 import 'package:pillory/domain/schedule.dart';
 
@@ -79,6 +80,7 @@ class FakeInventoryRepository implements InventoryRepository {
     MedicineForm? form,
     String? strength,
     double? threshold,
+    PillLook? look,
     bool setFields = false,
     DateTime? archivedAt,
     bool setArchived = false,
@@ -88,6 +90,7 @@ class FakeInventoryRepository implements InventoryRepository {
     form: setFields ? form : m.form,
     strength: setFields ? strength : m.strength,
     unit: m.unit,
+    look: setFields ? look : m.look,
     lowStockThreshold: setFields ? threshold : m.lowStockThreshold,
     archivedAt: setArchived ? archivedAt : m.archivedAt,
     createdAt: m.createdAt,
@@ -107,6 +110,7 @@ class FakeInventoryRepository implements InventoryRepository {
         form: edit.form,
         strength: strength == null || strength.isEmpty ? null : strength,
         threshold: edit.lowStockThreshold,
+        look: edit.look,
         setFields: true,
       ),
     );
@@ -184,6 +188,7 @@ class FakeInventoryRepository implements InventoryRepository {
         form: d.form,
         strength: d.strength,
         unit: d.unit,
+        look: d.look,
         lowStockThreshold: d.lowStockThreshold,
         createdAt: DateTime.now(),
       ),

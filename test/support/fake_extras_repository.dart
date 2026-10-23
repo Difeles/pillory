@@ -6,8 +6,17 @@ import 'package:pillory/domain/extras.dart';
 /// In-memory shopping list and settings for widget tests.
 class FakeExtrasRepository implements ExtrasRepository {
   final _items = <ShoppingItem>[];
-  final _prefs = <String, String>{};
+  // Tests start past the welcome screen unless they say otherwise.
+  final _prefs = <String, String>{
+    PrefKey.onboarded: 'true',
+    // The tests read Russian; the test device's own language is English.
+    PrefKey.language: 'ru',
+  };
   final _changes = StreamController<void>.broadcast(sync: true);
+  final _settingsChanged = StreamController<void>.broadcast(sync: true);
+
+  @override
+  Stream<void> get userSettingsChanged => _settingsChanged.stream;
 
   @override
   Stream<List<ShoppingItem>> watchShopping() async* {
@@ -63,8 +72,12 @@ class FakeExtrasRepository implements ExtrasRepository {
   }
 
   @override
+  Future<String?> getPref(String key) async => _prefs[key];
+
+  @override
   Future<void> setPref(String key, String value) async {
     _prefs[key] = value;
     _changes.add(null);
+    if (!key.startsWith(devicePrefix)) _settingsChanged.add(null);
   }
 }

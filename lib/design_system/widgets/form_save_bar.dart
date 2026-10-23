@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../tokens.dart';
 import '../motion.dart';
 
@@ -19,10 +20,11 @@ class FormSaveBar extends StatelessWidget {
     super.key,
     required this.onSave,
     this.saving = false,
-    this.label = 'Сохранить',
+    this.label,
   });
 
-  final String label;
+  /// The button text; "Save" by default.
+  final String? label;
 
   final VoidCallback onSave;
 
@@ -49,7 +51,7 @@ class FormSaveBar extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: saving ? null : onSave,
                 icon: const Icon(Icons.check),
-                label: Text(label),
+                label: Text(label ?? context.l10n.save),
               ),
             ),
           ),

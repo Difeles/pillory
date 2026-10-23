@@ -662,7 +662,7 @@ void main() {
 
     Future<(String, String, String?)> look(DateTime d) async {
       final i = ((await r.watchHistory(d, d).first)[d]!).single;
-      return (i.medicineName, i.medicineForm?.label ?? '-', i.medicineStrength);
+      return (i.medicineName, i.medicineForm?.name ?? '-', i.medicineStrength);
     }
 
     test('marked intakes keep the medicine as it was marked', () async {
@@ -679,20 +679,20 @@ void main() {
         ),
       );
 
-      expect(await look(d17), ('Аспирин', 'Таблетки', '500 мг'));
-      expect(await look(d18), ('Аспирин', 'Таблетки', '500 мг'));
+      expect(await look(d17), ('Аспирин', 'tablet', '500 мг'));
+      expect(await look(d18), ('Аспирин', 'tablet', '500 мг'));
       // Not marked: today follows the medicine.
-      expect(await look(day), ('Аспирин Кардио', 'Капсулы', '100 мг'));
+      expect(await look(day), ('Аспирин Кардио', 'capsule', '100 мг'));
       // The day screen shows the same.
       expect((await r.watchDay(d17).first).single.medicineName, 'Аспирин');
 
       // Undoing the mark removes the fact; it follows the medicine again.
       await r.resetMark(scheduleId: sid, day: d17);
-      expect(await look(d17), ('Аспирин Кардио', 'Капсулы', '100 мг'));
+      expect(await look(d17), ('Аспирин Кардио', 'capsule', '100 мг'));
       // Marking again records the medicine as it is now.
       await r.markTaken(scheduleId: sid, day: d17);
       await inventory.updateMedicine(mid, const MedicineEdit(name: 'Другое'));
-      expect(await look(d17), ('Аспирин Кардио', 'Капсулы', '100 мг'));
+      expect(await look(d17), ('Аспирин Кардио', 'capsule', '100 мг'));
     });
 
     test('a mark without a snapshot follows the current medicine', () async {
@@ -721,7 +721,7 @@ void main() {
 
       expect(await r.watchDay(day).first, isEmpty);
       expect(await r.watchDay(DateTime(2026, 10, 20)).first, isEmpty);
-      expect(await look(d17), ('Аспирин', 'Таблетки', '500 мг'));
+      expect(await look(d17), ('Аспирин', 'tablet', '500 мг'));
       expect((await r.watchDay(d17).first).single.taken, isTrue);
       expect((await db.select(db.schedules).get()).single.endDate, d18);
       expect(
@@ -1114,10 +1114,12 @@ extension on NewSchedule {
 
 /// Takes what v7 added out of a fresh database, to look like a v6 one.
 Future<void> _dropV7(AppDatabase db) async {
-  for (final c in ['category', 'storage']) {
+  for (final c in ['category', 'storage', 'look']) {
     await db.customStatement('ALTER TABLE medicines DROP COLUMN $c');
   }
   await db.customStatement('ALTER TABLE schedules DROP COLUMN meal_relation');
   await db.customStatement('DROP TABLE shopping_items');
   await db.customStatement('DROP TABLE app_settings');
+  // v8 and everything after it, which older files do not have either.
+  await db.customStatement('DROP TABLE diary_entries');
 }

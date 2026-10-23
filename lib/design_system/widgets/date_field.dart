@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/inventory/format.dart';
+import '../../l10n/l10n.dart';
 import '../tokens.dart';
 import '../pickers.dart';
 import '../motion.dart';
@@ -17,7 +18,7 @@ class DateField extends StatelessWidget {
     this.firstDate,
     this.initialDate,
     this.icon = Icons.calendar_today_outlined,
-    this.emptyText = 'Не указан',
+    this.emptyText,
     this.clearTooltip,
   });
 
@@ -35,7 +36,9 @@ class DateField extends StatelessWidget {
   /// Where the picker opens when there is no [value].
   final DateTime? initialDate;
   final IconData icon;
-  final String emptyText;
+
+  /// Shown while there is no value; "Not set" by default.
+  final String? emptyText;
 
   /// When set, a filled field offers a clear button with this tooltip.
   final String? clearTooltip;
@@ -77,7 +80,11 @@ class DateField extends StatelessWidget {
                     )
                   : Icon(icon),
             ),
-            child: Text(value == null ? emptyText : formatDate(value!)),
+            child: Text(
+              value == null
+                  ? emptyText ?? context.l10n.notSpecifiedM
+                  : formatDate(value!),
+            ),
           ),
         ),
       ),

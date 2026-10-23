@@ -51,12 +51,40 @@ void main() {
 
   test('badges', () {
     expect(earnedBadges(streak: 0, medicines: 0, expired: 0), isEmpty);
+    expect(earnedBadges(streak: 7, medicines: 3, expired: 0), {
+      AppBadge.firstWeek,
+      AppBadge.cabinetKeeper,
+      AppBadge.noExpired,
+    });
     expect(
-      earnedBadges(streak: 7, medicines: 3, expired: 0),
+      earnedBadges(
+        streak: 30,
+        medicines: 10,
+        expired: 0,
+        takenMarks: 50,
+        perfectWeek: true,
+        diaryEntries: 3,
+      ),
       AppBadge.values.toSet(),
     );
     expect(earnedBadges(streak: 1, medicines: 3, expired: 1), {
       AppBadge.cabinetKeeper,
     });
+  });
+
+  test('goals and summaries', () {
+    expect(nextStreakGoal(0), 7);
+    expect(nextStreakGoal(7), 14);
+    expect(nextStreakGoal(100), isNull);
+
+    final done = taken;
+    final missed = pending;
+    final week = {for (var k = 0; k < 7; k++) ago(k): done};
+    expect(periodSummary(week, today, days: 7).taken, 7);
+    expect(isPerfectWeek(week, today), isTrue);
+    week[ago(3)] = missed;
+    expect(isPerfectWeek(week, today), isFalse);
+    // Today's open intake is still ahead.
+    expect(periodSummary({today: missed}, today, days: 1).planned, 0);
   });
 }

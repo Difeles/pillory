@@ -10,7 +10,11 @@ import '../../design_system/widgets/section_header.dart';
 import '../../domain/errors.dart';
 import '../../domain/medicine_form.dart';
 import '../../domain/models.dart';
+import '../../l10n/l10n.dart';
+import '../../l10n/labels.dart';
+import '../../domain/pill_look.dart';
 import 'format.dart';
+import 'pill_look_editor.dart';
 import 'medicine_card.dart';
 import '../../design_system/motion.dart';
 
@@ -34,6 +38,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   MedicineForm? _form;
   MedicineCategory? _category;
   StorageSpot? _storage;
+  PillLook? _look;
   String _unit = quantityUnits.first;
   DateTime? _expiresOn;
   bool _saving = false;
@@ -51,6 +56,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     _form = e.form;
     _category = e.category;
     _storage = e.storage;
+    _look = e.look ?? defaultLookFor(e.form);
   }
 
   @override
@@ -67,6 +73,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     setState(() => _saving = true);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final problem = context.l10n.problem;
     try {
       final editing = widget.editing;
       if (editing != null) {
@@ -81,6 +88,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                 lowStockThreshold: parseQuantity(_threshold.text),
                 category: _category,
                 storage: _storage,
+                look: _look,
               ),
             );
         navigator.pop();
@@ -96,6 +104,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               lowStockThreshold: parseQuantity(_threshold.text),
               category: _category,
               storage: _storage,
+              look: _look,
               initialQuantity: parseQuantity(_quantity.text)!,
               unit: _unit,
               expiresOn: _expiresOn,
@@ -104,7 +113,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
       // The id lets a caller (the intake form) select the new medicine.
       navigator.pop(id);
     } on InvalidMedicineException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      messenger.showSnackBar(SnackBar(content: Text(problem(e.message))));
       if (mounted) setState(() => _saving = false);
     }
   }
@@ -113,31 +122,32 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   Widget build(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.md);
     final creating = widget.editing == null;
+    final l = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(creating ? 'Новое лекарство' : 'Лекарство')),
+      appBar: AppBar(title: Text(creating ? l.newMedicine : l.medicineTitle)),
       bottomNavigationBar: FormSaveBar(
         saving: _saving,
         onSave: _save,
-        label: creating ? 'Добавить в аптечку' : 'Сохранить',
+        label: creating ? l.addToCabinet : l.save,
       ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: formPadding,
           children: [
-            const SectionHeader(title: 'Основное'),
+            SectionHeader(title: l.secBasic),
             TextFormField(
               controller: _name,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Название *',
-                hintText: 'Например, Ибупрофен Форте',
-                prefixIcon: Icon(Icons.medication_outlined),
+              decoration: InputDecoration(
+                labelText: l.nameLabel,
+                hintText: l.nameHint,
+                prefixIcon: const Icon(Icons.medication_outlined),
               ),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Введите название' : null,
+                  (v == null || v.trim().isEmpty) ? l.enterName : null,
             ),
-            const SectionHeader(title: 'Категория действия'),
+            SectionHeader(title: l.secCategory),
             // Two columns, so words wrap at spaces; the tiles of a row share
             // one height and grow with the text.
             for (var i = 0; i < MedicineCategory.pickable.length; i += 2)
@@ -157,7 +167,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                             ),
                             child: ChoiceTile(
                               icon: _categoryIcon(c),
-                              label: c.label,
+                              label: l.category(c),
                               selected: _category == c,
                               onTap: () => setState(
                                 () => _category = _category == c ? null : c,
@@ -169,7 +179,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                   ),
                 ),
               ),
-            const SectionHeader(title: 'Форма выпуска'),
+            SectionHeader(title: l.secForm),
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
@@ -179,23 +189,38 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                     scale: .93,
                     child: ChoiceChip(
                       avatar: Icon(medicineFormIcon(f), size: 18),
-                      label: Text(f.label),
+                      label: Text(l.form(f)),
                       selected: _form == f,
-                      onSelected: (_) =>
-                          setState(() => _form = _form == f ? null : f),
+                      onSelected: (_) => setState(() {
+                        _form = _form == f ? null : f;
+                        // Tablets and capsules are drawn; a capsule is never
+                        // a tablet's shape, so a switch starts over.
+                        final start = defaultLookFor(_form);
+                        if (start == null ||
+                            _look?.isCapsule != start.isCapsule) {
+                          _look = start;
+                        }
+                      }),
                     ),
                   ),
               ],
             ),
+            if (_look != null) ...[
+              gap,
+              PillLookEditor(
+                look: _look!,
+                onChanged: (v) => setState(() => _look = v),
+              ),
+            ],
             gap,
             TextFormField(
               controller: _strength,
-              decoration: const InputDecoration(
-                labelText: 'Дозировка или концентрация',
-                hintText: 'Например, 500 мг',
+              decoration: InputDecoration(
+                labelText: l.strengthLabel,
+                hintText: l.strengthHint,
               ),
             ),
-            const SectionHeader(title: 'Где хранить?'),
+            SectionHeader(title: l.secStorage),
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
@@ -205,7 +230,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                     scale: .93,
                     child: ChoiceChip(
                       avatar: Icon(_storageIcon(st), size: 18),
-                      label: Text(st.label),
+                      label: Text(l.storage(st)),
                       selected: _storage == st,
                       onSelected: (_) =>
                           setState(() => _storage = _storage == st ? null : st),
@@ -213,7 +238,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                   ),
               ],
             ),
-            const SectionHeader(title: 'Запас'),
+            SectionHeader(title: l.secStock),
             if (creating) ...[
               TextFormField(
                 controller: _quantity,
@@ -221,35 +246,35 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                   decimal: true,
                 ),
                 decoration: InputDecoration(
-                  labelText: 'Начальное количество',
-                  suffixText: _unit,
+                  labelText: l.initialQuantity,
+                  suffixText: l.unit(_unit),
                 ),
                 validator: (v) {
                   final q = parseQuantity(v ?? '');
                   return (q == null || !q.isFinite || q < 0)
-                      ? 'Введите число 0 или больше'
+                      ? l.enterNumberZero
                       : null;
                 },
               ),
               gap,
               // Its own line: next to the quantity it overflows at large text.
               Text(
-                'Единица',
+                l.unitLabel,
                 style: AppType.caption.copyWith(
                   color: context.colors.textSecondary,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
               SegmentedPills<String>(
-                options: {for (final u in quantityUnits) u: u},
+                options: {for (final u in quantityUnits) u: l.unit(u)},
                 selected: _unit,
                 onChanged: (v) => setState(() => _unit = v),
               ),
               gap,
               DateField(
-                label: 'Срок годности',
+                label: l.expiryLabel,
                 value: _expiresOn,
-                clearTooltip: 'Убрать срок годности',
+                clearTooltip: l.clearExpiry,
                 onChanged: (d) => setState(() => _expiresOn = d),
               ),
               gap,
@@ -260,15 +285,15 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                 decimal: true,
               ),
               decoration: InputDecoration(
-                labelText: 'Порог низкого остатка (необязательно)',
-                helperText: 'По умолчанию: 20% от самой большой упаковки',
-                suffixText: widget.editing?.unit ?? _unit,
+                labelText: l.thresholdLabel,
+                helperText: l.thresholdHelper,
+                suffixText: l.unit(widget.editing?.unit ?? _unit),
               ),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return null;
                 final q = parseQuantity(v);
                 return (q == null || !q.isFinite || q < 0)
-                    ? 'Введите число 0 или больше'
+                    ? l.enterNumberZero
                     : null;
               },
             ),

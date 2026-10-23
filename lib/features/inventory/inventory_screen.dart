@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
+import '../../l10n/l10n.dart';
+import '../../l10n/labels.dart';
 import '../../design_system/widgets/app_card.dart';
 import '../../design_system/widgets/app_top_bar.dart';
 import '../../design_system/widgets/progress_ring.dart';
@@ -72,7 +74,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
           child: TextField(
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
-              hintText: 'Поиск по $count лекарствам',
+              hintText: context.l10n.searchMedicines(count),
               prefixIcon: const Icon(Icons.search),
               border: _pillBorder,
               enabledBorder: _pillBorder,
@@ -86,7 +88,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
         Pressable(
           scale: .88,
           child: IconButton.filledTonal(
-            tooltip: _archive ? 'Вернуться в аптечку' : 'Архив',
+            tooltip: _archive
+                ? context.l10n.backToCabinet
+                : context.l10n.archive,
             style: IconButton.styleFrom(
               backgroundColor: _archive
                   ? context.colors.tint
@@ -134,11 +138,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
     final stock = ref.watch(provider);
     return Scaffold(
       appBar: AppTopBar(
-        title: _archive ? 'Архив' : 'Аптечка',
+        title: _archive ? context.l10n.archive : context.l10n.titleCabinet,
         actions: [
           if (!_archive)
             TopBarAddButton(
-              tooltip: 'Добавить лекарство',
+              tooltip: context.l10n.addMedicine,
               onPressed: () => _add(context),
             ),
         ],
@@ -149,7 +153,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
           children: const [LoadingState()],
         ),
         error: (e, _) => ErrorState(
-          message: 'Не удалось загрузить аптечку',
+          message: context.l10n.cabinetLoadFailed,
           onRetry: () => ref.invalidate(provider),
         ),
         data: (items) {
@@ -159,22 +163,20 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
               const [],
               header: [_searchBar(0)],
               empty: _archive
-                  ? const EmptyState(
+                  ? EmptyState(
                       icon: Icons.inventory_2_outlined,
-                      title: 'Архив пуст',
-                      message: 'Сюда попадают лекарства, убранные из аптечки.',
+                      title: context.l10n.archiveEmptyTitle,
+                      message: context.l10n.archiveEmptyText,
                     )
                   : EmptyState(
                       icon: Icons.medication_outlined,
-                      title: 'В аптечке пока пусто',
-                      message:
-                          'Добавьте первое лекарство, чтобы следить за остатком '
-                          'и сроком годности.',
+                      title: context.l10n.cabinetEmptyTitle,
+                      message: context.l10n.cabinetEmptyText,
                       action: Pressable(
                         child: FilledButton.icon(
                           onPressed: () => _add(context),
                           icon: const Icon(Icons.add),
-                          label: const Text('Добавить лекарство'),
+                          label: Text(context.l10n.addMedicine),
                         ),
                       ),
                     ),
@@ -214,7 +216,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
             ],
             empty: EmptyState(
               icon: Icons.filter_alt_off_outlined,
-              title: 'Нет лекарств с таким статусом',
+              title: context.l10n.noMedicinesWithStatus,
               action: Pressable(
                 child: FilledButton.tonal(
                   onPressed: () => setState(() {
@@ -222,7 +224,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen>
                     _category = null;
                     _query = '';
                   }),
-                  child: const Text('Показать все'),
+                  child: Text(context.l10n.showAll),
                 ),
               ),
             ),
@@ -304,13 +306,13 @@ class _Summary extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ГОТОВНОСТЬ АПТЕЧКИ',
+                        context.l10n.readinessOverline,
                         style: AppType.overline.copyWith(
                           color: context.colors.success,
                         ),
                       ),
                       Text(
-                        'В порядке: ${(share * 100).round()}%',
+                        context.l10n.okPercent((share * 100).round()),
                         style: AppType.title,
                       ),
                     ],
@@ -332,19 +334,19 @@ class _Summary extends StatelessWidget {
               spacing: AppSpacing.sm,
               children: [
                 tile(
-                  'Всего',
+                  context.l10n.tileTotal,
                   all.length,
                   context.colors.surfaceLow,
                   context.colors.textPrimary,
                 ),
                 tile(
-                  'Истекают',
+                  context.l10n.tileExpiring,
                   expiring,
                   context.colors.warningTint,
                   context.colors.warning,
                 ),
                 tile(
-                  'Мало',
+                  context.l10n.tileLow,
                   low,
                   context.colors.dangerTint,
                   context.colors.danger,
@@ -354,7 +356,7 @@ class _Summary extends StatelessWidget {
             if (hint && expiring + low > 0) ...[
               const SizedBox(height: AppSpacing.ms),
               Text(
-                'Пора докупить: ${expiring + low} — загляните во вкладку «Покупки»',
+                context.l10n.timeToBuy(expiring + low),
                 style: AppType.caption.copyWith(
                   color: context.colors.primaryDeep,
                 ),
@@ -396,7 +398,7 @@ class _CategoryBar extends StatelessWidget {
           Pressable(
             scale: .93,
             child: ChoiceChip(
-              label: const Text('Все категории'),
+              label: Text(context.l10n.allCategories),
               selected: selected == null,
               onSelected: (_) => onSelected(null),
             ),
@@ -406,7 +408,7 @@ class _CategoryBar extends StatelessWidget {
               Pressable(
                 scale: .93,
                 child: ChoiceChip(
-                  label: Text(c.label),
+                  label: Text(context.l10n.category(c)),
                   selected: selected == c,
                   onSelected: (_) => onSelected(selected == c ? null : c),
                 ),
@@ -440,7 +442,7 @@ class _FilterBar extends StatelessWidget {
             child: Pressable(
               scale: .93,
               child: ChoiceChip(
-                label: Text(f.label),
+                label: Text(context.l10n.stockFilter(f)),
                 selected: f == selected,
                 onSelected: (_) => onSelected(f),
               ),

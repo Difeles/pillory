@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/l10n/l10n.dart';
 import 'package:pillory/design_system/motion.dart';
 
 void main() {
   testWidgets('a press shrinks only the innermost Pressable', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: supportedAppLocales,
+        localizationsDelegates: appLocalizationsDelegates,
         home: Center(
           child: Pressable(
             child: Pressable(

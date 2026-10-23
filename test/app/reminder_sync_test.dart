@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
@@ -6,6 +8,7 @@ import 'package:pillory/app/reminder_sync.dart';
 import 'package:pillory/data/app_database.dart';
 import 'package:pillory/data/drift_inventory_repository.dart';
 import 'package:pillory/data/drift_schedule_repository.dart';
+import 'package:pillory/domain/extras.dart';
 import 'package:pillory/domain/models.dart';
 import 'package:pillory/domain/reminders.dart';
 import 'package:pillory/domain/schedule.dart';
@@ -24,7 +27,12 @@ void main() {
   final now = DateTime(2026, 10, 19, 7);
   final today = DateTime(2026, 10, 19);
 
-  ReminderSync newSync() => ReminderSync(repo, scheduler, now: () => now);
+  ReminderSync newSync() => ReminderSync(
+    repo,
+    scheduler,
+    now: () => now,
+    prefs: () async => const AppPrefs(language: 'ru'),
+  );
 
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
@@ -183,7 +191,7 @@ void main() {
     sync.didChangeAppLifecycleState(AppLifecycleState.resumed);
     await settle();
     expect(scheduler.scheduled, hasLength(1));
-    expect(scheduler.scheduleCalls, before + 1);
+    expect(scheduler.scheduleCalls, before + 2);
     expect(scheduler.scheduled.values.single.payload, contains('Asia/Tokyo'));
   });
 
@@ -198,14 +206,104 @@ void main() {
     expect(scheduler.scheduled.values.single.body, '3 шт.');
   });
 
-  test('at most 60 reminders are kept, the nearest ones', () async {
+  test('quiet hours make a reminder silent', () async {
+    await sync.dispose();
+    sync = ReminderSync(
+      repo,
+      scheduler,
+      now: () => now,
+      prefs: () async => const AppPrefs(
+        language: 'ru',
+        quiet: true,
+        quietFrom: 22 * 60,
+        quietTo: 9 * 60,
+        vibration: false,
+      ),
+    )..start();
+    await repo.createSchedule(
+      daily(await medicine(), times: [8 * 60, 12 * 60], end: today),
+    );
+    await settle();
+    final byTime = {
+      for (final e in scheduler.scheduled.entries) e.value.at.hour: e.key,
+    };
+    expect(scheduler.styles[byTime[8]]!.sound, isFalse);
+    expect(scheduler.styles[byTime[12]]!.sound, isTrue);
+    expect(scheduler.styles[byTime[12]]!.vibration, isFalse);
+  });
+
+  test('a postponed reminder survives until its intake is marked', () async {
+    final sid = await repo.createSchedule(daily(await medicine(), end: today));
+    await settle();
+    final snooze = jsonEncode({
+      ...OpenIntakeRequest(
+        scheduleId: sid,
+        day: today,
+        minuteOfDay: 8 * 60,
+      ).toJson(),
+      'z': 1,
+    });
+    scheduler.scheduled[777] = (
+      at: now.add(const Duration(minutes: 10)),
+      title: 'Аспирин',
+      body: '2 шт.',
+      payload: snooze,
+    );
+    sync.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await settle();
+    expect(scheduler.scheduled, contains(777));
+
+    await repo.markTaken(scheduleId: sid, day: today, minuteOfDay: 8 * 60);
+    await settle();
+    expect(scheduler.scheduled, isNot(contains(777)));
+  });
+
+  test(
+    'the follow-up survives a pass after the first reminder fired',
+    () async {
+      await sync.dispose();
+      // 08:05: the 08:00 reminder has fired, the intake is still open.
+      sync = ReminderSync(
+        repo,
+        scheduler,
+        now: () => DateTime(2026, 10, 19, 8, 5),
+        prefs: () async => const AppPrefs(language: 'ru'),
+      )..start();
+      await repo.createSchedule(daily(await medicine(), end: today));
+      await settle();
+      expect(scheduler.scheduled, isEmpty);
+      expect(
+        scheduler.followUps.values.single.at,
+        DateTime(2026, 10, 19, 8, 15),
+      );
+
+      // Another pass (the app opened) must not cancel it.
+      sync.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await settle();
+      expect(scheduler.followUps, hasLength(1));
+    },
+  );
+
+  test('an open intake gets a follow-up that taking cancels', () async {
+    final sid = await repo.createSchedule(daily(await medicine(), end: today));
+    await settle();
+    expect(scheduler.followUps.values.single.at, DateTime(2026, 10, 19, 8, 15));
+    expect(scheduler.followUps.values.single.title, startsWith('Не забыли?'));
+
+    await repo.markTaken(scheduleId: sid, day: today, minuteOfDay: 8 * 60);
+    await settle();
+    expect(scheduler.followUps, isEmpty);
+  });
+
+  test('at most 60 notifications are kept, the nearest ones', () async {
     await repo.createSchedule(
       daily(await medicine(), times: [8 * 60, 20 * 60]),
     );
     await settle();
-    expect(scheduler.scheduled, hasLength(reminderLimit));
+    expect(scheduler.scheduled, hasLength(reminderLimit ~/ 2));
+    expect(scheduler.followUps, hasLength(reminderLimit ~/ 2));
     final last = fireTimes().reduce((a, b) => a.isAfter(b) ? a : b);
-    expect(last, DateTime(2026, 11, 17, 20));
+    expect(last, DateTime(2026, 11, 2, 20));
   });
 
   test('editing replaces the reminders, ending cancels them', () async {

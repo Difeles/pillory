@@ -1,37 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import 'motion.dart';
 import 'tokens.dart';
-
-const _months = [
-  'Январь',
-  'Февраль',
-  'Март',
-  'Апрель',
-  'Май',
-  'Июнь',
-  'Июль',
-  'Август',
-  'Сентябрь',
-  'Октябрь',
-  'Ноябрь',
-  'Декабрь',
-];
-const _monthsOf = [
-  'января',
-  'февраля',
-  'марта',
-  'апреля',
-  'мая',
-  'июня',
-  'июля',
-  'августа',
-  'сентября',
-  'октября',
-  'ноября',
-  'декабря',
-];
-const _weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -41,7 +12,7 @@ Future<DateTime?> pickDate(
   required DateTime initial,
   required DateTime first,
   required DateTime last,
-  String title = 'Дата',
+  String? title,
 }) {
   final f = _day(first), l = _day(last);
   var i = _day(initial);
@@ -49,7 +20,7 @@ Future<DateTime?> pickDate(
   if (i.isAfter(l)) i = l;
   return _show<DateTime>(
     context,
-    title,
+    title ?? context.l10n.date,
     (done) => _CalendarSheet(initial: i, first: f, last: l, onDone: done),
   );
 }
@@ -58,11 +29,11 @@ Future<DateTime?> pickDate(
 Future<TimeOfDay?> pickTime(
   BuildContext context, {
   required TimeOfDay initial,
-  String title = 'Время',
+  String? title,
 }) async {
   final r = await _show<DateTime>(
     context,
-    title,
+    title ?? context.l10n.time,
     (done) => _TimeSheet(initial: initial, onDone: done),
   );
   return r == null ? null : TimeOfDay(hour: r.hour, minute: r.minute);
@@ -76,7 +47,7 @@ Future<T?> _show<T>(
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: true,
-    barrierLabel: 'Закрыть',
+    barrierLabel: context.l10n.close,
     barrierColor: Colors.black38,
     transitionDuration: motionOf(context, AppMotion.tab),
     pageBuilder: (c, _, _) => Align(
@@ -193,7 +164,7 @@ class _SheetState extends State<_Sheet> {
                   child: Pressable(
                     child: OutlinedButton(
                       onPressed: widget.onCancel,
-                      child: const Text('Отмена'),
+                      child: Text(context.l10n.cancel),
                     ),
                   ),
                 ),
@@ -202,7 +173,7 @@ class _SheetState extends State<_Sheet> {
                   child: Pressable(
                     child: FilledButton(
                       onPressed: widget.onOk,
-                      child: const Text('Готово'),
+                      child: Text(context.l10n.done),
                     ),
                   ),
                 ),
@@ -252,9 +223,9 @@ class _CalendarSheetState extends State<_CalendarSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final label = '${_months[_month.month - 1]} ${_month.year}';
+    final label = context.monthYear(_month);
     return _Sheet(
-      title: 'Выберите дату',
+      title: context.l10n.chooseDate,
       onOk: () => widget.onDone(_selected),
       onCancel: () => widget.onDone(null),
       child: GestureDetector(
@@ -269,7 +240,7 @@ class _CalendarSheetState extends State<_CalendarSheet> {
               children: [
                 _Arrow(
                   icon: Icons.chevron_left,
-                  tooltip: 'Предыдущий месяц',
+                  tooltip: context.l10n.previousMonth,
                   onTap: _has(DateTime(_month.year, _month.month - 1))
                       ? () => _go(-1)
                       : null,
@@ -283,7 +254,7 @@ class _CalendarSheetState extends State<_CalendarSheet> {
                 ),
                 _Arrow(
                   icon: Icons.chevron_right,
-                  tooltip: 'Следующий месяц',
+                  tooltip: context.l10n.nextMonth,
                   onTap: _has(DateTime(_month.year, _month.month + 1))
                       ? () => _go(1)
                       : null,
@@ -292,9 +263,14 @@ class _CalendarSheetState extends State<_CalendarSheet> {
             ),
             Row(
               children: [
-                for (final d in _weekdays)
+                for (var d = 1; d <= 7; d++)
                   Expanded(
-                    child: Center(child: Text(d, style: AppType.captionStrong)),
+                    child: Center(
+                      child: Text(
+                        context.l10n.weekdayShort(d),
+                        style: AppType.captionStrong,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -352,7 +328,9 @@ class _CalendarSheetState extends State<_CalendarSheet> {
       selected: selected,
       enabled: enabled,
       // The full date, so a screen reader does not just say "20".
-      label: '$n ${_monthsOf[_month.month - 1]} ${_month.year}',
+      label:
+          '${context.dayMonth(DateTime(_month.year, _month.month, n))} '
+          '${_month.year}',
       excludeSemantics: true,
       child: Pressable(
         scale: .85,
@@ -420,7 +398,7 @@ class _TimeSheetState extends State<_TimeSheet> {
 
   @override
   Widget build(BuildContext context) => _Sheet(
-    title: 'Выберите время',
+    title: context.l10n.chooseTime,
     onOk: () => widget.onDone(DateTime(2000, 1, 1, _h, _m)),
     onCancel: () => widget.onDone(null),
     child: SizedBox(
@@ -440,7 +418,7 @@ class _TimeSheetState extends State<_TimeSheet> {
             children: [
               Expanded(
                 child: _Wheel(
-                  label: 'Часы',
+                  label: context.l10n.hours,
                   count: 24,
                   initial: _h,
                   onChanged: (v) => _h = v,
@@ -449,7 +427,7 @@ class _TimeSheetState extends State<_TimeSheet> {
               Text(':', style: AppType.wheel),
               Expanded(
                 child: _Wheel(
-                  label: 'Минуты',
+                  label: context.l10n.minutes,
                   count: 60,
                   initial: _m,
                   onChanged: (v) => _m = v,

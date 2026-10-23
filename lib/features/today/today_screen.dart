@@ -18,11 +18,14 @@ import '../../design_system/widgets/streak_banner.dart';
 import '../../design_system/widgets/week_strip.dart';
 import '../../domain/errors.dart';
 import '../../domain/extras.dart';
+import '../inventory/take_now.dart';
 import '../../domain/inventory_rules.dart';
 import '../../domain/reminders.dart';
 import '../../domain/schedule.dart';
 import '../../domain/streak.dart';
-import '../inventory/format.dart';
+import '../../domain/supply.dart' show EndingCourse;
+import '../../l10n/l10n.dart';
+import '../../l10n/labels.dart';
 import '../inventory/medicine_card.dart';
 import 'add_intake_screen.dart';
 import 'history_screen.dart';
@@ -30,44 +33,10 @@ import 'today_providers.dart';
 import '../../design_system/motion.dart';
 import '../../design_system/pickers.dart';
 
-const _months = [
-  'января',
-  'февраля',
-  'марта',
-  'апреля',
-  'мая',
-  'июня',
-  'июля',
-  'августа',
-  'сентября',
-  'октября',
-  'ноября',
-  'декабря',
-]; // prettier-ignore
+/// "20 октября" / "October 20".
+String formatDay(BuildContext context, DateTime d) => context.dayMonth(d);
 
-String formatDay(DateTime d) => '${d.day} ${_months[d.month - 1]}';
-
-const _monthsNominative = [
-  'Январь',
-  'Февраль',
-  'Март',
-  'Апрель',
-  'Май',
-  'Июнь',
-  'Июль',
-  'Август',
-  'Сентябрь',
-  'Октябрь',
-  'Ноябрь',
-  'Декабрь',
-]; // prettier-ignore
-
-const _tips = [
-  'Не забудь выпить стакан воды: таблетки лучше усваиваются.',
-  'Поставь аптечку на видное место: так проще не пропускать приём.',
-  'Каждая отметка — маленькая победа. Серия растёт!',
-  'Проверь сроки годности раз в месяц: я подскажу, что скоро истечёт.',
-];
+List<String> _tips(AppLocalizations l) => [l.tip1, l.tip2, l.tip3, l.tip4];
 
 String formatMinute(int m) =>
     '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
@@ -135,6 +104,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
 
   Future<void> _take(DayIntake i) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l = context.l10n;
     try {
       await ref
           .read(scheduleRepositoryProvider)
@@ -144,14 +114,49 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
             minuteOfDay: i.minuteOfDay,
           );
     } on InsufficientStockException {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('В аптечке не хватает лекарства')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.notEnoughStock)));
       return;
     }
     final prefs = ref.read(prefsProvider).value ?? const AppPrefs();
     if (prefs.haptics) unawaited(HapticFeedback.mediumImpact());
     if (prefs.confetti && mounted) showConfetti(context);
+  }
+
+  /// Asks for how long, then continues the course: the running schedule is
+  /// closed and carried on to the new end date.
+  Future<void> _extend(EndingCourse c) async {
+    final l = context.l10n;
+    final days = await showDialog<int>(
+      context: context,
+      builder: (d) => SimpleDialog(
+        title: Text(l.extendCourseTitle(c.medicineName)),
+        children: [
+          for (final n in const [7, 14, 30])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(d, n),
+              child: Text(l.extendDays(n)),
+            ),
+        ],
+      ),
+    );
+    if (days == null) return;
+    final s = c.schedule;
+    final end = dateOnly(s.endDate!);
+    await ref
+        .read(scheduleRepositoryProvider)
+        .updateSchedule(
+          s.id,
+          ScheduleEdit(
+            kind: s.kind,
+            dose: s.dose,
+            times: s.times,
+            weekdays: s.weekdays,
+            dates: s.dates,
+            startDate: s.startDate,
+            endDate: DateTime(end.year, end.month, end.day + days),
+            mealRelation: s.mealRelation,
+          ),
+        );
   }
 
   Future<void> _skip(DayIntake i) => ref
@@ -187,10 +192,10 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     final streak = ref.watch(streakProvider);
     return Scaffold(
       appBar: AppTopBar(
-        title: 'Приём',
+        title: context.l10n.tabToday,
         actions: [
           TopBarAddButton(
-            tooltip: 'Добавить приём',
+            tooltip: context.l10n.addIntake,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const AddIntakeScreen()),
             ),
@@ -215,7 +220,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                 child: Semantics(
                   header: true,
                   child: Text(
-                    '${_monthsNominative[_day.month - 1]}, ${_day.year}',
+                    '${context.monthName(_day)}, ${_day.year}',
                     style: AppType.title,
                   ),
                 ),
@@ -223,7 +228,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               Pressable(
                 scale: .88,
                 child: IconButton(
-                  tooltip: 'История',
+                  tooltip: context.l10n.historyTooltip,
                   icon: const Icon(Icons.history),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -235,7 +240,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               Pressable(
                 scale: .88,
                 child: IconButton(
-                  tooltip: 'Весь месяц',
+                  tooltip: context.l10n.wholeMonth,
                   icon: const Icon(Icons.calendar_month_outlined),
                   onPressed: _pickDay,
                 ),
@@ -248,19 +253,27 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
             onSelected: _select,
           ),
           const SizedBox(height: AppSpacing.md),
+          Pressable(
+            child: OutlinedButton.icon(
+              onPressed: () => pickAndTakeNow(context, ref),
+              icon: const Icon(Icons.add_task),
+              label: Text(context.l10n.takeOutsideSchedule),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           intakes.when(
             loading: () => const LoadingState(),
             error: (e, _) => ErrorState(
-              message: 'Не удалось загрузить приёмы',
+              message: context.l10n.loadIntakesFailed,
               onRetry: () => ref.invalidate(dayIntakesProvider(_day)),
             ),
             data: (list) {
               if (_scrollPending) _scrollToHighlight();
               if (list.isEmpty) {
-                return const EmptyState(
+                return EmptyState(
                   icon: Icons.event_available,
-                  title: 'На этот день приёмов нет',
-                  message: 'Нажмите «+», чтобы добавить приём',
+                  title: context.l10n.noIntakesTitle,
+                  message: context.l10n.noIntakesText,
                 );
               }
               return _dayBody(list, today);
@@ -284,6 +297,35 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        for (final c in ref.watch(endingCoursesProvider).value ?? const [])
+          if (_day == dateOnly(DateTime.now()))
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: AppCard(
+                child: Row(
+                  children: [
+                    Icon(Icons.event_available, color: context.colors.warning),
+                    const SizedBox(width: AppSpacing.ms),
+                    Expanded(
+                      child: Text(
+                        c.endsOn == dateOnly(DateTime.now())
+                            ? context.l10n.courseLastDay(c.medicineName)
+                            : context.l10n.courseEnds(
+                                c.medicineName,
+                                formatDay(context, c.endsOn),
+                              ),
+                      ),
+                    ),
+                    Pressable(
+                      child: TextButton(
+                        onPressed: () => _extend(c),
+                        child: Text(context.l10n.extendCourse),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         _PlanCard(done: done, total: list.length),
         for (final p in _Period.values)
           if (groups[p] case final items?) ...[
@@ -293,7 +335,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
           ],
         const SizedBox(height: AppSpacing.md),
         _TipCard(
-          tip: _tips[_day.difference(DateTime(2020)).inDays % _tips.length],
+          tip: _tips(context.l10n)[_day.difference(DateTime(2020)).inDays % 4],
         ),
       ],
     );
@@ -330,14 +372,20 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
 }
 
 enum _Period {
-  morning('Утро', Icons.wb_sunny_outlined),
-  day('День', Icons.restaurant_outlined),
-  evening('Вечер', Icons.nightlight_outlined),
-  anytime('В течение дня', Icons.schedule);
+  morning(Icons.wb_sunny_outlined),
+  day(Icons.restaurant_outlined),
+  evening(Icons.nightlight_outlined),
+  anytime(Icons.schedule);
 
-  const _Period(this.label, this.icon);
-  final String label;
+  const _Period(this.icon);
   final IconData icon;
+
+  String label(AppLocalizations l) => switch (this) {
+    morning => l.periodMorning,
+    day => l.periodDay,
+    evening => l.periodEvening,
+    anytime => l.periodAnytime,
+  };
 
   static _Period of(int? minute) => switch (minute) {
     null => anytime,
@@ -370,13 +418,13 @@ class _PeriodHeader extends StatelessWidget {
             header: true,
             child: Text(
               first == null
-                  ? period.label
-                  : '${period.label}  ${formatMinute(first)}',
+                  ? period.label(context.l10n)
+                  : '${period.label(context.l10n)}  ${formatMinute(first)}',
               style: AppType.cardTitle,
             ),
           );
           final badge = StatusBadge(
-            label: all ? 'Выполнено' : 'Ожидает',
+            label: all ? context.l10n.periodDone : context.l10n.periodWaiting,
             icon: all ? Icons.check_circle : Icons.schedule,
             tone: all ? StatusTone.success : StatusTone.accent,
           );
@@ -428,16 +476,19 @@ class _PlanCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ПЛАН ДНЯ',
+                  context.l10n.planOverline,
                   style: AppType.overline.copyWith(
                     color: context.colors.primary,
                   ),
                 ),
-                Text('$done из $total принято', style: AppType.title),
+                Text(
+                  context.l10n.takenOfTotal(done, total),
+                  style: AppType.title,
+                ),
                 Text(
                   left == 0
-                      ? 'Всё принято — отличный день!'
-                      : 'Осталось принять: $left',
+                      ? context.l10n.allTaken
+                      : context.l10n.leftToTake(left),
                   style: AppType.caption.copyWith(
                     color: context.colors.textSecondary,
                   ),
@@ -478,7 +529,7 @@ class _TipCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Пилюлькин шепчет:', style: AppType.label),
+              Text(context.l10n.whisper, style: AppType.label),
               Text(tip, style: AppType.caption),
             ],
           ),
@@ -514,32 +565,32 @@ class _IntakeCard extends StatelessWidget {
   final VoidCallback onSkip;
   final VoidCallback onReset;
 
-  String get _subtitle => [
-    '${formatQuantity(intake.schedule.dose)} ${intake.schedule.doseUnit}',
-    if (intake.medicineForm != null) intake.medicineForm!.label,
+  String _subtitle(AppLocalizations l) => [
+    l.quantity(intake.schedule.dose, intake.schedule.doseUnit),
+    if (intake.medicineForm != null) l.form(intake.medicineForm!),
     if (intake.medicineStrength != null) intake.medicineStrength!,
   ].join(' · ');
 
-  Widget _menu() => Pressable(
+  Widget _menu(BuildContext context) => Pressable(
     scale: .88,
     child: PopupMenuButton<VoidCallback>(
-      tooltip: 'Управление расписанием',
+      tooltip: context.l10n.manageSchedule,
       onSelected: (action) => action(),
       itemBuilder: (_) => manageable
           ? [
               PopupMenuItem(
                 value: onEdit,
-                child: const Text('Изменить расписание'),
+                child: Text(context.l10n.editSchedule),
               ),
               PopupMenuItem(
                 value: onEnd,
-                child: const Text('Завершить расписание'),
+                child: Text(context.l10n.endScheduleItem),
               ),
             ]
-          : const [
+          : [
               PopupMenuItem(
                 enabled: false,
-                child: Text('Расписание уже изменено или завершено'),
+                child: Text(context.l10n.scheduleAlreadyChanged),
               ),
             ],
     ),
@@ -563,7 +614,10 @@ class _IntakeCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              MedicineAvatar(form: intake.medicineForm),
+              MedicineAvatar(
+                form: intake.medicineForm,
+                look: intake.medicineLook,
+              ),
               const SizedBox(width: AppSpacing.ms),
               Expanded(
                 child: Column(
@@ -578,14 +632,14 @@ class _IntakeCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      _subtitle,
+                      _subtitle(context.l10n),
                       style: AppType.caption.copyWith(
                         color: context.colors.textSecondary,
                       ),
                     ),
                     if (intake.skipped) ...[
                       const SizedBox(height: AppSpacing.xs),
-                      _statusBadge(intake.status),
+                      _statusBadge(context, intake.status),
                     ],
                   ],
                 ),
@@ -594,7 +648,9 @@ class _IntakeCard extends StatelessWidget {
                 Pressable(
                   scale: .88,
                   child: IconButton.filled(
-                    tooltip: intake.canReset ? 'Отменить отметку' : 'Принято',
+                    tooltip: intake.canReset
+                        ? context.l10n.cancelMark
+                        : context.l10n.statusTaken,
                     style: IconButton.styleFrom(
                       backgroundColor: context.colors.success,
                       foregroundColor: context.colors.onSuccess,
@@ -609,12 +665,12 @@ class _IntakeCard extends StatelessWidget {
                 Pressable(
                   scale: .88,
                   child: IconButton(
-                    tooltip: 'Отменить отметку',
+                    tooltip: context.l10n.cancelMark,
                     icon: const Icon(Icons.undo),
                     onPressed: onReset,
                   ),
                 ),
-              _menu(),
+              _menu(context),
             ],
           ),
           if (pending) ...[
@@ -630,7 +686,7 @@ class _IntakeCard extends StatelessWidget {
                       foregroundColor: context.colors.textSecondary,
                     ),
                     onPressed: canMark ? onSkip : null,
-                    child: const Text('Пропустить'),
+                    child: Text(context.l10n.skip),
                   ),
                 ),
                 Pressable(
@@ -638,12 +694,12 @@ class _IntakeCard extends StatelessWidget {
                       ? FilledButton.icon(
                           onPressed: canMark ? onTake : null,
                           icon: const Icon(Icons.check),
-                          label: const Text('Принять'),
+                          label: Text(context.l10n.take),
                         )
                       : FilledButton.tonalIcon(
                           onPressed: canMark ? onTake : null,
                           icon: const Icon(Icons.check),
-                          label: const Text('Принять'),
+                          label: Text(context.l10n.take),
                         ),
                 ),
               ],
@@ -655,21 +711,22 @@ class _IntakeCard extends StatelessWidget {
   }
 }
 
-Widget _statusBadge(IntakeStatus status) => switch (status) {
-  IntakeStatus.taken => const StatusBadge(
-    label: 'Принято',
-    icon: Icons.check_circle,
-    tone: StatusTone.success,
-  ),
-  IntakeStatus.skipped => const StatusBadge(
-    label: 'Пропущено',
-    icon: Icons.remove_circle_outline,
-  ),
-  IntakeStatus.pending => const StatusBadge(
-    label: 'Не отмечено',
-    icon: Icons.radio_button_unchecked,
-  ),
-};
+Widget _statusBadge(BuildContext context, IntakeStatus status) =>
+    switch (status) {
+      IntakeStatus.taken => StatusBadge(
+        label: context.l10n.statusTaken,
+        icon: Icons.check_circle,
+        tone: StatusTone.success,
+      ),
+      IntakeStatus.skipped => StatusBadge(
+        label: context.l10n.statusSkipped,
+        icon: Icons.remove_circle_outline,
+      ),
+      IntakeStatus.pending => StatusBadge(
+        label: context.l10n.statusUnmarked,
+        icon: Icons.radio_button_unchecked,
+      ),
+    };
 
 /// Asks, then ends [s] with effect from the next day it can; returns whether
 /// it was ended.
@@ -679,23 +736,18 @@ Future<bool> confirmEndSchedule(
   Schedule s,
 ) async {
   final messenger = ScaffoldMessenger.of(context);
+  final ends = context.l10n.endsTomorrow;
   final ok = await showConfirmDialog(
     context,
-    title: 'Завершить расписание?',
-    message: 'Прошлые приёмы сохранятся, будущие исчезнут.',
-    confirmLabel: 'Завершить',
+    title: context.l10n.endAskTitle,
+    message: context.l10n.endAskText,
+    confirmLabel: context.l10n.endConfirm,
     danger: true,
   );
   if (!ok) return false;
   final from = await ref.read(scheduleRepositoryProvider).endSchedule(s.id);
   if (from.isAfter(dateOnly(DateTime.now()))) {
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Расписание завершится со следующего дня: сегодня уже есть отметка',
-        ),
-      ),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(ends)));
   }
   return true;
 }
@@ -721,9 +773,9 @@ Widget intakeStatusLabel(IntakeStatus status) => Builder(
       },
       const SizedBox(width: AppSpacing.xs),
       Text(switch (status) {
-        IntakeStatus.taken => 'Принято',
-        IntakeStatus.skipped => 'Пропущено',
-        IntakeStatus.pending => 'Не отмечено',
+        IntakeStatus.taken => context.l10n.statusTaken,
+        IntakeStatus.skipped => context.l10n.statusSkipped,
+        IntakeStatus.pending => context.l10n.statusUnmarked,
       }),
     ],
   ),

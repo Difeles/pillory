@@ -5,6 +5,7 @@ import '../domain/errors.dart';
 import '../domain/inventory_repository.dart';
 import '../domain/inventory_rules.dart';
 import '../domain/models.dart';
+import '../domain/pill_look.dart';
 import '../domain/reminders.dart';
 import '../domain/schedule.dart';
 import 'app_database.dart';
@@ -124,6 +125,7 @@ class DriftScheduleRepository implements ScheduleRepository {
                 medicineStrength: snap
                     ? log!.medicineStrength
                     : current.strength,
+                medicineLook: PillLook.tryParse(current.look),
                 minuteOfDay: slot,
                 status: log?.status ?? IntakeStatus.pending,
                 deductionsTracked: log?.deductionsTracked ?? false,

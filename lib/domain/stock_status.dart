@@ -42,15 +42,7 @@ int daysUntil(DateTime date, DateTime today) {
 /// The one problem a card shows, in priority order.
 enum StockProblem { expired, expiringSoon, out, low }
 
-enum StockFilter {
-  all('Все'),
-  lowOrOut('Мало или нет'),
-  expiringSoon('Скоро истекает'),
-  expired('Просрочено');
-
-  const StockFilter(this.label);
-  final String label;
-}
+enum StockFilter { all, lowOrOut, expiringSoon, expired }
 
 /// How a medicine stands on a given day. Only packages in the medicine's
 /// unit count; packages in another unit are left out of everything.

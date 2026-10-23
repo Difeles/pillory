@@ -1,3 +1,11 @@
+/// How a reminder announces itself.
+class ReminderStyle {
+  const ReminderStyle({this.sound = true, this.vibration = true});
+
+  final bool sound;
+  final bool vibration;
+}
+
 class PendingReminder {
   const PendingReminder(this.id, this.payload);
 
@@ -19,6 +27,16 @@ abstract class ReminderScheduler {
 
   Future<List<PendingReminder>> pending();
 
+  /// Android only: whether reminders may fire at the exact minute. False
+  /// elsewhere, where there is nothing to grant.
+  Future<bool> exactAllowed();
+
+  /// Asks Android for exact alarms (opens the system screen); no-op elsewhere.
+  Future<void> requestExact();
+
+  /// Shows a notification right now, to check that they reach the user.
+  Future<void> showTest();
+
   /// Schedules a notification at the wall-clock time [at] in [timeZone]. The
   /// same [id] replaces the earlier one.
   Future<void> schedule({
@@ -27,6 +45,7 @@ abstract class ReminderScheduler {
     required String title,
     required String body,
     required String payload,
+    ReminderStyle style = const ReminderStyle(),
   });
 
   Future<void> cancel(int id);
@@ -49,12 +68,22 @@ class NoopReminderScheduler implements ReminderScheduler {
   Future<List<PendingReminder>> pending() async => const [];
 
   @override
+  Future<bool> exactAllowed() async => false;
+
+  @override
+  Future<void> requestExact() async {}
+
+  @override
+  Future<void> showTest() async {}
+
+  @override
   Future<void> schedule({
     required int id,
     required DateTime at,
     required String title,
     required String body,
     required String payload,
+    ReminderStyle style = const ReminderStyle(),
   }) async {}
 
   @override

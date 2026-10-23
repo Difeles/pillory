@@ -1,4 +1,5 @@
 import 'medicine_form.dart';
+import 'pill_look.dart';
 
 /// The drug itself: what it is called and what it is. Holds no quantities.
 class Medicine {
@@ -13,6 +14,7 @@ class Medicine {
     this.lowStockThreshold,
     this.category,
     this.storage,
+    this.look,
   });
 
   final String id;
@@ -32,6 +34,9 @@ class Medicine {
   final String? strength;
   final MedicineCategory? category;
   final StorageSpot? storage;
+
+  /// How the pill is drawn, or null for the form's icon.
+  final PillLook? look;
   final DateTime createdAt;
 }
 
@@ -138,8 +143,10 @@ class NewMedicine {
     this.lowStockThreshold,
     this.category,
     this.storage,
+    this.look,
   });
 
+  final PillLook? look;
   final double? lowStockThreshold;
   final MedicineCategory? category;
   final StorageSpot? storage;
@@ -161,8 +168,11 @@ class MedicineEdit {
     this.lowStockThreshold,
     this.category,
     this.storage,
+    this.look,
   });
 
+  /// Null clears the custom look.
+  final PillLook? look;
   final MedicineCategory? category;
   final StorageSpot? storage;
 

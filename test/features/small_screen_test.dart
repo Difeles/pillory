@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pillory/l10n/l10n.dart';
 import 'package:pillory/design_system/widgets/form_save_bar.dart';
 import 'package:pillory/design_system/widgets/floating_dock.dart';
 import 'package:pillory/app/app.dart';
@@ -11,10 +12,11 @@ import 'package:pillory/domain/schedule.dart';
 import 'package:pillory/features/inventory/add_medicine_screen.dart';
 import 'package:pillory/features/inventory/inventory_screen.dart';
 import 'package:pillory/features/inventory/medicine_screen.dart';
-import 'package:pillory/features/profile/profile_screen.dart';
+import 'package:pillory/features/profile/settings_screen.dart';
 import 'package:pillory/features/today/add_intake_screen.dart';
 import 'package:pillory/features/today/today_screen.dart';
 
+import '../support/fake_diary_repository.dart';
 import '../support/fake_extras_repository.dart';
 import '../support/fake_inventory_repository.dart';
 
@@ -26,6 +28,7 @@ Future<void> reveal(WidgetTester tester, Finder f) async {
   await tester.scrollUntilVisible(
     f,
     100,
+    maxScrolls: 200,
     scrollable: find.byType(Scrollable).first,
   );
   await tester.ensureVisible(f);
@@ -69,6 +72,7 @@ void main() {
         overrides: [
           inventoryRepositoryProvider.overrideWithValue(inventory),
           extrasRepositoryProvider.overrideWithValue(FakeExtrasRepository()),
+          diaryRepositoryProvider.overrideWithValue(FakeDiaryRepository()),
           scheduleRepositoryProvider.overrideWithValue(schedules),
         ],
         child: app,
@@ -78,6 +82,9 @@ void main() {
   }
 
   Widget screen(Widget Function() build) => MaterialApp(
+    locale: const Locale('ru'),
+    supportedLocales: supportedAppLocales,
+    localizationsDelegates: appLocalizationsDelegates,
     theme: buildAppTheme(),
     home: Builder(builder: (_) => build()),
   );
@@ -333,8 +340,8 @@ void main() {
     expect(find.text('Сохранить').hitTestable(), findsOneWidget);
   });
 
-  testWidgets('Profile fits', (tester) async {
-    await pumpSmall(tester, screen(() => const ProfileScreen()));
+  testWidgets('Settings fit', (tester) async {
+    await pumpSmall(tester, screen(() => const SettingsScreen()));
     // Below the fold at ×2: it must still be reachable by scrolling.
     await reveal(tester, find.text('Восстановить из копии'));
     expect(find.text('Восстановить из копии'), findsOneWidget);

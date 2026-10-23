@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'inventory_rules.dart';
+import 'reminder_scheduler.dart' show ReminderStyle;
 import 'schedule.dart';
 
 /// How many future reminders are kept scheduled. iOS allows 64 pending local
@@ -12,6 +13,9 @@ const reminderLimit = 60;
 /// (weekly) reaches that in about 420 days, so this never cuts a plan short.
 /// A schedule on specific dates ignores it: every future date counts.
 const reminderMaxDays = 730;
+
+/// Flips a reminder's id to the id of its follow-up (stays a 31-bit value).
+const followUpBit = 0x40000000;
 
 /// A schedule with the name of its medicine: what a reminder is made from.
 class ReminderSchedule {
@@ -177,6 +181,64 @@ class OpenIntakeRequest {
         scheduleId: j['s'] as String,
         day: DateTime(d[0], d[1], d[2]),
         minuteOfDay: j['m'] as int,
+      );
+    } on Object {
+      return null;
+    }
+  }
+}
+
+/// Button ids of a reminder and how long each postpones it.
+const takenAction = 'taken';
+const snoozeActions = {
+  'snooze': Duration(minutes: 10),
+  'snooze30': Duration(minutes: 30),
+};
+
+/// What pressing a "later" button does: another notification with the same
+/// text, and the follow-up of the reminder dropped (it would only come while
+/// the user has asked to wait).
+class SnoozePlan {
+  const SnoozePlan({
+    required this.cancelId,
+    required this.newId,
+    required this.after,
+    required this.title,
+    required this.body,
+    required this.style,
+    required this.payload,
+  });
+
+  final int cancelId;
+  final int newId;
+  final Duration after;
+  final String title;
+  final String body;
+  final ReminderStyle style;
+  final String payload;
+
+  /// Null for a button that does not postpone, or a payload that cannot be
+  /// postponed.
+  static SnoozePlan? from({
+    required int? id,
+    required String? payload,
+    required String? actionId,
+  }) {
+    final after = snoozeActions[actionId];
+    if (after == null || id == null || payload == null) return null;
+    try {
+      final j = jsonDecode(payload) as Map<String, dynamic>;
+      return SnoozePlan(
+        cancelId: id ^ followUpBit,
+        newId: (id ^ 0x20000000) & 0x7FFFFFFF,
+        after: after,
+        title: j['t'] as String,
+        body: j['b'] as String,
+        style: ReminderStyle(
+          sound: j['ss'] != false,
+          vibration: j['sv'] != false,
+        ),
+        payload: jsonEncode({...j, 'z': 1}),
       );
     } on Object {
       return null;

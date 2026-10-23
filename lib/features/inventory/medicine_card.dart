@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../design_system/tokens.dart';
 import '../../design_system/widgets/app_card.dart';
+import '../../design_system/widgets/pill_view.dart';
 import '../../design_system/widgets/quantity_stepper.dart';
 import '../../design_system/widgets/status_badge.dart';
 import '../../domain/errors.dart';
 import '../../domain/medicine_form.dart';
 import '../../domain/models.dart';
+import '../../domain/pill_look.dart';
 import '../../domain/stock_status.dart';
+import '../../l10n/l10n.dart';
+import '../../l10n/labels.dart';
 import 'format.dart';
 import 'medicine_screen.dart';
 
@@ -25,14 +29,13 @@ class MedicineCard extends ConsumerWidget {
     double delta,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    final message = context.l10n.negativeStock;
     try {
       await ref
           .read(inventoryRepositoryProvider)
           .adjustQuantity(packageId: stock.primaryPackage.id, delta: delta);
     } on InsufficientStockException {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Остаток не может быть отрицательным')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -41,14 +44,14 @@ class MedicineCard extends ConsumerWidget {
     final medicine = stock.medicine;
     final package = stock.primaryPackage;
     final details = [
-      if (medicine.form != null) medicine.form!.label,
+      if (medicine.form != null) context.l10n.form(medicine.form!),
       if (medicine.strength != null) medicine.strength!,
     ].join(' · ');
     // Archived medicines are left out of the stock checks.
     final today = DateTime.now();
     final assessment = archived ? null : assess(stock, today);
-    final status = _status(assessment, today);
-    final quantity = '${formatQuantity(stock.totalQuantity)} ${stock.unit}';
+    final status = _status(context, assessment, today);
+    final quantity = context.l10n.quantity(stock.totalQuantity, stock.unit);
 
     // +/- act on one package, so they are offered only when there is one.
     final quick = !archived && stock.packages.length == 1;
@@ -65,7 +68,7 @@ class MedicineCard extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              MedicineAvatar(form: medicine.form),
+              MedicineAvatar(form: medicine.form, look: medicine.look),
               const SizedBox(width: AppSpacing.ms),
               Expanded(
                 child: Column(
@@ -86,7 +89,7 @@ class MedicineCard extends ConsumerWidget {
                     if (assessment?.problem == StockProblem.expired) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        'Проверьте инструкцию и местные правила утилизации',
+                        context.l10n.disposalHint,
                         style: AppType.caption.copyWith(
                           color: context.colors.textSecondary,
                         ),
@@ -110,7 +113,7 @@ class MedicineCard extends ConsumerWidget {
             runSpacing: AppSpacing.xs,
             children: [
               Text(
-                'Остаток',
+                context.l10n.stockLabel,
                 style: AppType.caption.copyWith(
                   color: context.colors.textSecondary,
                 ),
@@ -169,13 +172,29 @@ class _StockBar extends StatelessWidget {
 /// The form's icon on its pastel square; shared by the card and the
 /// medicine screen.
 class MedicineAvatar extends StatelessWidget {
-  const MedicineAvatar({super.key, required this.form});
+  const MedicineAvatar({super.key, required this.form, this.look});
 
   final MedicineForm? form;
+
+  /// The pill the user drew; it replaces the form's icon.
+  final PillLook? look;
 
   @override
   Widget build(BuildContext context) {
     final (icon, fill) = _formLook(form);
+    final look = this.look;
+    if (look != null) {
+      return Container(
+        width: AppSizes.avatar,
+        height: AppSizes.avatar,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: context.colors.tint,
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+        ),
+        child: PillView(look: look, size: AppSizes.avatarIcon + 14),
+      );
+    }
     return Container(
       width: AppSizes.avatar,
       height: AppSizes.avatar,
@@ -215,32 +234,33 @@ IconData medicineFormIcon(MedicineForm? form) => _formLook(form).$1;
 
 /// The single status of a card: the most important problem, else the
 /// nearest expiry date.
-StatusBadge? _status(StockAssessment? a, DateTime today) {
+StatusBadge? _status(BuildContext context, StockAssessment? a, DateTime today) {
+  final l = context.l10n;
   if (a == null) return null;
   switch (a.problem) {
     case StockProblem.expired:
       return StatusBadge(
-        label: 'Просрочено с ${formatDate(a.earliestExpired!)}',
+        label: l.expiredSince(formatDate(a.earliestExpired!)),
         icon: Icons.error_outline,
         tone: StatusTone.danger,
       );
     case StockProblem.expiringSoon:
       final days = daysUntil(a.nearestExpiring!, today);
-      final when = days == 0 ? 'сегодня' : 'через $days дн.';
+      final when = days == 0 ? l.whenToday : l.whenInDays(days);
       return StatusBadge(
-        label: 'Скоро истекает: до ${formatDate(a.nearestExpiring!)} ($when)',
+        label: l.expiringBadge(formatDate(a.nearestExpiring!), when),
         icon: Icons.schedule,
         tone: StatusTone.warning,
       );
     case StockProblem.out:
-      return const StatusBadge(
-        label: 'Закончилось',
+      return StatusBadge(
+        label: l.outBadge,
         icon: Icons.remove_circle_outline,
         tone: StatusTone.danger,
       );
     case StockProblem.low:
       return StatusBadge(
-        label: 'Мало: осталось ${formatQuantity(a.usable)} ${a.stock.unit}',
+        label: l.lowBadge(l.quantity(a.usable, a.stock.unit)),
         icon: Icons.trending_down,
         tone: StatusTone.warning,
       );
@@ -249,7 +269,7 @@ StatusBadge? _status(StockAssessment? a, DateTime today) {
       return expiry == null
           ? null
           : StatusBadge(
-              label: 'Годен до ${formatDate(expiry)}',
+              label: l.goodUntil(formatDate(expiry)),
               icon: Icons.event_outlined,
             );
   }

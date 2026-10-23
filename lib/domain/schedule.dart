@@ -1,6 +1,7 @@
 import 'errors.dart';
 import 'inventory_rules.dart';
 import 'medicine_form.dart';
+import 'pill_look.dart';
 import 'models.dart';
 import 'reminders.dart';
 
@@ -103,6 +104,25 @@ NewSchedule validateNewSchedule(NewSchedule d) {
   );
 }
 
+/// [d] a whole number of [years] later: the same course a year on. The
+/// start and the end move together, a date that does not exist then (29
+/// February) falls on the next day.
+NewSchedule shiftedByYears(NewSchedule d, int years) {
+  DateTime shift(DateTime x) => DateTime(x.year + years, x.month, x.day);
+  return NewSchedule(
+    medicineId: d.medicineId,
+    kind: d.kind,
+    dose: d.dose,
+    doseUnit: d.doseUnit,
+    weekdays: d.weekdays,
+    dates: [for (final x in d.dates) shift(x)],
+    startDate: shift(d.startDate),
+    endDate: d.endDate == null ? null : shift(d.endDate!),
+    times: d.times,
+    mealRelation: d.mealRelation,
+  );
+}
+
 /// Whether [s] has an intake on [day].
 bool occursOn(NewSchedule s, DateTime day) {
   final d = dateOnly(day);
@@ -128,6 +148,7 @@ class DayIntake {
     required this.medicineName,
     this.medicineForm,
     this.medicineStrength,
+    this.medicineLook,
     this.minuteOfDay,
     this.status = IntakeStatus.pending,
     this.deductionsTracked = false,
@@ -140,6 +161,9 @@ class DayIntake {
   final String medicineName;
   final MedicineForm? medicineForm;
   final String? medicineStrength;
+
+  /// The medicine's pill drawing as it is now (not part of the snapshot).
+  final PillLook? medicineLook;
 
   /// Which of the schedule's times this is; null for an untimed intake.
   final int? minuteOfDay;

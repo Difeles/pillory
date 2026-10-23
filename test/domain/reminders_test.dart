@@ -173,4 +173,55 @@ void main() {
       expect(OpenIntakeRequest.fromPayload(bad), isNull);
     }
   });
+
+  group('SnoozePlan', () {
+    final payload = jsonEncode({
+      's': 'sid',
+      'd': '2026-10-19',
+      'm': 480,
+      't': 'Аспирин',
+      'b': '2 шт.',
+      'ss': false,
+      'sv': true,
+    });
+
+    test('a later button repeats the reminder and drops its follow-up', () {
+      final plan = SnoozePlan.from(
+        id: 100,
+        payload: payload,
+        actionId: 'snooze30',
+      )!;
+      expect(plan.after, const Duration(minutes: 30));
+      expect(plan.cancelId, 100 ^ followUpBit);
+      expect(plan.newId, isNot(100));
+      expect(plan.title, 'Аспирин');
+      expect(plan.body, '2 шт.');
+      expect(plan.style.sound, isFalse);
+      expect(plan.style.vibration, isTrue);
+      // The postponed one is marked, and still opens the same intake.
+      expect(jsonDecode(plan.payload)['z'], 1);
+      expect(OpenIntakeRequest.fromPayload(plan.payload)!.scheduleId, 'sid');
+      expect(
+        SnoozePlan.from(id: 100, payload: payload, actionId: 'snooze')!.after,
+        const Duration(minutes: 10),
+      );
+    });
+
+    test('other buttons and broken payloads do not postpone', () {
+      expect(
+        SnoozePlan.from(id: 1, payload: payload, actionId: 'taken'),
+        isNull,
+      );
+      expect(SnoozePlan.from(id: 1, payload: payload, actionId: null), isNull);
+      expect(
+        SnoozePlan.from(id: null, payload: payload, actionId: 'snooze'),
+        isNull,
+      );
+      expect(
+        SnoozePlan.from(id: 1, payload: 'nope', actionId: 'snooze'),
+        isNull,
+      );
+      expect(SnoozePlan.from(id: 1, payload: '{}', actionId: 'snooze'), isNull);
+    });
+  });
 }
